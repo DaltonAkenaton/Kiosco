@@ -40,7 +40,12 @@ const carpetaDeEsteArchivo = path.dirname(fileURLToPath(import.meta.url));
 const raizDelMonorepo = path.resolve(carpetaDeEsteArchivo, '../..');
 
 const ARCHIVO_ORIGEN = path.join(raizDelMonorepo, 'packages/compartido/src/tema.json');
-const ARCHIVO_DESTINO = path.join(carpetaDeEsteArchivo, 'src/tema.css');
+// Por defecto, el del kiosco. El panel lo llama con su propio destino
+// (`node ../kiosco-ui/generar-tema.mjs src/tema.css`): mismos colores, un
+// solo generador.
+const ARCHIVO_DESTINO = process.argv[2]
+  ? path.resolve(process.argv[2])
+  : path.join(carpetaDeEsteArchivo, 'src/tema.css');
 
 const tema = JSON.parse(readFileSync(ARCHIVO_ORIGEN, 'utf8'));
 

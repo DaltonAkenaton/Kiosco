@@ -7,12 +7,16 @@
   "workspaces": [
     "packages/compartido",
     "apps/kiosco-main",
-    "apps/kiosco-ui"
+    "apps/kiosco-ui",
+    "apps/panel"
   ],
   "scripts": {
     "kiosco:compilar": "npm run compilar --workspace=@kiosko/kiosco-main",
     "ui:servir": "npm start --workspace=@kiosko/kiosco-ui",
     "ui:compilar": "npm run build --workspace=@kiosko/kiosco-ui",
+    "panel:servir": "npm start --workspace=@kiosko/panel",
+    "panel:compilar": "npm run build --workspace=@kiosko/panel",
+    "panel:probar": "npm run probar --workspace=@kiosko/panel --",
     "kiosco:dev": "npm run dev --workspace=@kiosko/kiosco-main",
     "revisar-tipos": "npm run revisar-tipos --workspace=@kiosko/kiosco-main",
     "probar": "npm run probar --workspace=@kiosko/kiosco-main",

@@ -1,0 +1,46 @@
+{
+  "name": "@kiosko/panel",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Panel administrativo del jefe (Angular + Supabase), se publica en Netlify",
+  "scripts": {
+    "ng": "ng",
+    "prestart": "node ../kiosco-ui/generar-tema.mjs src/tema.css",
+    "start": "ng serve --port 4300",
+    "prebuild": "node ../kiosco-ui/generar-tema.mjs src/tema.css",
+    "build": "ng build",
+    "probar": "electron probar-panel.cjs"
+  },
+  "prettier": {
+    "printWidth": 100,
+    "singleQuote": true,
+    "overrides": [
+      {
+        "files": "*.html",
+        "options": {
+          "parser": "angular"
+        }
+      }
+    ]
+  },
+  "dependencies": {
+    "@angular/common": "^21.1.0",
+    "@angular/compiler": "^21.1.0",
+    "@angular/core": "^21.1.0",
+    "@angular/forms": "^21.1.0",
+    "@angular/platform-browser": "^21.1.0",
+    "@angular/router": "^21.1.0",
+    "@supabase/supabase-js": "^2.58.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@angular/build": "^21.1.5",
+    "@angular/cli": "^21.1.5",
+    "@angular/compiler-cli": "^21.1.0",
+    "typescript": "~5.9.2",
+    "tailwindcss": "^4.1.14",
+    "@tailwindcss/postcss": "^4.1.14",
+    "postcss": "^8.5.6"
+  }
+}

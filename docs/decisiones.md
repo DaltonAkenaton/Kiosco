@@ -1065,6 +1065,53 @@ modo administrador para verlos y reenviarlos a mano.
 
 ---
 
+## D-033 · El panel no escribe en las tablas: llama funciones que exigen rol y motivo
+
+**Decidido:**
+
+- Cada acción del panel que cambia algo es una **función de la base**
+  (migración 0015): `alta_empleado`, `editar_empleado`,
+  `cambiar_estado_empleado`, `restablecer_pin`, `registrar_marca_manual`,
+  `actualizar_configuracion` y `revocar_dispositivo`. Cada una revisa el rol y
+  **exige un motivo** (al menos 10 letras).
+- El motivo llega a la **bitácora** por `app.motivo`: la función lo pone sólo
+  para su transacción y el trigger de auditoría lo copia.
+- **El PIN lo genera el sistema** (`pin_al_azar`, sin 0000, 1234 ni parecidos)
+  y se muestra una sola vez, con botón para imprimir.
+- **La configuración trae su rango** (`tipo`, `minimo`, `maximo`, `unidad`). El
+  panel ayuda con él y la base no acepta nada fuera de él. Son los mismos
+  rangos que obedece el kiosco.
+- La bitácora **no anota el latido** de los kioscos y **oculta** también el
+  hash de la contraseña del kiosco.
+- El usuario del empleado puede llevar números ("dgomez2"), igual que en el
+  kiosco.
+- El panel usa **los mismos colores** (`tema.json`) y el mismo componente de
+  ayuda ⓘ que el kiosco, y `compartido/fechas.ts` para las horas de Nuevo
+  Laredo, incluida la conversión de una hora local con horario de verano
+  (`instanteLocal`).
+- En desarrollo, `seed.sql` trae un jefe que puede entrar al panel y **datos
+  de demostración** (dos kioscos y cinco días de registros) calculados desde
+  "hoy".
+
+**Descartado:**
+
+- *UPDATE/INSERT directos desde el panel, protegidos sólo por RLS.* RLS decide
+  **quién** puede, pero no puede exigir un motivo ni validar que la
+  tolerancia no sea 999. Además, cada pantalla tendría que repetir las reglas.
+- *Que el jefe invente el PIN.* Terminarían siendo 1234 o la fecha de
+  nacimiento.
+- *Guardar el motivo en una tabla aparte de la bitácora.* Serían dos lugares
+  que alguien tendría que cruzar.
+
+**Por qué:** "todas las acciones quedan en bitácora y requieren motivo"
+(CLAUDE.md 10) sólo se puede garantizar si no hay otra puerta.
+
+**Reconsiderar si:** aparece una acción que de verdad no necesite motivo (por
+ejemplo, generar un código de alta, que ya no lo pide porque no cambia nada
+hasta que alguien lo usa).
+
+---
+
 ## Plantilla para decisiones nuevas
 
 ```markdown

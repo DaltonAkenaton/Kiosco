@@ -11,6 +11,8 @@
 import { randomUUID } from 'node:crypto';
 import {
   CONFIG,
+  diaSiguiente,
+  inicioDelDiaLocal,
   type EmpleadoParaFiltro,
   type EstadoFotoLocal,
   type FiltrosAuditoria,
@@ -140,39 +142,9 @@ export function accesosDeFoto(marcaId: string): { adminId: string; accion: Accio
 //  La consulta de auditoria
 // ----------------------------------------------------------------------------
 
-/**
- * Convierte "AAAA-MM-DD" (dia local) en el milisegundo UTC en que empieza.
- *
- * No se puede hacer con `new Date('2026-09-22')`: eso es medianoche UTC, que
- * en Nuevo Laredo son las 18:00 o 19:00 del dia ANTERIOR, segun el horario de
- * verano. Aqui se busca el desfase real de esa fecha en la zona configurada.
- */
-export function inicioDelDiaLocal(fecha: string, zona: string): number {
-  const [ano, mes, dia] = fecha.split('-').map(Number) as [number, number, number];
-  const comoSiFueraUtc = Date.UTC(ano, mes - 1, dia);
-
-  // Que hora marca el reloj de la zona en ese instante UTC; la diferencia es
-  // el desfase. Se calcula dos veces porque cerca del cambio de horario el
-  // desfase de "medianoche UTC" y el de "medianoche local" pueden no coincidir.
-  const desfase = (ms: number): number => {
-    const partes = new Intl.DateTimeFormat('en-US', {
-      timeZone: zona,
-      hourCycle: 'h23',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    }).formatToParts(new Date(ms));
-    const v = (tipo: string): number => Number(partes.find((p) => p.type === tipo)?.value);
-    return Date.UTC(v('year'), v('month') - 1, v('day'), v('hour'), v('minute'), v('second')) - ms;
-  };
-
-  const primera = comoSiFueraUtc - desfase(comoSiFueraUtc);
-  return comoSiFueraUtc - desfase(primera);
-}
-
+// `inicioDelDiaLocal` y `diaSiguiente` viven en compartido/fechas.ts: los usa
+// tambien el panel. Se reexporta para las pruebas.
+export { inicioDelDiaLocal };
 
 /** Un renglon de auditoria con lo que ademas hace falta para exportar su foto. */
 export interface MarcaParaExportar extends MarcaParaAuditoria {
@@ -205,13 +177,9 @@ function consultarMarcas(filtros: FiltrosAuditoria, limite: number): MarcaParaEx
     valores.push(inicioDelDiaLocal(filtros.desde, zona));
   }
   if (filtros.hasta) {
-    // "Hasta el 22" incluye todo el 22: se corta al inicio del 23. Se suma un
-    // dia a la FECHA (no 24 h a los milisegundos), porque el dia del cambio de
-    // horario dura 23 o 25 horas.
-    const [ano, mes, dia] = filtros.hasta.split('-').map(Number) as [number, number, number];
-    const siguiente = new Date(Date.UTC(ano, mes - 1, dia + 1)).toISOString().slice(0, 10);
+    // "Hasta el 22" incluye todo el 22: se corta al inicio del 23.
     condiciones.push('m.hora_estimada_ms < ?');
-    valores.push(inicioDelDiaLocal(siguiente, zona));
+    valores.push(inicioDelDiaLocal(diaSiguiente(filtros.hasta), zona));
   }
   if (filtros.empleadoId) {
     condiciones.push('m.empleado_id = ?');

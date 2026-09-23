@@ -591,6 +591,110 @@ await debeFallar(
 
 
 // ============================================================================
+//  0015 · Lo que hace el panel: roles, motivo y bitacora
+// ============================================================================
+console.log('\n--- acciones del panel (0015) ---');
+
+await bd.query('reset role');
+// La seccion anterior dejo puesta la "sesion" de un usuario inexistente; sin
+// limpiarla, la bitacora lo anotaria como autor de lo que sigue.
+await bd.query(`select set_config('request.jwt.claims', '', true)`);
+const ID_SUPERVISOR = '22222222-2222-2222-2222-222222222222';
+await bd.query(`
+  insert into auth.users (id, instance_id, aud, role, email)
+  values ('${ID_SUPERVISOR}', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'super@prueba.local')
+`);
+await bd.query(`insert into administradores (user_id, nombre, rol) values ('${ID_SUPERVISOR}', 'Supervisor de Prueba', 'supervisor')`);
+
+await entrarComo(ID_ADMIN);
+const { rows: [alta] } = await bd.query(
+  `select * from alta_empleado('Nueva', 'Persona', 'Prueba', '9001', 'npersona', 'Alta de prueba del panel')`,
+);
+comprobar('alta_empleado devuelve el id y un PIN de 4 digitos', !!alta.id && /^[0-9]{4}$/.test(alta.pin), alta.pin);
+comprobar('el PIN no es de los faciles de adivinar', !['0000', '1111', '1234', '4321'].includes(alta.pin));
+{
+  const { rows: [ok] } = await bd.query(
+    `select pin_hash = extensions.crypt($1, pin_hash) as cuadra from empleados where id = $2`, [alta.pin, alta.id]);
+  comprobar('y ese PIN es el que quedo guardado (como hash)', ok.cuadra === true);
+}
+
+await debeFallar('sin motivo no hay alta',
+  `select * from alta_empleado('Otra', 'Persona', '', '', 'opersona', '')`, 'motivo');
+await debeFallar('un usuario repetido se rechaza con mensaje claro',
+  `select * from alta_empleado('Otra', 'Persona', '', '', 'npersona', 'Alta repetida de prueba')`, 'Ya hay alguien');
+
+const pinNuevo = (await bd.query(`select restablecer_pin($1, 'Olvido su PIN en la prueba') as pin`, [alta.id])).rows[0].pin;
+{
+  const { rows: [e] } = await bd.query(
+    `select pin_temporal, pin_hash = extensions.crypt($1, pin_hash) as cuadra from empleados where id = $2`, [pinNuevo, alta.id]);
+  comprobar('restablecer_pin da un PIN nuevo que funciona, marcado como temporal', e.cuadra && e.pin_temporal);
+}
+
+await bd.query(`select cambiar_estado_empleado($1, false, 'Baja de prueba del panel')`, [alta.id]);
+comprobar('la baja desactiva, no borra',
+  (await bd.query('select activo from empleados where id = $1', [alta.id])).rows[0]?.activo === false);
+
+await debeFallar('una tolerancia fuera de rango se rechaza',
+  `select actualizar_configuracion('tolerancia_retardo_minutos', '999', 'Prueba de rango absurdo')`, 'entre');
+await debeFallar('texto donde va un numero se rechaza',
+  `select actualizar_configuracion('tolerancia_retardo_minutos', '"diez"', 'Prueba de tipo equivocado')`, 'número');
+await debeFallar('una zona horaria inventada se rechaza',
+  `select actualizar_configuracion('zona_horaria', '"America/Narnia"', 'Prueba de zona inventada')`, 'zona');
+await bd.query(`select actualizar_configuracion('tolerancia_retardo_minutos', '15', 'El jefe dio 15 minutos')`);
+comprobar('un valor valido se guarda',
+  (await bd.query(`select valor from configuracion where clave = 'tolerancia_retardo_minutos'`)).rows[0].valor === 15);
+
+await bd.query(`select revocar_dispositivo($1, 'Se cambio la computadora del kiosco')`, [dispositivo.id]);
+
+// El supervisor: registra a mano, pero no administra.
+await entrarComo(ID_SUPERVISOR);
+const idManual = (await bd.query(
+  `select registrar_marca_manual($1, 'entrada', now() - interval '2 hours', 'Se fue la luz en la manana') as id`,
+  [empleado.id])).rows[0].id;
+{
+  const { rows: [m] } = await bd.query('select origen, banderas, dispositivo_id from marcas where id = $1', [idManual]);
+  comprobar('un supervisor puede registrar a mano: origen manual, bandera manual, sin kiosco',
+    m.origen === 'manual' && m.banderas.includes('manual') && m.dispositivo_id === null);
+}
+await debeFallar('una marca manual en el futuro se rechaza',
+  `select registrar_marca_manual('${empleado.id}', 'salida', now() + interval '1 day', 'Prueba de hora futura')`, 'futuro');
+await debeFallar('un supervisor NO puede dar de alta empleados',
+  `select * from alta_empleado('X', 'Y', '', '', 'xysuper', 'Intento del supervisor')`, 'administrador');
+await debeFallar('un supervisor NO puede cambiar la configuracion',
+  `select actualizar_configuracion('tolerancia_retardo_minutos', '20', 'Intento del supervisor')`, 'administrador');
+
+// La bitacora, vista como postgres.
+await bd.query('reset role');
+{
+  const { rows: [b] } = await bd.query(
+    `select motivo, actor, datos_despues ->> 'pin_hash' as pin from bitacora_auditoria
+      where tabla = 'empleados' and registro_id = $1 and accion = 'INSERT'`, [alta.id]);
+  comprobar('la bitacora guarda el MOTIVO y quien lo hizo', b?.motivo === 'Alta de prueba del panel' && b?.actor === ID_ADMIN);
+  comprobar('y nunca el hash del PIN', b?.pin === '[oculto]');
+
+  const { rows: [manual] } = await bd.query(
+    `select motivo, actor from bitacora_auditoria where tabla = 'marcas' and registro_id = $1`, [idManual]);
+  comprobar('la marca manual queda en la bitacora con su motivo',
+    manual?.motivo === 'Se fue la luz en la manana' && manual?.actor === ID_SUPERVISOR);
+
+  const { rows: [baja] } = await bd.query(
+    `select motivo from bitacora_auditoria where tabla = 'dispositivos' and registro_id = $1 and accion = 'UPDATE'
+      order by id desc limit 1`, [dispositivo.id]);
+  comprobar('revocar un kiosco queda con su motivo', baja?.motivo === 'Se cambio la computadora del kiosco');
+
+  const antes = (await bd.query(`select count(*)::int as n from bitacora_auditoria where tabla = 'dispositivos'`)).rows[0].n;
+  await bd.query(`update dispositivos set ultima_conexion = now(), pendientes = 3, camara_ok = true where id = $1`, [dispositivo.id]);
+  const despues = (await bd.query(`select count(*)::int as n from bitacora_auditoria where tabla = 'dispositivos'`)).rows[0].n;
+  comprobar('el LATIDO de un kiosco no llena la bitacora', despues === antes, `${antes} -> ${despues}`);
+
+  await bd.query(`update administradores set usuario_kiosco = 'supercito', contrasena_kiosco_hash = '$2a$10$abcdefghijklmnopqrstuv' where user_id = $1`, [ID_SUPERVISOR]);
+  const { rows: [cred] } = await bd.query(
+    `select datos_despues ->> 'contrasena_kiosco_hash' as h from bitacora_auditoria
+      where tabla = 'administradores' and accion = 'UPDATE' order by id desc limit 1`);
+  comprobar('la bitacora tampoco guarda el hash de la contrasena del kiosco', cred?.h === '[oculto]', cred?.h);
+}
+
+// ============================================================================
 //  Resultado
 // ============================================================================
 // Todo corrio dentro de una transaccion que ahora se deshace: la base local

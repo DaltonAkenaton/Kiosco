@@ -1,0 +1,137 @@
+<div class="flex flex-wrap items-end justify-between gap-4">
+  <div>
+    <h1 class="text-2xl font-bold">Kioscos</h1>
+    <p class="text-texto-suave mt-1">Cómo está cada computadora donde se registra la asistencia. Se actualiza sola cada minuto.</p>
+  </div>
+  @if (sesion.esAdmin()) {
+    <button type="button" class="boton-principal" (click)="abrirAlta()">+ Dar de alta un kiosco</button>
+  }
+</div>
+
+@if (alertas().length > 0) {
+  <div class="mt-4 rounded-2xl px-5 py-4" style="background-color: rgb(234 179 8 / 0.12); border: 2px solid var(--kiosko-atencion)">
+    <p class="text-lg font-bold" style="color: var(--kiosko-atencion)">⚠ Para atender</p>
+    <ul class="mt-1 list-disc pl-6">
+      @for (a of alertas(); track a) {
+        <li>{{ a }}</li>
+      }
+    </ul>
+  </div>
+}
+
+@if (error(); as mensaje) {
+  <p class="mt-4 font-bold" style="color: var(--kiosko-peligro)">{{ mensaje }}</p>
+}
+
+@if (kioscos().length === 0 && !error()) {
+  <p class="text-texto-suave mt-12 text-center text-xl">
+    Todavía no hay ningún kiosco dado de alta.
+  </p>
+} @else {
+  <div class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    @for (k of kioscos(); track k.id) {
+      <article class="bg-superficie border-borde rounded-2xl border-2 p-5" [class.opacity-60]="!k.activo">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h2 class="text-xl font-bold">{{ k.nombre }}</h2>
+            @if (k.ubicacion) {
+              <p class="text-texto-suave">{{ k.ubicacion }}</p>
+            }
+          </div>
+          @if (!k.activo) {
+            <span class="rounded-lg px-2 py-1 text-sm font-bold" style="background-color: rgb(239 68 68 / 0.18); color: var(--kiosko-peligro)">
+              Dado de baja
+            </span>
+          } @else if (sinReportarse(k)) {
+            <span class="rounded-lg px-2 py-1 text-sm font-bold" style="background-color: rgb(234 179 8 / 0.18); color: var(--kiosko-atencion)">
+              Sin reportarse
+            </span>
+          } @else {
+            <span class="rounded-lg px-2 py-1 text-sm font-bold" style="background-color: rgb(16 185 129 / 0.18); color: var(--kiosko-entrada)">
+              Funcionando
+            </span>
+          }
+        </div>
+
+        <dl class="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
+          <dt class="text-texto-suave">Última conexión <panel-ayuda titulo="Última conexión" [texto]="AYUDA.ultimaConexion" alinear="izquierda" /></dt>
+          <dd>{{ haceCuanto(k.ultima_conexion, ahora()) }}</dd>
+
+          <dt class="text-texto-suave">Cámara</dt>
+          <dd [style.color]="k.camara_ok === false ? 'var(--kiosko-peligro)' : null">
+            {{ k.camara_ok === null ? '—' : k.camara_ok ? 'Funcionando' : 'No funciona' }}
+          </dd>
+
+          <dt class="text-texto-suave">Por enviar <panel-ayuda titulo="Por enviar" [texto]="AYUDA.porEnviar" alinear="izquierda" /></dt>
+          <dd>{{ k.pendientes }}</dd>
+
+          <dt class="text-texto-suave">Reloj <panel-ayuda titulo="Reloj del kiosco" [texto]="AYUDA.desfase" alinear="izquierda" /></dt>
+          <dd>{{ desfaseEnPalabras(k.desfase_reloj_ms) }}</dd>
+
+          @if ((fotosPorRevisar().get(k.id) ?? 0) > 0) {
+            <dt style="color: var(--kiosko-peligro)">Fotos con problema <panel-ayuda titulo="Fotos con problema" [texto]="AYUDA.fotos" alinear="izquierda" /></dt>
+            <dd style="color: var(--kiosko-peligro)">{{ fotosPorRevisar().get(k.id) }}</dd>
+          }
+
+          <dt class="text-texto-suave">Versión</dt>
+          <dd>{{ k.version_app ?? '—' }}</dd>
+
+          <dt class="text-texto-suave">Dado de alta</dt>
+          <dd>{{ fecha(k.enrolado_en, zona()) }}</dd>
+
+          @if (k.revocado_en) {
+            <dt class="text-texto-suave">Dado de baja</dt>
+            <dd>{{ fecha(k.revocado_en, zona()) }} {{ hora(k.revocado_en, zona()) }}</dd>
+          }
+        </dl>
+        @if (k.activo && sesion.esAdmin()) {
+          <button type="button" class="boton-secundario mt-4" (click)="abrirBaja(k)">Dar de baja este kiosco</button>
+        }
+      </article>
+    }
+  </div>
+}
+
+<!-- ====================== DAR DE ALTA: nombre, luego el codigo ====================== -->
+@if (dandoDeAlta()) {
+  <panel-dialogo titulo="Dar de alta un kiosco" textoBoton="Generar código" [pedirMotivo]="false"
+                 [ocupado]="guardando()" [error]="errorAccion()" (confirmar)="generarCodigo()" (cancelar)="dandoDeAlta.set(false)">
+    <p>Primero dale un nombre que se reconozca desde aquí. Luego el sistema te da un código para teclearlo en el kiosco.</p>
+    <label class="flex flex-col gap-1">Nombre del kiosco
+      <input class="campo" placeholder="Ej.: Entrada principal" [value]="nombreNuevo()" (input)="nombreNuevo.set(valor($event))" />
+    </label>
+    <label class="flex flex-col gap-1">Dónde está <span class="text-texto-suave text-sm">(opcional)</span>
+      <input class="campo" placeholder="Ej.: Edificio A, junto a la caseta" [value]="ubicacionNueva()" (input)="ubicacionNueva.set(valor($event))" />
+    </label>
+  </panel-dialogo>
+}
+
+@if (codigo(); as c) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-6" style="background-color: rgb(0 0 0 / 0.8)">
+    <div class="bg-superficie border-borde flex w-full max-w-xl flex-col gap-4 rounded-3xl border-2 p-8 text-center">
+      <h2 class="text-2xl font-bold">Código para «{{ c.nombre }}»</h2>
+      <p class="font-mono text-6xl font-bold tracking-widest">{{ c.codigo.slice(0, 4) }}-{{ c.codigo.slice(4) }}</p>
+      <p class="text-lg">Sirve <b>una sola vez</b> y vence a las <b>{{ hora(c.expira, zona()) }}</b>.</p>
+      <ol class="text-texto-suave list-decimal pl-6 text-left text-lg">
+        <li>En el kiosco, abajo, pica <b>«Dar de alta»</b>.</li>
+        <li>Escribe este código (hace falta el teclado completo) y pica <b>«Dar de alta»</b>.</li>
+        <li>En unos segundos, el kiosco aparece en esta página.</li>
+      </ol>
+      <p class="text-texto-suave text-base">Este código no se vuelve a mostrar. Si se pierde o vence, genera otro: no pasa nada.</p>
+      <button type="button" class="boton-principal self-center" (click)="cerrarCodigo()">Listo</button>
+    </div>
+  </div>
+}
+
+<!-- ====================== DAR DE BAJA ====================== -->
+@if (porRevocar(); as k) {
+  <panel-dialogo [titulo]="'Dar de baja el kiosco «' + k.nombre + '»'" textoBoton="Dar de baja" [peligro]="true"
+                 ejemploMotivo="Ej.: se cambió la computadora del kiosco"
+                 [ocupado]="guardando()" [error]="errorAccion()" (confirmar)="revocar(k, $event)" (cancelar)="porRevocar.set(null)">
+    <p>Ese kiosco deja de mandar y de recibir datos de inmediato. Úsalo cuando se cambia o se retira la computadora, o si se la robaron.</p>
+    <p class="text-texto-suave">
+      <b>No se pierde nada:</b> lo que registró antes de la baja y aún no mandaba se recibe y queda «en cuarentena» para que lo revises.
+      Si fue un error, se le da de alta otra vez con un código nuevo.
+    </p>
+  </panel-dialogo>
+}

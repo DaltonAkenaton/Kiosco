@@ -12,3 +12,4 @@ export * from './tema';
 export * from './tipos';
 export * from './usuarios';
 export * from './contrato-ipc';
+export * from './fechas';

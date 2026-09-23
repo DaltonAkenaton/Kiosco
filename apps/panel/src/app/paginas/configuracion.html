@@ -1,0 +1,60 @@
+<h1 class="text-2xl font-bold">Configuración</h1>
+<p class="text-texto-suave mt-1 max-w-3xl">
+  Las reglas del sistema. Se cambian aquí, sin reinstalar nada. Los kioscos reciben los cambios en unos
+  minutos, cuando tienen internet.
+  @if (!sesion.esAdmin()) {
+    <b>Sólo el administrador puede cambiarlas.</b>
+  }
+</p>
+
+@if (error(); as mensaje) {
+  <p class="mt-4 font-bold" style="color: var(--kiosko-peligro)">{{ mensaje }}</p>
+}
+
+@for (g of porGrupo(); track g.nombre) {
+  <section class="mt-6">
+    <h2 class="text-xl font-bold">{{ g.nombre }}</h2>
+    <div class="mt-2 grid gap-3 lg:grid-cols-2">
+      @for (o of g.opciones; track o.clave) {
+        @let p = palabras(o);
+        <article class="bg-superficie border-borde flex items-center justify-between gap-4 rounded-2xl border-2 px-5 py-4">
+          <div>
+            <p class="font-semibold">
+              {{ p.nombre }}
+              <panel-ayuda [titulo]="p.nombre" [texto]="p.explicacion" alinear="izquierda" />
+            </p>
+            <p class="text-texto-suave text-sm">
+              @if (p.seUsaEn) { Se usa en: {{ p.seUsaEn }} · }
+              Cambiada el {{ fecha(o.actualizado_en, sesion.zona()) }}
+            </p>
+          </div>
+          <div class="flex shrink-0 items-center gap-3">
+            <span class="text-xl font-bold tabular-nums">{{ valorEnPalabras(o) }}</span>
+            @if (sesion.esAdmin()) {
+              <button type="button" class="boton-secundario !px-3 !py-1" (click)="abrir(o)">Cambiar</button>
+            }
+          </div>
+        </article>
+      }
+    </div>
+  </section>
+}
+
+@if (editando(); as o) {
+  @let p = palabras(o);
+  <panel-dialogo [titulo]="p.nombre" textoBoton="Guardar" ejemploMotivo="Ej.: acuerdo con la dirección del 23 de septiembre"
+                 [ocupado]="guardando()" [error]="errorAccion()" (confirmar)="guardar(o, $event)" (cancelar)="editando.set(null)">
+    <p>{{ p.explicacion }}</p>
+    <label class="flex flex-col gap-1">
+      <span>
+        Valor nuevo
+        @if (o.tipo === 'entero' && o.minimo !== null) {
+          <span class="text-texto-suave">(entre {{ o.minimo }} y {{ o.maximo }}{{ o.unidad ? ' ' + o.unidad : '' }})</span>
+        }
+      </span>
+      <input class="campo text-xl" [attr.inputmode]="o.tipo === 'entero' ? 'numeric' : null"
+             [value]="nuevoValor()" (input)="nuevoValor.set(valor($event))" />
+    </label>
+    <p class="text-texto-suave text-base">Valor actual: {{ valorEnPalabras(o) }}.</p>
+  </panel-dialogo>
+}

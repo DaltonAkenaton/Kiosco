@@ -1,0 +1,187 @@
+<div class="flex flex-wrap items-end justify-between gap-4">
+  <div>
+    <h1 class="text-2xl font-bold">Empleados</h1>
+    <p class="text-texto-suave mt-1">El personal que registra su asistencia en los kioscos.</p>
+  </div>
+  @if (sesion.esAdmin()) {
+    <div class="flex flex-wrap gap-3">
+      <button type="button" class="boton-principal" (click)="abrir({ tipo: 'alta' })">+ Agregar empleado</button>
+      <button type="button" class="boton-secundario" (click)="abrir({ tipo: 'importar' })">Importar lista de Excel</button>
+    </div>
+  }
+</div>
+
+<div class="mt-4 flex flex-wrap items-center gap-4">
+  <input class="campo w-80" placeholder="Buscar por nombre, usuario o número" [value]="buscar()" (input)="buscar.set(valor($event))" />
+  <label class="flex items-center gap-2">
+    <input type="checkbox" class="h-5 w-5" [checked]="verBajas()" (change)="verBajas.set(!verBajas())" />
+    Ver también a los dados de baja
+  </label>
+  <span class="text-texto-suave">{{ visibles().length }} persona(s)</span>
+</div>
+
+@if (error(); as mensaje) {
+  <p class="mt-4 font-bold" style="color: var(--kiosko-peligro)">{{ mensaje }}</p>
+}
+
+<table class="mt-4 w-full border-collapse text-left">
+  <thead>
+    <tr class="text-texto-suave border-borde border-b text-sm uppercase tracking-wide">
+      <th class="py-2 pr-4">Número</th>
+      <th class="py-2 pr-4">Nombre</th>
+      <th class="py-2 pr-4">Usuario <panel-ayuda titulo="Usuario" [texto]="AYUDA.usuario" /></th>
+      <th class="py-2 pr-4">Estado</th>
+      @if (sesion.esAdmin()) {
+        <th class="py-2">Acciones</th>
+      }
+    </tr>
+  </thead>
+  <tbody>
+    @for (e of visibles(); track e.id) {
+      <tr class="border-borde border-b" [class.opacity-60]="!e.activo">
+        <td class="py-2 pr-4 tabular-nums">{{ e.numero_empleado ?? '—' }}</td>
+        <td class="py-2 pr-4 font-semibold">{{ nombreCompleto(e) }}</td>
+        <td class="py-2 pr-4 font-mono">{{ e.usuario }}</td>
+        <td class="py-2 pr-4">
+          @if (!e.activo) {
+            <span style="color: var(--kiosko-peligro)">Dado de baja</span>
+          } @else {
+            Activo
+            @if (e.pin_temporal) {
+              <span class="text-texto-suave"> · PIN dado por el jefe <panel-ayuda titulo="PIN dado por el jefe" [texto]="AYUDA.pinTemporal" /></span>
+            }
+          }
+        </td>
+        @if (sesion.esAdmin()) {
+          <td class="py-2">
+            <div class="flex flex-wrap gap-2">
+              <button type="button" class="boton-secundario !px-3 !py-1" (click)="abrir({ tipo: 'editar', empleado: e })">Corregir datos</button>
+              @if (e.activo) {
+                <button type="button" class="boton-secundario !px-3 !py-1" (click)="abrir({ tipo: 'pin', empleado: e })">PIN nuevo</button>
+              }
+              <button type="button" class="boton-secundario !px-3 !py-1" (click)="abrir({ tipo: 'estado', empleado: e })">
+                {{ e.activo ? 'Dar de baja' : 'Reactivar' }}
+              </button>
+            </div>
+          </td>
+        }
+      </tr>
+    } @empty {
+      <tr><td colspan="5" class="text-texto-suave py-10 text-center text-lg">Nadie coincide con la búsqueda.</td></tr>
+    }
+  </tbody>
+</table>
+
+<!-- ====================== VENTANAS DE ACCION ====================== -->
+<ng-template #camposDeDatos>
+  <div class="grid gap-3 sm:grid-cols-2">
+    <label class="flex flex-col gap-1">Nombre(s)
+      <input class="campo" [value]="datos().nombre" (input)="cambiarDato('nombre', valor($event))" />
+    </label>
+    <label class="flex flex-col gap-1">Apellido paterno
+      <input class="campo" [value]="datos().paterno" (input)="cambiarDato('paterno', valor($event))" />
+    </label>
+    <label class="flex flex-col gap-1">Apellido materno <span class="text-texto-suave text-sm">(si tiene)</span>
+      <input class="campo" [value]="datos().materno" (input)="cambiarDato('materno', valor($event))" />
+    </label>
+    <label class="flex flex-col gap-1">Número de empleado <span class="text-texto-suave text-sm">(si tiene)</span>
+      <input class="campo" [value]="datos().numero" (input)="cambiarDato('numero', valor($event))" />
+    </label>
+    <label class="flex flex-col gap-1 sm:col-span-2">
+      <span>Usuario <panel-ayuda titulo="Usuario" [texto]="AYUDA.usuario" alinear="izquierda" /></span>
+      <input class="campo font-mono" [value]="datos().usuario" (input)="cambiarDato('usuario', valor($event).toLowerCase())" />
+    </label>
+  </div>
+</ng-template>
+
+@if (accion(); as a) {
+  @switch (a.tipo) {
+    @case ('alta') {
+      <panel-dialogo titulo="Agregar empleado" textoBoton="Dar de alta" ejemploMotivo="Ej.: ingreso de personal nuevo"
+                     [ocupado]="guardando()" [error]="errorAccion()" (confirmar)="guardarAlta($event)" (cancelar)="cerrar()">
+        <ng-container *ngTemplateOutlet="camposDeDatos" />
+        <p class="text-texto-suave text-base">Al guardar, el sistema le da un PIN de 4 números. Te lo mostrará una sola vez para que lo anotes.</p>
+      </panel-dialogo>
+    }
+    @case ('editar') {
+      <panel-dialogo [titulo]="'Corregir datos de ' + nombreCompleto(a.empleado)" textoBoton="Guardar cambios"
+                     [ocupado]="guardando()" [error]="errorAccion()" (confirmar)="guardarEdicion(a.empleado, $event)" (cancelar)="cerrar()">
+        <ng-container *ngTemplateOutlet="camposDeDatos" />
+      </panel-dialogo>
+    }
+    @case ('pin') {
+      <panel-dialogo [titulo]="'PIN nuevo para ' + nombreCompleto(a.empleado)" textoBoton="Dar PIN nuevo" ejemploMotivo="Ej.: olvidó su PIN"
+                     [ocupado]="guardando()" [error]="errorAccion()" (confirmar)="darPinNuevo(a.empleado, $event)" (cancelar)="cerrar()">
+        <p>El PIN que tenía deja de servir. El sistema le da uno nuevo y te lo muestra una sola vez.</p>
+        <p class="text-texto-suave">El cambio llega a los kioscos en unos minutos (cuando tengan internet).</p>
+      </panel-dialogo>
+    }
+    @case ('estado') {
+      <panel-dialogo [titulo]="(a.empleado.activo ? 'Dar de baja a ' : 'Reactivar a ') + nombreCompleto(a.empleado)"
+                     [textoBoton]="a.empleado.activo ? 'Dar de baja' : 'Reactivar'" [peligro]="a.empleado.activo"
+                     [ejemploMotivo]="a.empleado.activo ? 'Ej.: renunció el 20 de septiembre' : 'Ej.: regresó de su permiso'"
+                     [ocupado]="guardando()" [error]="errorAccion()" (confirmar)="cambiarEstado(a.empleado, $event)" (cancelar)="cerrar()">
+        @if (a.empleado.activo) {
+          <p>Ya no podrá registrar su asistencia. <b>No se borra nada:</b> sus registros anteriores se conservan y se puede reactivar después.</p>
+        } @else {
+          <p>Volverá a aparecer en los kioscos y podrá registrar su asistencia con el PIN que tenía.</p>
+        }
+      </panel-dialogo>
+    }
+    @case ('importar') {
+      <panel-dialogo titulo="Importar lista de Excel" [textoBoton]="'Dar de alta a ' + importables()" ejemploMotivo="Ej.: alta inicial del personal"
+                     [ocupado]="guardando()" [error]="errorAccion()" (confirmar)="guardarImportacion($event)" (cancelar)="cerrar()">
+        <p>
+          Elige el archivo CSV.
+          <panel-ayuda titulo="¿Cómo preparo el archivo?" [texto]="AYUDA.importar" alinear="izquierda" />
+        </p>
+        <input type="file" accept=".csv,text/csv" class="campo" (change)="leerArchivo($event)" />
+        @if (porImportar().length > 0) {
+          <div class="max-h-64 overflow-y-auto">
+            <table class="w-full text-left text-base">
+              <thead><tr class="text-texto-suave"><th class="pr-3">Nombre</th><th class="pr-3">Usuario</th><th>Revisión</th></tr></thead>
+              <tbody>
+                @for (f of porImportar(); track $index) {
+                  <tr>
+                    <td class="pr-3">{{ nombreCompleto(f) }}</td>
+                    <td class="pr-3 font-mono">{{ f.usuario || '—' }}</td>
+                    <td [style.color]="f.problema ? 'var(--kiosko-peligro)' : 'var(--kiosko-entrada)'">{{ f.problema ?? 'Bien' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <p class="text-texto-suave text-base">Se darán de alta {{ importables() }}; los que tienen un problema se saltan.</p>
+        }
+      </panel-dialogo>
+    }
+  }
+}
+
+<!-- ====================== LOS PIN, UNA SOLA VEZ ====================== -->
+@if (pines().length > 0) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-6" style="background-color: rgb(0 0 0 / 0.8)">
+    <div class="bg-superficie border-borde hoja-de-pines flex max-h-full w-full max-w-2xl flex-col gap-4 overflow-y-auto rounded-3xl border-2 p-8">
+      <h2 class="text-2xl font-bold">{{ pines().length === 1 ? 'Su PIN' : 'Los PIN del personal' }}</h2>
+      <p class="no-imprimir text-lg">
+        <b>Anótalo o imprímelo ahora:</b> no se vuelve a mostrar. Dáselo a la persona en privado.
+      </p>
+      <table class="w-full text-left">
+        <thead><tr class="text-texto-suave"><th class="py-1 pr-4">Nombre</th><th class="py-1 pr-4">Usuario</th><th class="py-1">PIN</th></tr></thead>
+        <tbody>
+          @for (p of pines(); track p.usuario) {
+            <tr class="border-borde border-t">
+              <td class="py-2 pr-4">{{ p.nombre }}</td>
+              <td class="py-2 pr-4 font-mono">{{ p.usuario }}</td>
+              <td class="py-2 font-mono text-3xl font-bold tracking-widest">{{ p.pin }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      <div class="no-imprimir flex gap-3">
+        <button type="button" class="boton-principal" (click)="imprimirPines()">Imprimir</button>
+        <button type="button" class="boton-secundario" (click)="pines.set([])">Ya lo anoté, cerrar</button>
+      </div>
+    </div>
+  </div>
+}

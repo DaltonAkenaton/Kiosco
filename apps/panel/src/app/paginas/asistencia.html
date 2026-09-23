@@ -1,0 +1,177 @@
+<div class="flex flex-wrap items-start justify-between gap-4">
+<h1 class="text-2xl font-bold">Asistencia</h1>
+<button type="button" class="boton-principal" (click)="abrirManual()">+ Registrar a mano</button>
+</div>
+<p class="text-texto-suave mt-1">
+  Los registros de entrada y salida que llegaron de los kioscos. Las horas son de
+  {{ zona() === 'America/Matamoros' ? 'Nuevo Laredo' : zona() }}.
+</p>
+
+<!-- ====================== FILTROS ====================== -->
+<div class="mt-4 flex flex-wrap items-end gap-4">
+  <label class="flex flex-col gap-1">
+    Desde
+    <input type="date" class="campo" [value]="desde()" (change)="cambiar('desde', valor($event))" />
+  </label>
+  <label class="flex flex-col gap-1">
+    Hasta
+    <input type="date" class="campo" [value]="hasta()" (change)="cambiar('hasta', valor($event))" />
+  </label>
+  <label class="flex flex-col gap-1">
+    Empleado
+    <select class="campo" (change)="cambiar('empleadoId', valor($event))">
+      <option value="">Todos</option>
+      @for (e of empleados(); track e.id) {
+        <option [value]="e.id">{{ e.nombre }}</option>
+      }
+    </select>
+  </label>
+  <label class="flex flex-col gap-1">
+    Kiosco
+    <select class="campo" (change)="cambiar('dispositivoId', valor($event))">
+      <option value="">Todos</option>
+      @for (d of dispositivos(); track d.id) {
+        <option [value]="d.id">{{ d.nombre }}</option>
+      }
+    </select>
+  </label>
+  <label class="flex flex-col gap-1">
+    <span>
+      Revisión
+      <panel-ayuda titulo="Revisar la foto en el kiosco" [texto]="AYUDA_REVISAR_EN_KIOSCO" />
+    </span>
+    <select class="campo" (change)="cambiar('revision', valor($event))">
+      <option value="">Todos los registros</option>
+      <option value="cualquiera">Sólo los que tienen algo raro</option>
+      <option value="foto_en_kiosco">Revisar la foto en el kiosco</option>
+      <option value="foto_problema">Foto que falta o alterada</option>
+      <option value="cuarentena">En cuarentena</option>
+      @for (b of BANDERAS; track b) {
+        <option [value]="b">Sólo: {{ NOMBRES_DE_BANDERAS[b] }}</option>
+      }
+    </select>
+  </label>
+  <span class="text-texto-suave pb-2">
+    @if (cargando()) {
+      Buscando…
+    } @else {
+      {{ marcas().length }} registro(s){{ marcas().length === MAXIMO ? ' (se muestran los más recientes; acorta las fechas para ver más)' : '' }}
+    }
+  </span>
+</div>
+
+@if (casosPorKiosco().length > 0) {
+  <div class="mt-4 rounded-2xl px-5 py-3" style="background-color: rgb(234 179 8 / 0.12); border: 2px solid var(--kiosko-atencion)">
+    <b>Para revisar en persona:</b>
+    @for (k of casosPorKiosco(); track k.nombre; let ultimo = $last) {
+      {{ k.nombre }} ({{ k.casos }}){{ ultimo ? '.' : ', ' }}
+    }
+    Ve al kiosco, entra al modo administrador y busca las mismas fechas.
+  </div>
+}
+
+@if (error(); as mensaje) {
+  <p class="mt-4 font-bold" style="color: var(--kiosko-peligro)">{{ mensaje }}</p>
+}
+
+<!-- ====================== TABLA ====================== -->
+@if (marcas().length === 0 && !cargando()) {
+  <p class="text-texto-suave mt-12 text-center text-xl">No hay registros con estos filtros. Prueba con otras fechas.</p>
+} @else {
+  <div class="mt-4 overflow-x-auto">
+    <table class="w-full border-collapse text-left">
+      <thead>
+        <tr class="text-texto-suave border-borde border-b text-sm uppercase tracking-wide">
+          <th class="py-2 pr-4">Fecha</th>
+          <th class="py-2 pr-4">Hora</th>
+          <th class="py-2 pr-4">Quién</th>
+          <th class="py-2 pr-4">Qué</th>
+          <th class="py-2 pr-4">Kiosco</th>
+          <th class="py-2 pr-4">Foto</th>
+          <th class="py-2">Revisión</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (m of marcas(); track m.id) {
+          @let foto = estadoDeFoto(m.foto_estado);
+          <tr class="border-borde border-b">
+            <td class="py-2 pr-4 tabular-nums">{{ fecha(m.hora_estimada, zona()) }}</td>
+            <td class="py-2 pr-4 font-bold tabular-nums">{{ hora(m.hora_estimada, zona()) }}</td>
+            <td class="py-2 pr-4">
+              <span class="font-semibold">{{ nombreCompleto(m) }}</span>
+              @if (m.empleado?.numero_empleado) {
+                <span class="text-texto-suave"> · #{{ m.empleado?.numero_empleado }}</span>
+              }
+            </td>
+            <td class="py-2 pr-4 font-bold" [style.color]="m.tipo === 'entrada' ? 'var(--kiosko-entrada)' : 'var(--kiosko-salida)'">
+              {{ m.tipo === 'entrada' ? '→ ENTRADA' : '← SALIDA' }}
+            </td>
+            <td class="py-2 pr-4">{{ m.origen === 'manual' ? 'Captura manual' : (m.dispositivo?.nombre ?? '—') }}</td>
+            <td class="py-2 pr-4" [style.color]="foto.color">
+              {{ foto.texto }}
+              @if (foto.ayuda) {
+                <panel-ayuda [titulo]="foto.texto" [texto]="foto.ayuda" alinear="derecha" />
+              }
+            </td>
+            <td class="py-2" style="color: var(--kiosko-atencion)">
+              @if (m.en_cuarentena) {
+                <span class="mr-3 whitespace-nowrap">
+                  En cuarentena <panel-ayuda titulo="En cuarentena" [texto]="AYUDA_CUARENTENA" alinear="derecha" />
+                </span>
+              }
+              <!--
+                "Sin camara" y "Foto tapada" ya los dice la columna Foto; aqui
+                se repetirian. Y "kiosco dado de baja" lo dice "En cuarentena".
+              -->
+              @for (b of m.banderas; track b) {
+                @if (!BANDERAS_QUE_YA_SE_VEN.includes(b) && (b !== 'dispositivo_revocado' || !m.en_cuarentena)) {
+                  <span class="mr-3 whitespace-nowrap">
+                    {{ NOMBRES_DE_BANDERAS[b] ?? b }}
+                    @if (AYUDA_BANDERAS[b]; as explicacion) {
+                      <panel-ayuda [titulo]="NOMBRES_DE_BANDERAS[b] ?? b" [texto]="explicacion" alinear="derecha" />
+                    }
+                  </span>
+                }
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}
+
+<!-- ====================== REGISTRO MANUAL ====================== -->
+@if (registrandoAMano()) {
+  @let m = manual();
+  <panel-dialogo titulo="Registrar asistencia a mano" textoBoton="Registrar" ejemploMotivo="Ej.: no hubo luz en la mañana, me avisó por WhatsApp"
+                 [ocupado]="guardando()" [error]="errorAccion()" (confirmar)="guardarManual($event)" (cancelar)="registrandoAMano.set(false)">
+    <p class="text-texto-suave">Para cuando no se pudo usar el kiosco (sin luz, olvido de PIN). Queda marcado como «Captura manual».</p>
+    <label class="flex flex-col gap-1">Quién
+      <select class="campo" (change)="cambiarManual('empleadoId', valor($event))">
+        <option value="">Elige a la persona</option>
+        @for (e of empleados(); track e.id) {
+          <option [value]="e.id" [selected]="e.id === m.empleadoId">{{ e.nombre }}</option>
+        }
+      </select>
+    </label>
+    <div class="flex flex-wrap gap-3">
+      <button type="button" class="rounded-xl border-2 px-4 py-2 font-bold"
+              [style.border-color]="m.tipo === 'entrada' ? 'var(--kiosko-entrada)' : 'var(--kiosko-borde)'"
+              [style.color]="m.tipo === 'entrada' ? 'var(--kiosko-entrada)' : null"
+              (click)="cambiarManual('tipo', 'entrada')">→ ENTRADA</button>
+      <button type="button" class="rounded-xl border-2 px-4 py-2 font-bold"
+              [style.border-color]="m.tipo === 'salida' ? 'var(--kiosko-salida)' : 'var(--kiosko-borde)'"
+              [style.color]="m.tipo === 'salida' ? 'var(--kiosko-salida)' : null"
+              (click)="cambiarManual('tipo', 'salida')">← SALIDA</button>
+    </div>
+    <div class="flex flex-wrap gap-3">
+      <label class="flex flex-col gap-1">Fecha
+        <input type="date" class="campo" [value]="m.fecha" (change)="cambiarManual('fecha', valor($event))" />
+      </label>
+      <label class="flex flex-col gap-1">Hora <span class="text-texto-suave text-sm">(de Nuevo Laredo)</span>
+        <input type="time" class="campo" [value]="m.hora" (change)="cambiarManual('hora', valor($event))" />
+      </label>
+    </div>
+  </panel-dialogo>
+}

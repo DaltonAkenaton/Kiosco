@@ -1,0 +1,92 @@
+/* ==========================================================================
+   ESTILOS GLOBALES DEL PANEL
+   ==========================================================================
+   Los mismos colores que el kiosco: vienen de packages/compartido/src/tema.json
+   y los genera ../kiosco-ui/generar-tema.mjs en src/tema.css (corre solo con
+   `npm start` y `npm run build`). No se editan aqui.
+   ========================================================================== */
+@import 'tailwindcss';
+@import './tema.css';
+
+@theme inline {
+  --color-institucion-primario: var(--kiosko-institucion-primario);
+  --color-institucion-secundario: var(--kiosko-institucion-secundario);
+  --color-institucion-terciario: var(--kiosko-institucion-terciario);
+  --color-fondo: var(--kiosko-fondo);
+  --color-superficie: var(--kiosko-superficie);
+  --color-borde: var(--kiosko-borde);
+  --color-texto: var(--kiosko-texto);
+  --color-texto-suave: var(--kiosko-texto-suave);
+  --color-entrada: var(--kiosko-entrada);
+  --color-salida: var(--kiosko-salida);
+  --color-peligro: var(--kiosko-peligro);
+  --color-atencion: var(--kiosko-atencion);
+}
+
+html,
+body {
+  height: 100%;
+  background-color: var(--kiosko-fondo);
+  color: var(--kiosko-texto);
+  font-family: system-ui, 'Segoe UI', sans-serif;
+  /* Letra grande de base: el jefe puede ser una persona mayor. */
+  font-size: 17px;
+}
+
+/* Botones y campos: que se note cuando se puede picar y cuando no. */
+button:not(:disabled) {
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.campo {
+  border: 2px solid var(--kiosko-borde);
+  border-radius: 0.75rem;
+  background-color: var(--kiosko-superficie);
+  padding: 0.5rem 0.75rem;
+  color: var(--kiosko-texto);
+}
+.campo:focus {
+  outline: 2px solid var(--kiosko-institucion-secundario);
+  outline-offset: 1px;
+}
+
+.boton-principal {
+  border-radius: 0.75rem;
+  padding: 0.6rem 1.25rem;
+  font-weight: 700;
+  background-color: var(--kiosko-institucion-primario);
+  border: 2px solid var(--kiosko-institucion-secundario);
+}
+
+/* Al imprimir la hoja de PIN: solo la hoja, en blanco y negro, sin botones. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .hoja-de-pines,
+  .hoja-de-pines * {
+    visibility: visible;
+    color: #000 !important;
+    background: #fff !important;
+    border-color: #999 !important;
+  }
+  .hoja-de-pines {
+    position: absolute;
+    inset: 0 auto auto 0;
+    max-height: none;
+  }
+  .no-imprimir {
+    display: none !important;
+  }
+}
+
+.boton-secundario {
+  border-radius: 0.75rem;
+  padding: 0.6rem 1.25rem;
+  border: 2px solid var(--kiosko-borde);
+  background-color: var(--kiosko-superficie);
+}

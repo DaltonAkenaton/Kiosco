@@ -496,6 +496,15 @@ app.whenReady().then(async () => {
   comprobar('9-mar-2026 (ya horario de verano) empieza a las 05:00 UTC',
     new Date(bd.inicioDelDiaLocal('2026-03-09', z)).toISOString() === '2026-03-09T05:00:00.000Z');
 
+  // Una hora cualquiera (el registro manual del panel). NO es "medianoche +
+  // 6 horas": la noche del cambio, entre 00:00 y 06:00 pasan 7 o 5 horas.
+  comprobar('1-nov-2026 06:00 (despues de repetir la hora) = 12:00 UTC',
+    new Date(bd.instanteLocal('2026-11-01', 6, 0, z)).toISOString() === '2026-11-01T12:00:00.000Z');
+  comprobar('8-mar-2026 06:00 (despues de perder la hora) = 11:00 UTC',
+    new Date(bd.instanteLocal('2026-03-08', 6, 0, z)).toISOString() === '2026-03-08T11:00:00.000Z');
+  comprobar('23-sep-2026 22:00 = 03:00 UTC del dia siguiente',
+    new Date(bd.instanteLocal('2026-09-23', 22, 0, z)).toISOString() === '2026-09-24T03:00:00.000Z');
+
   // --- Bitacora de quien miro que foto ---
   const outboxAntes = bd.baseDeDatos().prepare("SELECT COUNT(*) AS n FROM outbox WHERE tipo_registro = 'acceso_foto'").get().n;
   bd.registrarAccesoFoto(idMarca, 'admin-de-prueba', 'ver');

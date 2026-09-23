@@ -44,6 +44,7 @@ migración fallará y nadie sabrá por qué.
 | 0012 | `modo_admin_kiosco` | "Conservar" y los eventos del modo administrador |
 | 0013 | `exportacion_usb` | El evento de cada exportación a USB |
 | 0014 | `enrolamiento_y_sincronizacion` | Generar códigos, revocar kioscos, contraseña del kiosco; recibir y bajar datos (lo usan las Edge Functions) |
+| 0015 | `panel_administracion` | Las acciones del panel con rol y motivo; motivo en la bitácora; rangos de la configuración |
 
 ---
 
@@ -105,7 +106,7 @@ gigabytes; después arranca en menos de un minuto.
 ```bash
 npx supabase start          # levanta Postgres y Auth locales (necesita Docker)
 npm run supabase:aplicar    # borra todo y aplica las migraciones desde cero
-npm run supabase:probar     # 63 pruebas de RLS, triggers y restricciones
+npm run supabase:probar     # 84 pruebas de RLS, triggers, restricciones y acciones del panel
 npm run supabase:funciones:probar  # 53 pruebas de las Edge Functions, por HTTP
 npm run probar:sincronizacion      # un kiosco de verdad contra esta base (28)
 npm run supabase:codigo            # un codigo de alta para el kiosco de desarrollo
@@ -178,9 +179,11 @@ sólo llega su hash. Ver CLAUDE.md 5.1.)*
 ## Datos de prueba (`seed.sql`)
 
 `db reset` carga, sólo en local, los mismos 20 empleados que el kiosco siembra
-en desarrollo (PIN 1234) y un jefe con contraseña de kiosco `jefe` /
-`jefe-de-prueba`. Nunca llegan a la nube real.
+en desarrollo (PIN 1234); un jefe que entra al panel con `jefe@prueba.local` /
+`panel-de-prueba` y al modo administrador del kiosco con `jefe` /
+`jefe-de-prueba`; y datos de demostración (dos kioscos y cinco días de
+registros, calculados desde hoy). Nunca llegan a la nube real.
 
 ## Qué falta
 
-- **Bloques 7–8:** el panel, que llama a las funciones de la base de la 0014.
+- **Bloque 9:** turnos, jornadas, retardos y faltas, calculados aquí (CLAUDE.md 8).

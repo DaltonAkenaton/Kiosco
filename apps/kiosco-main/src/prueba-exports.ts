@@ -116,3 +116,4 @@ export {
 } from './servicios/sincronizacion';
 export { leerCredencial, rutaDeLaCredencial, olvidarCredencialEnMemoria } from './servicios/credencial-kiosco';
 export { EsquemaEnrolamiento } from './ipc/esquemas';
+export { instanteLocal } from '@kiosko/compartido';
