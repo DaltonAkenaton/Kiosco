@@ -43,6 +43,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { CONFIG, type BanderaMarca, type LecturasDeReloj } from '@kiosko/compartido';
+import { umbralDeRelojMs } from '../configuracion-vigente';
 
 /**
  * Identificador de ESTA sesion de la aplicacion.
@@ -118,7 +119,7 @@ export function detectarAnomaliasDeReloj(
   const avanceDeCronometro = lecturas.monotonicoMs - REFERENCIA.monotonicoMs;
   const discrepancia = Math.abs(avanceDePared - avanceDeCronometro);
 
-  if (discrepancia > CONFIG.reloj.umbralDesfaseSospechosoMs) {
+  if (discrepancia > umbralDeRelojMs()) {
     banderas.push('reloj_sospechoso');
     console.warn(
       `[reloj] discrepancia de ${Math.round(discrepancia / 1000)} s entre el reloj ` +

@@ -370,6 +370,96 @@
   </div>
 }
 
+<!--
+  ============================================================================
+   DAR DE ALTA EL KIOSCO  (CLAUDE.md 3.3)
+  ============================================================================
+   El jefe genera en el panel un codigo de 8 letras y numeros que dura 15
+   minutos; aqui se teclea. Lo hace quien instala, normalmente una sola vez.
+
+   Es el UNICO lugar del kiosco con un campo de texto de verdad: el codigo
+   lleva letras, y hace falta el teclado completo. Por eso lo dice.
+-->
+@if (dandoDeAlta()) {
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center px-10"
+    style="background-color: rgb(15 23 42 / 0.82); backdrop-filter: blur(6px)"
+  >
+    <form
+      class="aparecer-suave bg-superficie border-borde flex w-full max-w-xl flex-col gap-5 rounded-3xl
+             border-2 px-12 py-10 text-center shadow-2xl"
+      (submit)="$event.preventDefault(); enviarAlta()"
+    >
+      @if (altaLograda(); as nombre) {
+        <p class="text-3xl font-bold" style="color: var(--kiosko-entrada)">✔ Kiosco dado de alta</p>
+        <p class="text-xl">
+          Este kiosco quedó registrado como <b>{{ nombre }}</b>. En unos segundos bajan los empleados
+          y la configuración de la oficina.
+        </p>
+        <button
+          type="button"
+          class="boton-tactil self-center rounded-2xl px-10 py-3 text-xl font-bold"
+          style="background-color: var(--kiosko-institucion-primario)"
+          (click)="cerrarAlta()"
+        >
+          Listo
+        </button>
+      } @else {
+        <p class="texto-nombre-grande font-bold">Dar de alta este kiosco</p>
+        <p class="text-texto-suave text-lg">
+          Pide al jefe un código nuevo en el panel (sección <b>Kioscos</b>). Tiene 8 letras y números
+          y dura 15 minutos. Para escribirlo hace falta el <b>teclado completo</b>, no sólo el
+          numérico.
+        </p>
+
+        <input
+          type="text"
+          autocomplete="off"
+          autofocus
+          maxlength="20"
+          placeholder="Ej.: K7M4-QX2P"
+          class="border-borde rounded-2xl border-2 bg-transparent px-6 py-4 text-center font-mono text-4xl
+                 tracking-widest uppercase"
+          [value]="codigoDeAlta()"
+          (input)="escribirCodigoDeAlta($event)"
+        />
+
+        @if (errorDeAlta(); as mensaje) {
+          <p
+            class="rounded-2xl px-6 py-3 text-xl font-bold"
+            style="background-color: rgb(239 68 68 / 0.18); color: var(--kiosko-peligro)"
+          >
+            {{ mensaje }}
+          </p>
+        }
+
+        <div class="flex justify-center gap-4">
+          <button
+            type="submit"
+            class="boton-tactil rounded-2xl px-10 py-3 text-xl font-bold"
+            style="background-color: var(--kiosko-institucion-primario)"
+            [disabled]="enviandoAlta()"
+          >
+            {{ enviandoAlta() ? 'Revisando…' : 'Dar de alta' }}
+          </button>
+          <button
+            type="button"
+            class="bg-superficie border-borde hover:bg-borde boton-tactil rounded-2xl border-2 px-8 py-3 text-xl"
+            [disabled]="enviandoAlta()"
+            (click)="cerrarAlta()"
+          >
+            Cancelar
+          </button>
+        </div>
+        <p class="text-texto-suave text-base">
+          Mientras no se dé de alta, el kiosco funciona igual: los registros se guardan aquí y se
+          mandarán después.
+        </p>
+      }
+    </form>
+  </div>
+}
+
 @if (pendiente(); as registro) {
   <div
     class="fixed inset-0 z-50 flex items-center justify-center px-10"
@@ -995,20 +1085,32 @@
     class="border-borde text-texto-suave flex shrink-0 items-center justify-between border-t px-8 py-3 text-lg"
   >
     <div class="flex items-center gap-6">
-      <span class="flex items-center gap-2">
-        <span
-          class="h-3 w-3 rounded-full"
-          [style.background-color]="
-            estado()?.enLinea ? 'var(--kiosko-entrada)' : 'var(--kiosko-texto-suave)'
-          "
-        ></span>
-        {{ estado()?.enLinea ? 'Con internet' : 'Sin internet' }}
+      <!-- La conexion con la oficina, en palabras y con su ⓘ (CLAUDE.md 7). -->
+      @let c = conexion();
+      <span class="flex items-center gap-2" [style.color]="c.color">
+        <span class="h-3 w-3 rounded-full" [style.background-color]="c.color"></span>
+        {{ c.texto }}
+        <kiosco-ayuda [titulo]="c.texto" [texto]="c.ayuda" alinear="izquierda" />
       </span>
+      @if (c.alta) {
+        <button
+          type="button"
+          class="boton-tactil rounded-lg border-2 px-3 py-1 text-base font-bold"
+          [style.border-color]="c.color"
+          [style.color]="c.color"
+          (click)="abrirAlta()"
+        >
+          {{ estado()?.nube === 'sin_alta' ? 'Dar de alta' : 'Dar de alta de nuevo' }}
+        </button>
+      }
 
-      <span class="flex items-center gap-1">
-        {{ estado()?.registrosPendientes ?? 0 }} por enviar
-        <kiosco-ayuda titulo="Registros por enviar" [texto]="AYUDA_POR_ENVIAR" alinear="izquierda" />
-      </span>
+      <!-- Sin nube no hay nada "por enviar": todo se queda aqui. -->
+      @if (estado()?.nube !== 'apagada') {
+        <span class="flex items-center gap-1">
+          {{ estado()?.registrosPendientes ?? 0 }} por enviar
+          <kiosco-ayuda titulo="Registros por enviar" [texto]="AYUDA_POR_ENVIAR" alinear="izquierda" />
+        </span>
+      }
 
       <span [style.color]="camara.disponible() ? 'var(--kiosko-entrada)' : 'var(--kiosko-atencion)'">
         {{ camara.disponible() ? 'Cámara funcionando' : 'Sin cámara' }}

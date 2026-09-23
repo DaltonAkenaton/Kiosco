@@ -30,11 +30,12 @@ import {
 import { abrirBaseDeDatos, cerrarBaseDeDatos } from './datos/base-de-datos';
 import { sembrarAdministradorDePrueba, sembrarEmpleadosDePrueba } from './datos/semilla';
 import { ES_DESARROLLO } from './entorno';
-import { actualizarEstado, registrarManejadoresIpc } from './ipc/manejadores';
+import { actualizarEstado, estadoActual, registrarManejadoresIpc } from './ipc/manejadores';
 import { registrarManejadoresAdmin } from './ipc/manejadores-admin';
 import { prepararLlaveDeFotos } from './servicios/llave-fotos';
 import { configurarPausa, reanudar } from './servicios/pausa';
 import { migrarFotosHeredadas, programarDepuracionDeFotos } from './servicios/retencion-fotos';
+import { iniciarSincronizacion } from './servicios/sincronizacion';
 import { alCerrarseSesionAdmin } from './servicios/sesion-admin';
 import { aplicarPoliticasDeSesion } from './seguridad';
 import { crearVentanaPrincipal } from './ventana';
@@ -197,6 +198,10 @@ if (!esLaPrimeraCopia) {
      */
     configurarArranqueConWindows();
     iniciarActualizaciones();
+
+    // La sincronizacion con la nube (CLAUDE.md 7). En segundo plano: nada de
+    // lo que haga, ni una red caida, puede retrasar a quien viene a checar.
+    iniciarSincronizacion({ avisar: actualizarEstado, obtenerEstado: estadoActual });
 
     console.info(
       `[arranque] ${CONFIG.ventana.titulo} v${app.getVersion()} - ` +

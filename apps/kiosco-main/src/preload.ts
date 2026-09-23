@@ -49,6 +49,7 @@ import {
   type EstadoKiosco,
   type FiltrosAuditoria,
   type ResultadoIdentificacion,
+  type ResultadoEnrolamiento,
   type ResultadoPausa,
   type ResultadoRegistro,
   type SolicitudIdentificacion,
@@ -103,6 +104,10 @@ const api: ApiKiosco = {
 
   pausarKiosco(codigo: string): Promise<ResultadoPausa> {
     return ipcRenderer.invoke(CANALES.pausarKiosco, { codigo });
+  },
+
+  enrolarKiosco(codigo: string): Promise<ResultadoEnrolamiento> {
+    return ipcRenderer.invoke(CANALES.enrolarKiosco, { codigo });
   },
 
   reportarEstadoCamara(estado: EstadoCamaraReportado): Promise<void> {

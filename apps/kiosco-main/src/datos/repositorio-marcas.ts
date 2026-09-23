@@ -168,7 +168,7 @@ export function guardarMarca(datos: DatosDeMarca): string {
  */
 export function contarPendientes(): number {
   const fila = baseDeDatos()
-    .prepare('SELECT COUNT(*) AS total FROM outbox WHERE sincronizado_en IS NULL')
+    .prepare('SELECT COUNT(*) AS total FROM outbox WHERE sincronizado_en IS NULL AND rechazado_en IS NULL')
     .get() as { total: number };
   return fila.total;
 }
@@ -196,7 +196,7 @@ export function marcasPendientes(limite: number): { id: string; payload: string 
   return baseDeDatos()
     .prepare(
       `SELECT id, payload FROM outbox
-       WHERE sincronizado_en IS NULL AND tipo_registro = 'marca'
+       WHERE sincronizado_en IS NULL AND rechazado_en IS NULL AND tipo_registro = 'marca'
        ORDER BY creado_en
        LIMIT ?`,
     )

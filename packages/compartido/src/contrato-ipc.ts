@@ -77,6 +77,8 @@ export const CANALES = {
   pausarKiosco: 'kiosco:pausar',
   /** Trae los ultimos registros guardados, para la pantalla de consulta. */
   obtenerRegistros: 'kiosco:obtener-registros',
+  /** Da de alta este kiosco con el codigo de 8 caracteres del panel. */
+  enrolarKiosco: 'kiosco:enrolar',
   /** Canal de un solo sentido: el proceso principal AVISA a la interfaz que algo cambio. */
   estadoActualizado: 'kiosco:estado-actualizado',
 
@@ -180,6 +182,11 @@ export interface SolicitudRegistro {
 }
 
 /** Lo que responde un intento de pausar el kiosco. */
+/** Como termino el intento de dar de alta el kiosco. `mensaje` se muestra tal cual. */
+export type ResultadoEnrolamiento =
+  | { ok: true; nombre: string }
+  | { ok: false; mensaje: string };
+
 export type ResultadoPausa =
   | { ok: true; minutos: number }
   | { ok: false; mensaje: string };
@@ -257,6 +264,12 @@ export interface ApiKiosco {
 
   /** Los ultimos registros guardados, para la pantalla de consulta. */
   obtenerRegistros(): Promise<MarcaParaMostrar[]>;
+
+  /**
+   * Da de alta el kiosco con el codigo que genero el jefe en el panel.
+   * Solo funciona si el kiosco lo necesita (`EstadoKiosco.requiereEnrolamiento`).
+   */
+  enrolarKiosco(codigo: string): Promise<ResultadoEnrolamiento>;
 
   /**
    * Se suscribe a los avisos de cambio de estado.

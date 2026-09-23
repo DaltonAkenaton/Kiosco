@@ -47,10 +47,15 @@ import {
   INSTITUCION,
   nombreCompleto,
   type ResultadoIdentificacion,
+  type ResultadoEnrolamiento,
   type ResultadoPausa,
   type ResultadoRegistro,
 } from '@kiosko/compartido';
-import { cambiarModoIdentificacion, modoIdentificacionVigente } from '../configuracion-vigente';
+import {
+  cambiarModoIdentificacion,
+  modoIdentificacionVigente,
+  umbralesDeCamara,
+} from '../configuracion-vigente';
 import {
   accionSugeridaPara,
   buscarPorId,
@@ -74,12 +79,14 @@ import {
 import { type FotoGuardada, guardarFoto, pareceObstruida } from '../servicios/fotos';
 import { registrarEvento } from '../datos/repositorio-eventos';
 import { estadoDePausa, pausar } from '../servicios/pausa';
+import { enrolar, sincronizarPronto } from '../servicios/sincronizacion';
 import { detectarAnomaliasDeReloj, leerReloj } from '../servicios/reloj';
 import { ES_DESARROLLO } from '../entorno';
 import {
   EsquemaCambioDeModo,
   EsquemaCancelacion,
   EsquemaEstadoCamara,
+  EsquemaEnrolamiento,
   EsquemaPausa,
   EsquemaRegistro,
   esquemaIdentificacion,
@@ -88,9 +95,9 @@ import {
 /**
  * Estado que el proceso principal mantiene en memoria mientras la app corre.
  *
- * Mas adelante varios de estos campos los llenara la base de datos y el
- * sincronizador. Por ahora viven aqui para que la interfaz ya pueda pintar
- * la barra de estado.
+ * Lo van llenando la camara, la pausa y el sincronizador
+ * (servicios/sincronizacion.ts), cada uno con `actualizarEstado`. Arranca
+ * "apagado": el sincronizador dice su estado real en cuanto inicia.
  */
 const estado: EstadoKiosco = {
   enLinea: false,
@@ -98,7 +105,9 @@ const estado: EstadoKiosco = {
   camaraDisponible: false,
   ultimaSincronizacion: null,
   version: app.getVersion(),
-  requiereEnrolamiento: true,
+  requiereEnrolamiento: false,
+  nube: 'apagada',
+  nombreKiosco: null,
   pausado: false,
   pausaTerminaEn: null,
 };
@@ -149,8 +158,8 @@ function configuracionParaInterfaz(): ConfiguracionParaInterfaz {
     // El LARGO del codigo, nunca el codigo. Ver servicios/pausa.ts.
     largoCodigoDePausa: CONFIG.pausa.codigo.length,
     minutosDePausa: CONFIG.pausa.minutosParaVolver,
-    umbralBrilloMinimo: CONFIG.camara.umbralBrilloMinimo,
-    umbralVarianzaMinima: CONFIG.camara.umbralVarianzaMinima,
+    umbralBrilloMinimo: umbralesDeCamara().brilloMinimo,
+    umbralVarianzaMinima: umbralesDeCamara().varianzaMinima,
 
     // Cuando exista la sincronizacion, esta zona vendra de la tabla
     // `configuracion` de Supabase. Mientras, el valor por defecto.
@@ -446,8 +455,9 @@ export function registrarManejadoresIpc(): void {
           foto,
         });
 
-        // --- 7. Actualizar la barra de estado -----------------------------
+        // --- 7. Actualizar la barra de estado y avisar al sincronizador ---
         actualizarEstado({ registrosPendientes: contarPendientes() });
+        sincronizarPronto();
 
         // --- 8. Responder --------------------------------------------------
         return {
@@ -609,6 +619,21 @@ export function registrarManejadoresIpc(): void {
   //  eligiera quien llama, un `obtenerRegistros(1000000)` traeria la base
   //  entera a memoria. La pantalla pide "los registros"; cuantos, lo decide
   //  este lado.
+  // ---------------------------------------------------------------------
+  //  enrolarKiosco: el codigo de 8 caracteres del panel (CLAUDE.md 3.3)
+  // ---------------------------------------------------------------------
+  //  Sin sesion de administrador, a proposito: un kiosco recien instalado
+  //  todavia no tiene administradores (bajan del catalogo, DESPUES de darlo
+  //  de alta). Lo que protege es el codigo: sin uno valido, esto no hace
+  //  nada. Y solo funciona si el kiosco lo necesita (sin alta o revocado).
+  ipcMain.handle(CANALES.enrolarKiosco, async (_evento, datosCrudos): Promise<ResultadoEnrolamiento> => {
+    const validacion = EsquemaEnrolamiento.safeParse(datosCrudos);
+    if (!validacion.success) {
+      return { ok: false, mensaje: 'El código tiene 8 letras y números. Revísalo y vuelve a intentar.' };
+    }
+    return enrolar(validacion.data.codigo);
+  });
+
   ipcMain.handle(CANALES.obtenerRegistros, async (): Promise<MarcaParaMostrar[]> => {
     if (!CONFIG.interfaz.mostrarRegistrosEnKiosco) return [];
 

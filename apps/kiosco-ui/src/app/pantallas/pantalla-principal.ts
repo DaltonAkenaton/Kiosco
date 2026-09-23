@@ -70,6 +70,7 @@ import {
 import type {
   ConfiguracionParaInterfaz,
   EmpleadoParaLista,
+  EstadoNube,
   MarcaParaMostrar,
   TipoMarca,
 } from '@kiosko/compartido';
@@ -257,6 +258,9 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
    */
   private camaraSoltadaPorPausa = false;
 
+  /** La ultima sincronizacion por la que ya se recargo la lista de empleados. */
+  private ultimaListaPorSincronizacion: string | null = null;
+
   constructor() {
     /**
      * Durante la pausa se SUELTA la camara.
@@ -281,6 +285,20 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
         this.camara.detener();
       } else {
         void this.arrancarCamara();
+      }
+    });
+
+    /**
+     * Cuando llega el catalogo de la oficina (altas, bajas, cambios de
+     * nombre), la lista de empleados se vuelve a pedir. Sin esto, alguien
+     * recien dado de alta no apareceria hasta reiniciar el kiosco.
+     */
+    effect(() => {
+      const sincronizado = this.estado()?.ultimaSincronizacion ?? null;
+      if (sincronizado === null || sincronizado === this.ultimaListaPorSincronizacion) return;
+      this.ultimaListaPorSincronizacion = sincronizado;
+      if (this.modo() === 'lista') {
+        void this.puente.obtenerEmpleadosParaLista().then((lista) => this.empleados.set(lista));
       }
     });
 
@@ -370,6 +388,12 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
     // Con el modo administrador abierto, las teclas son de sus formularios.
     // Sin este corte, escribir "07" en la fecha elegiria a la persona 07.
     if (this.modoAdminAbierto()) return;
+
+    // Igual con la ventana de alta: las teclas son del codigo.
+    if (this.dandoDeAlta()) {
+      if (evento.key === 'Escape') this.cerrarAlta();
+      return;
+    }
 
     /**
      * Si la confirmacion esta en pantalla, CUALQUIER tecla la quita.
@@ -608,6 +632,116 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
   // --------------------------------------------------------------------------
   //  Selector de modo (SOLO DESARROLLO)
   // --------------------------------------------------------------------------
+
+  // --------------------------------------------------------------------------
+  //  La conexion con la oficina (CLAUDE.md 7) y el alta del kiosco
+  // --------------------------------------------------------------------------
+
+  /**
+   * Lo que dice la barra de abajo segun el estado de la nube, con su ⓘ.
+   * `alta` = se ofrece el boton para teclear el codigo.
+   */
+  protected readonly conexion = computed(() => {
+    const e = this.estado();
+    const TEXTOS: Record<EstadoNube, { texto: string; color: string; ayuda: string; alta: boolean }> = {
+      apagada: {
+        texto: 'Sólo en esta computadora',
+        color: 'var(--kiosko-texto-suave)',
+        ayuda:
+          'Este kiosco está configurado para no conectarse con la oficina. Los registros se guardan ' +
+          'aquí y cuentan igual; para verlos hay que venir a esta computadora.',
+        alta: false,
+      },
+      sin_alta: {
+        texto: 'Kiosco sin dar de alta',
+        color: 'var(--kiosko-atencion)',
+        ayuda:
+          'Este kiosco todavía no está conectado con la oficina. Los registros SÍ se guardan aquí y se ' +
+          'mandarán cuando se dé de alta. Para darlo de alta, el jefe genera un código en el panel y ' +
+          'alguien lo teclea con el botón "Dar de alta".',
+        alta: true,
+      },
+      conectando: {
+        texto: 'Conectando…',
+        color: 'var(--kiosko-texto-suave)',
+        ayuda: 'El kiosco está buscando la conexión con la oficina. Puedes registrarte normalmente.',
+        alta: false,
+      },
+      en_linea: {
+        texto: 'Con internet',
+        color: 'var(--kiosko-entrada)',
+        ayuda: 'El kiosco está conectado con la oficina: los registros se mandan solos.',
+        alta: false,
+      },
+      sin_conexion: {
+        texto: 'Sin internet',
+        color: 'var(--kiosko-texto-suave)',
+        ayuda:
+          'No hay conexión con la oficina en este momento. Puedes registrarte normalmente: tu registro ' +
+          'se guarda aquí y se manda solo cuando vuelva el internet.',
+        alta: false,
+      },
+      revocado: {
+        texto: 'Kiosco dado de baja',
+        color: 'var(--kiosko-peligro)',
+        ayuda:
+          'En el panel dieron de baja este kiosco. Los registros se siguen guardando aquí, pero la ' +
+          'oficina ya no los recibe. Si fue un error, el jefe genera un código nuevo y alguien lo ' +
+          'teclea con "Dar de alta de nuevo".',
+        alta: true,
+      },
+      no_reconocido: {
+        texto: 'La oficina no reconoce este kiosco',
+        color: 'var(--kiosko-peligro)',
+        ayuda:
+          'La oficina ya no reconoce la credencial de este kiosco. Los registros se siguen guardando ' +
+          'aquí. Para arreglarlo, el jefe genera un código nuevo en el panel y alguien lo teclea con ' +
+          '"Dar de alta de nuevo".',
+        alta: true,
+      },
+    };
+    return TEXTOS[e?.nube ?? 'apagada'];
+  });
+
+  protected readonly dandoDeAlta = signal(false);
+  protected readonly codigoDeAlta = signal('');
+  protected readonly enviandoAlta = signal(false);
+  protected readonly errorDeAlta = signal<string | null>(null);
+  protected readonly altaLograda = signal<string | null>(null);
+
+  protected abrirAlta(): void {
+    this.codigoDeAlta.set('');
+    this.errorDeAlta.set(null);
+    this.altaLograda.set(null);
+    this.dandoDeAlta.set(true);
+  }
+
+  protected cerrarAlta(): void {
+    if (this.enviandoAlta()) return;
+    this.dandoDeAlta.set(false);
+  }
+
+  protected async enviarAlta(): Promise<void> {
+    const codigo = this.codigoDeAlta().trim();
+    if (this.enviandoAlta() || codigo.replace(/[^A-Za-z0-9]/g, '').length !== 8) {
+      this.errorDeAlta.set('El código tiene 8 letras y números. Revísalo y vuelve a intentar.');
+      return;
+    }
+    this.enviandoAlta.set(true);
+    this.errorDeAlta.set(null);
+    const resultado = await this.puente.enrolarKiosco(codigo);
+    this.enviandoAlta.set(false);
+    if (resultado.ok) {
+      this.altaLograda.set(resultado.nombre);
+    } else {
+      this.errorDeAlta.set(resultado.mensaje);
+    }
+  }
+
+  protected escribirCodigoDeAlta(evento: Event): void {
+    // En mayusculas mientras se escribe: asi se ve igual que en el papel.
+    this.codigoDeAlta.set((evento.target as HTMLInputElement).value.toUpperCase());
+  }
 
   /** El ⓘ de "N por enviar", en la barra de abajo. */
   protected readonly AYUDA_POR_ENVIAR =

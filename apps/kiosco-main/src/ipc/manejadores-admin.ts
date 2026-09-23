@@ -33,6 +33,7 @@ import {
   registrarAccesoFoto,
 } from '../datos/repositorio-admin';
 import { cambiarConservar, obtenerFoto } from '../datos/repositorio-fotos';
+import { registrarEstadoDeFoto } from '../datos/repositorio-sincronizacion';
 import { leerFoto } from '../servicios/fotos';
 import {
   definirContrasenaDeRecuperacion,
@@ -185,6 +186,12 @@ export function registrarManejadoresAdmin(): void {
       if (lectura.estado !== 'con_foto') {
         // faltante / alterada / llave_no_disponible: se informa sin mostrar nada.
         console.warn(`[admin] foto en estado ${lectura.estado}`);
+        // Faltante y alterada son evidencia de que algo paso: la nube tiene
+        // que saberlo para que el panel lo muestre (CLAUDE.md 5.1). "Llave no
+        // disponible" no: la foto esta bien, solo falta con que abrirla.
+        if (lectura.estado === 'faltante' || lectura.estado === 'alterada') {
+          registrarEstadoDeFoto(foto.marcaId, lectura.estado);
+        }
         return { estado: lectura.estado };
       }
 

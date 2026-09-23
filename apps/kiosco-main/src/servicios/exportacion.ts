@@ -56,6 +56,7 @@ import {
   registrarAccesosFoto,
 } from '../datos/repositorio-admin';
 import { registrarEvento } from '../datos/repositorio-eventos';
+import { leerCredencial } from './credencial-kiosco';
 import { leerFoto } from './fotos';
 import { colorDeHex, grabarMarcaDeAgua, type RenglonDeMarca } from './marca-de-agua';
 import { EscritorZip } from './zip';
@@ -108,12 +109,12 @@ const fechaIso = (p: PartesDeFecha): string => `${p.ano}-${dos(p.mes)}-${dos(p.d
 const horaCompleta = (p: PartesDeFecha): string => `${dos(p.hora)}:${dos(p.minuto)}:${dos(p.segundo)}`;
 
 /**
- * Como se llama este kiosco en la foto. Cuando exista el enrolamiento
- * (bloque 5), sera el nombre que se le dio en el panel ("Kiosco Edificio A");
- * mientras, el nombre de la computadora en Windows.
+ * Como se llama este kiosco en la foto: el nombre que le dio el jefe en el
+ * panel al darlo de alta ("Entrada principal"). Sin alta, el nombre de la
+ * computadora en Windows.
  */
 function nombreDelKiosco(): string {
-  return os.hostname();
+  return leerCredencial()?.nombre ?? os.hostname();
 }
 
 // ----------------------------------------------------------------------------

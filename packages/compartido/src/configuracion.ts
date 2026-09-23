@@ -545,6 +545,43 @@ export const RELOJ = {
 // ============================================================================
 //  CLAUDE.md 7. La red NUNCA bloquea la interfaz: todo esto corre por detras.
 export const SINCRONIZACION = {
+  /**
+   * EL INTERRUPTOR GENERAL (CLAUDE.md 7). Con `false` el kiosco funciona 100%
+   * local y no intenta hablar con nadie: ni se enrola, ni sube, ni baja. Es
+   * lo que permite entregar el sistema aunque el cliente decida al final que
+   * no quiere nube.
+   */
+  activa: true,
+
+  /**
+   * ¿Se suben las fotos? NO: la foto nunca sale del kiosco; a la nube va solo
+   * su hash (CLAUDE.md 5.1). El interruptor existe para que, si algun dia el
+   * cliente cambia de opinion, quede claro donde se decide. Hoy nada lo lee
+   * para subir: encenderlo requeriria construir esa parte.
+   */
+  subirFotos: false,
+
+  /**
+   * Donde viven las Edge Functions. En desarrollo, el Supabase local
+   * (`npx supabase start`). En el kiosco instalado, el proyecto de
+   * PRODUCCION: se llena al crear la cuenta (CLAUDE.md 13.3). Mientras este
+   * vacio, el kiosco instalado se comporta como si `activa` fuera `false`.
+   */
+  urlFuncionesDesarrollo: 'http://127.0.0.1:54321/functions/v1',
+  urlFuncionesProduccion: '',
+
+  /**
+   * Tras guardar una marca, en cuanto intenta subirla. No es inmediato para
+   * juntar en un solo viaje las que llegan seguidas (la fila de las 6 AM).
+   */
+  segundosTrasUnaMarca: 3,
+
+  /**
+   * Una respuesta que tarda mas que esto no sirve para medir el desfase del
+   * reloj: no se sabe en que momento del viaje la escribio el servidor.
+   */
+  viajeMaximoParaMedirDesfaseMs: 5000,
+
   /** Cada cuanto intenta vaciar la bandeja de salida (outbox) hacia Supabase. */
   intervaloPushMs: 30_000,
 
@@ -615,6 +652,12 @@ export const ALMACENAMIENTO = {
    * (ver `migrarFotosHeredadas` en servicios/fotos.ts).
    */
   carpetaFotosHeredada: 'fotos_pendientes',
+
+  /**
+   * El "gafete" del kiosco ante la nube: su token, cifrado con DPAPI de
+   * Windows (CLAUDE.md 3.3). Copiado a otra PC no se puede descifrar.
+   */
+  archivoCredencial: 'credencial-kiosco.json',
 } as const;
 
 // ============================================================================

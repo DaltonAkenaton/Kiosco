@@ -671,6 +671,92 @@ app.whenReady().then(async () => {
   fs2.rmSync(carpetaExport, { recursive: true, force: true });
 
   // ======================================================================
+  //  SINCRONIZACION, DEL LADO LOCAL  (bloque 6)
+  // ======================================================================
+  //  Lo que se puede probar sin servidor: que se arme bien lo que sube, que
+  //  lo rechazado salga de la cola sin borrarse, y que el catalogo se aplique
+  //  sin perder nada local. La prueba contra la nube de verdad esta en
+  //  probar-sincronizacion.cjs.
+  console.log('\n--- sincronizacion (local) ---');
+
+  const bdSql = bd.baseDeDatos();
+  const renglones = bd.renglonesParaSubir(1000);
+  const loteLocal = bd.armarCuerpo(renglones);
+  comprobar('el lote junta marcas, eventos y accesos a fotos',
+    loteLocal.marcas.length > 0 && loteLocal.eventos.length > 0 && loteLocal.accesosFoto.length > 0,
+    `${loteLocal.marcas.length}/${loteLocal.eventos.length}/${loteLocal.accesosFoto.length}`);
+  comprobar('cada marca va tal cual se guardo (con sus lecturas de reloj)',
+    loteLocal.marcas.every((m) => m.id && m.empleadoId && m.reloj && typeof m.reloj.horaEstimadaMs === 'number'));
+  comprobar('lo que sube nunca lleva la foto ni su ruta',
+    !JSON.stringify(loteLocal).includes('.jpg') && !JSON.stringify(loteLocal).includes('data:image'));
+
+  // La foto conservada en la prueba de exportacion ya dejo su estado en cola.
+  comprobar('"Conservar" deja en cola su estado para la nube',
+    loteLocal.estadosDeFoto.some((e) => e.estado === 'conservada'), JSON.stringify(loteLocal.estadosDeFoto.slice(0, 2)));
+
+  const pendientesAntesSync = bd.contarPendientes();
+  const [primero, segundo, tercero] = renglones;
+  bd.marcarEnviados([primero.id]);
+  bd.marcarRechazados([{ id: segundo.id, motivo: 'empleado_desconocido' }]);
+  bd.anotarFallo([tercero.id], 'sin red');
+  comprobar('enviado y rechazado salen de "por enviar"; el fallo pasajero no',
+    bd.contarPendientes() === pendientesAntesSync - 2, `${pendientesAntesSync} -> ${bd.contarPendientes()}`);
+  const filaRechazada = bdSql.prepare('SELECT rechazado_en, ultimo_error FROM outbox WHERE id = ?').get(segundo.id);
+  comprobar('lo rechazado NO se borra: queda con fecha y motivo',
+    filaRechazada && filaRechazada.rechazado_en && filaRechazada.ultimo_error === 'empleado_desconocido');
+  const filaFallida = bdSql.prepare('SELECT intentos, ultimo_error FROM outbox WHERE id = ?').get(tercero.id);
+  comprobar('un fallo pasajero suma un intento y anota el error', filaFallida.intentos >= 1 && filaFallida.ultimo_error === 'sin red');
+  comprobar('lo rechazado ya no vuelve a subir', !bd.renglonesParaSubir(1000).some((r) => r.id === segundo.id));
+
+  // --- El catalogo ---
+  const idNube = crypto.randomUUID();
+  const antesDalton = bd.buscarPorUsuario('dgomez');
+  const hashNube = bd.hashearPin('9876');
+  const recienteMs = Date.now() + 60_000;
+  bd.aplicarCatalogo({
+    empleados: [{
+      id: idNube, usuario: 'dgomez', numero_empleado: '1001', nombre: 'Dalton', apellido_paterno: 'Gómez',
+      apellido_materno: 'Arellano', pin_hash: hashNube, pin_temporal: false, activo: true,
+      actualizado_en: new Date().toISOString(),
+    }],
+    administradores: [],
+    configuracion: { intentos_pin_maximos: 6, umbral_brillo_minimo: 'no es numero', zona_horaria: 'America/Matamoros' },
+    ultimasMarcas: [
+      { empleadoId: idNube, tipo: 'salida', horaEstimada: new Date(recienteMs).toISOString() },
+      // Mas vieja que la local: NO debe pisarla.
+      { empleadoId: antesDalton.id, tipo: 'entrada', horaEstimada: '2001-01-01T00:00:00Z' },
+    ],
+    cursor: '2026-09-23T12:00:00.000Z',
+  });
+  const daltonNube = bd.buscarPorUsuario('dgomez');
+  comprobar('manda la nube: "dgomez" ahora es el de la nube', daltonNube && daltonNube.id === idNube && daltonNube.pinHash === hashNube);
+  const apartado = bd.buscarPorId(antesDalton.id);
+  comprobar('el local con el mismo usuario se aparta (inactivo), NO se borra',
+    apartado && apartado.activo === false && apartado.usuario.startsWith('dgomez.anterior.'), apartado && apartado.usuario);
+  comprobar('sus marcas siguen ahi', bdSql.prepare('SELECT COUNT(*) AS n FROM marcas WHERE empleado_id = ?').get(antesDalton.id).n > 0);
+  comprobar('la ultima marca de la nube, si es mas nueva, se usa', bd.accionSugeridaPara(idNube) === 'entrada');
+  comprobar('una ultima marca MAS VIEJA que la local no la pisa',
+    bdSql.prepare('SELECT hora_estimada_ms FROM ultimas_marcas_cache WHERE empleado_id = ?').get(antesDalton.id).hora_estimada_ms > Date.parse('2002-01-01'));
+  comprobar('el cursor se recuerda para la proxima vez', bd.leerEstadoLocal('cursor_catalogo') === '2026-09-23T12:00:00.000Z');
+
+  // --- La configuracion del jefe ---
+  comprobar('el kiosco obedece la configuracion de la nube (6 intentos de PIN)', bd.reglasDelPin().intentosMaximos === 6);
+  comprobar('un valor absurdo NO se obedece: se usa el respaldo',
+    bd.umbralesDeCamara().brilloMinimo === 45, String(bd.umbralesDeCamara().brilloMinimo));
+  bdSql.prepare('DELETE FROM configuracion_cache').run();
+  comprobar('sin configuracion, el respaldo de configuracion.ts', bd.reglasDelPin().intentosMaximos === 4);
+
+  // --- El reloj ---
+  comprobar('desfase: PC 5 s adelantada -> +5000', bd.calcularDesfase(10_000, 10_200, 5_100) === 5000);
+  comprobar('un viaje muy largo no sirve para medir el desfase', bd.calcularDesfase(0, 60_000, 30_000) === null);
+  comprobar('sin hora del servidor no hay medicion', bd.calcularDesfase(0, 100, NaN) === null);
+
+  // --- El codigo de alta ---
+  comprobar('el codigo de alta acepta guion y minusculas',
+    bd.EsquemaEnrolamiento.safeParse({ codigo: 'k7m4-qx2p' }).success === true);
+  comprobar('y rechaza otra cosa', bd.EsquemaEnrolamiento.safeParse({ codigo: "'; drop table" }).success === false);
+
+  // ======================================================================
   //  VALIDACION DE LO QUE LLEGA DE LA PANTALLA
   // ======================================================================
   //  Estas pruebas nacen de E-019: una expresión regular a la que le faltaba

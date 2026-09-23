@@ -80,7 +80,7 @@ const AccesoFoto = z.object({
 const EstadoDeFoto = z.object({
   id: z.uuid(),
   marcaId: z.uuid(),
-  estado: z.enum(['con_foto', 'eliminada_por_antiguedad', 'conservada', 'faltante', 'alterada']),
+  estado: z.enum(['con_foto', 'obstruida', 'eliminada_por_antiguedad', 'conservada', 'faltante', 'alterada']),
 });
 
 const Lote = z.object({

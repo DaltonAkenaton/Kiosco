@@ -94,3 +94,25 @@ export { pintarMarcaDeAgua, grabarMarcaDeAgua, textoDibujable } from './servicio
 export { exportarRegistros, renglonesDeMarca } from './servicios/exportacion';
 export { interpretarRespuesta, esDiscoDeEstaComputadora } from './servicios/memorias-usb';
 export { EsquemaExportarAUsb } from './ipc/esquemas';
+export {
+  renglonesParaSubir,
+  armarCuerpo,
+  marcarEnviados,
+  marcarRechazados,
+  anotarFallo,
+  contarRechazados,
+  aplicarCatalogo,
+  registrarEstadoDeFoto,
+  leerEstadoLocal,
+} from './datos/repositorio-sincronizacion';
+export { reglasDelPin, umbralesDeCamara, numeroConfigurado } from './configuracion-vigente';
+export {
+  calcularDesfase,
+  enrolar,
+  ciclo,
+  iniciarSincronizacion,
+  estadoDeLaNube,
+  reiniciarSincronizacionParaPrueba,
+} from './servicios/sincronizacion';
+export { leerCredencial, rutaDeLaCredencial, olvidarCredencialEnMemoria } from './servicios/credencial-kiosco';
+export { EsquemaEnrolamiento } from './ipc/esquemas';

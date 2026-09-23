@@ -180,6 +180,15 @@ export const EsquemaCancelacion = z.strictObject({
  * podria mandar un texto de un megabyte por este campo, y compararlo contra el
  * codigo real seria trabajo regalado para nadie.
  */
+/**
+ * El codigo de alta del kiosco: 8 letras y numeros, pero se aceptan
+ * guiones y espacios ("K7M4-QX2P"), que es como se anota en un papel.
+ * La nube lo normaliza y lo compara.
+ */
+export const EsquemaEnrolamiento = z.strictObject({
+  codigo: z.string().min(8).max(20).regex(/^[A-Za-z0-9 -]+$/, 'Codigo con caracteres invalidos'),
+});
+
 export const EsquemaPausa = z.strictObject({
   codigo: z
     .string()

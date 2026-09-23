@@ -39,6 +39,7 @@
 
 import { app } from 'electron';
 import { CONFIG } from '@kiosko/compartido';
+import { baseDeDatos } from './datos/base-de-datos';
 
 /** Los tres modos posibles de identificacion. */
 export type ModoIdentificacion = 'usuario' | 'lista' | 'numero';
@@ -57,6 +58,75 @@ const vigente = {
 /** Lee el modo de identificacion que manda ahora mismo. */
 export function modoIdentificacionVigente(): ModoIdentificacion {
   return vigente.modoIdentificacion;
+}
+
+/**
+ * ============================================================================
+ *  REGLAS QUE DECIDE EL JEFE  (tabla `configuracion` de Supabase)
+ * ============================================================================
+ *
+ *  Bajan con la sincronizacion a `configuracion_cache` (como JSON: '4',
+ *  '"America/Matamoros"'). Aqui se leen EN CADA USO, para que un cambio en el
+ *  panel se note en el siguiente registro sin reiniciar nada (CLAUDE.md 1.3).
+ *
+ *  Un valor que no llego, o que llego absurdo (texto, negativo, fuera de
+ *  rango), NUNCA se obedece: se usa el respaldo de configuracion.ts. Con un
+ *  "0 intentos" mal escrito en el panel, nadie podria checar.
+ */
+export function numeroConfigurado(
+  clave: string,
+  respaldo: number,
+  rango: { minimo: number; maximo: number },
+): number {
+  try {
+    const fila = baseDeDatos().prepare('SELECT valor FROM configuracion_cache WHERE clave = ?').get(clave) as
+      | { valor: string }
+      | undefined;
+    if (!fila) return respaldo;
+    const valor = Number(JSON.parse(fila.valor));
+    if (Number.isFinite(valor) && valor >= rango.minimo && valor <= rango.maximo) return valor;
+    console.warn(`[config] ${clave} fuera de rango en la configuracion; se usa ${respaldo}`);
+  } catch {
+    // Base cerrada o valor ilegible: el respaldo.
+  }
+  return respaldo;
+}
+
+/** Las reglas del PIN vigentes (CLAUDE.md 3.4). */
+export function reglasDelPin(): { intentosMaximos: number; segundosDeBloqueo: number; minutosParaOlvidar: number } {
+  return {
+    intentosMaximos: numeroConfigurado('intentos_pin_maximos', CONFIG.seguridadPin.intentosFallidosMaximos, {
+      minimo: 2,
+      maximo: 20,
+    }),
+    segundosDeBloqueo: numeroConfigurado('segundos_bloqueo_pin', CONFIG.seguridadPin.segundosDeBloqueo, {
+      minimo: 10,
+      maximo: 3600,
+    }),
+    minutosParaOlvidar: numeroConfigurado('minutos_olvidar_intentos', CONFIG.seguridadPin.minutosParaOlvidarIntentos, {
+      minimo: 1,
+      maximo: 24 * 60,
+    }),
+  };
+}
+
+/** Umbrales de la camara tapada (CLAUDE.md 5). */
+export function umbralesDeCamara(): { brilloMinimo: number; varianzaMinima: number } {
+  return {
+    brilloMinimo: numeroConfigurado('umbral_brillo_minimo', CONFIG.camara.umbralBrilloMinimo, { minimo: 0, maximo: 255 }),
+    varianzaMinima: numeroConfigurado('umbral_varianza_minima', CONFIG.camara.umbralVarianzaMinima, {
+      minimo: 0,
+      maximo: 100_000,
+    }),
+  };
+}
+
+/** Cuanto pueden separarse reloj y cronometro antes de sospechar (CLAUDE.md 6). */
+export function umbralDeRelojMs(): number {
+  return numeroConfigurado('umbral_desfase_reloj_ms', CONFIG.reloj.umbralDesfaseSospechosoMs, {
+    minimo: 5_000,
+    maximo: 24 * 60 * 60 * 1000,
+  });
 }
 
 /**

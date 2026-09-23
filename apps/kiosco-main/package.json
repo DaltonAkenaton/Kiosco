@@ -9,6 +9,7 @@
     "dev": "node construir.mjs --dev && electron .",
     "revisar-tipos": "tsc --noEmit -p tsconfig.json",
     "probar": "node construir-pruebas.mjs && electron probar-autenticacion.cjs",
+    "probar:sincronizacion": "node construir-pruebas.mjs && electron probar-sincronizacion.cjs",
     "empaquetar": "node construir.mjs && npm run ui:compilar --prefix ../.. && electron-builder --win",
     "empaquetar:solo-carpeta": "node construir.mjs && npm run ui:compilar --prefix ../.. && electron-builder --win --dir",
     "probar:empaquetado": "npm run empaquetar:solo-carpeta && node lanzar-empaquetado.mjs"

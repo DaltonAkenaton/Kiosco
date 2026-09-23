@@ -127,7 +127,7 @@ export function contarEventosPendientes(): number {
   const fila = baseDeDatos()
     .prepare(
       `SELECT COUNT(*) AS total FROM outbox
-       WHERE sincronizado_en IS NULL AND tipo_registro = 'evento'`,
+       WHERE sincronizado_en IS NULL AND rechazado_en IS NULL AND tipo_registro = 'evento'`,
     )
     .get() as { total: number };
 
@@ -139,7 +139,7 @@ export function eventosPendientes(limite: number): { id: string; payload: string
   return baseDeDatos()
     .prepare(
       `SELECT id, payload FROM outbox
-       WHERE sincronizado_en IS NULL AND tipo_registro = 'evento'
+       WHERE sincronizado_en IS NULL AND rechazado_en IS NULL AND tipo_registro = 'evento'
        ORDER BY creado_en
        LIMIT ?`,
     )

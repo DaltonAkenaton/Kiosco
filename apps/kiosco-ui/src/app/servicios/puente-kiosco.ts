@@ -35,6 +35,7 @@ import type {
   EstadoCamaraReportado,
   EstadoKiosco,
   MarcaParaMostrar,
+  ResultadoEnrolamiento,
   ResultadoIdentificacion,
   ResultadoPausa,
   ResultadoRegistro,
@@ -191,6 +192,14 @@ export class PuenteKiosco {
       return { ok: false, mensaje: 'El programa no está funcionando bien. Avisa a tu jefe para que registre tu asistencia.' };
     }
     return window.kiosco.pausarKiosco(codigo);
+  }
+
+  /** Da de alta el kiosco con el codigo del panel. */
+  async enrolarKiosco(codigo: string): Promise<ResultadoEnrolamiento> {
+    if (!window.kiosco) {
+      return { ok: false, mensaje: 'El programa no está funcionando bien. Ciérralo y vuelve a abrirlo.' };
+    }
+    return window.kiosco.enrolarKiosco(codigo);
   }
 
   /** Avisa al proceso principal si la camara vive o murio. */

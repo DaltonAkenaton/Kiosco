@@ -13,6 +13,7 @@
 
 import type { FotoGuardada } from '../servicios/fotos';
 import { baseDeDatos, enTransaccion } from './base-de-datos';
+import { registrarEstadoDeFoto } from './repositorio-sincronizacion';
 
 export interface FotoRegistrada {
   marcaId: string;
@@ -76,9 +77,13 @@ export function fotosVencidas(capturadasAntesDeMs: number): { marcaId: string; r
 }
 
 export function marcarComoEliminada(marcaId: string): void {
-  baseDeDatos()
-    .prepare('UPDATE fotos SET eliminada_en = ? WHERE marca_id = ? AND eliminada_en IS NULL')
-    .run(new Date().toISOString(), marcaId);
+  enTransaccion(() => {
+    const resultado = baseDeDatos()
+      .prepare('UPDATE fotos SET eliminada_en = ? WHERE marca_id = ? AND eliminada_en IS NULL')
+      .run(new Date().toISOString(), marcaId);
+    // La nube no tiene la foto: solo se entera de que se borro si se le dice.
+    if (Number(resultado.changes) === 1) registrarEstadoDeFoto(marcaId, 'eliminada_por_antiguedad');
+  });
 }
 
 /**
@@ -94,14 +99,29 @@ export function cambiarConservar(
   conservar: boolean,
   datos: { motivo: string | null; por: string },
 ): boolean {
-  const resultado = baseDeDatos()
-    .prepare(
-      `UPDATE fotos
-          SET conservar = ?, conservar_motivo = ?, conservar_por = ?, conservar_en = ?
-        WHERE marca_id = ? AND eliminada_en IS NULL`,
-    )
-    .run(conservar ? 1 : 0, datos.motivo, datos.por, new Date().toISOString(), marcaId);
-  return Number(resultado.changes) === 1;
+  return enTransaccion(() => {
+    const resultado = baseDeDatos()
+      .prepare(
+        `UPDATE fotos
+            SET conservar = ?, conservar_motivo = ?, conservar_por = ?, conservar_en = ?
+          WHERE marca_id = ? AND eliminada_en IS NULL`,
+      )
+      .run(conservar ? 1 : 0, datos.motivo, datos.por, new Date().toISOString(), marcaId);
+    if (Number(resultado.changes) !== 1) return false;
+
+    // Al quitar "Conservar", la foto vuelve a su estado de origen: la de un
+    // lente tapado sigue siendo "obstruida", no pasa a ser una foto normal.
+    registrarEstadoDeFoto(marcaId, conservar ? 'conservada' : estadoDeOrigen(marcaId));
+    return true;
+  });
+}
+
+/** 'obstruida' si la foto se tomo con el lente tapado; si no, 'con_foto'. */
+function estadoDeOrigen(marcaId: string): 'con_foto' | 'obstruida' {
+  const fila = baseDeDatos().prepare('SELECT banderas FROM marcas WHERE id = ?').get(marcaId) as
+    | { banderas: string }
+    | undefined;
+  return fila?.banderas.split(',').includes('foto_obstruida') ? 'obstruida' : 'con_foto';
 }
 
 /**

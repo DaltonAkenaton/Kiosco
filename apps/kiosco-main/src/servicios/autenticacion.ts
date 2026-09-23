@@ -18,6 +18,7 @@
 import bcrypt from 'bcryptjs';
 import { CONFIG, type EmpleadoEnCache } from '@kiosko/compartido';
 import { baseDeDatos } from '../datos/base-de-datos';
+import { reglasDelPin } from '../configuracion-vigente';
 
 /**
  * ----------------------------------------------------------------------------
@@ -113,7 +114,8 @@ export function estadoDeBloqueo(empleadoId: string): EstadoDeBloqueo {
   }
 
   // ¿Ya paso la ventana de olvido desde el ultimo fallo?
-  const ventanaMs = CONFIG.seguridadPin.minutosParaOlvidarIntentos * 60 * 1000;
+  // Lo que decidio el jefe en el panel, o el respaldo de configuracion.ts.
+  const ventanaMs = reglasDelPin().minutosParaOlvidar * 60 * 1000;
   const intentosCaducados = ahora - fila.ultimo_intento_ms > ventanaMs;
 
   return {
@@ -133,9 +135,9 @@ function registrarFallo(empleadoId: string): EstadoDeBloqueo {
   const actual = estadoDeBloqueo(empleadoId);
   const fallidos = actual.fallidos + 1;
 
-  const { intentosFallidosMaximos, segundosDeBloqueo } = CONFIG.seguridadPin;
+  const { intentosMaximos, segundosDeBloqueo } = reglasDelPin();
   const bloqueadoHasta =
-    fallidos >= intentosFallidosMaximos ? ahora + segundosDeBloqueo * 1000 : null;
+    fallidos >= intentosMaximos ? ahora + segundosDeBloqueo * 1000 : null;
 
   baseDeDatos()
     .prepare(

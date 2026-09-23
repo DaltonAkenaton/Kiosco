@@ -107,6 +107,8 @@ npx supabase start          # levanta Postgres y Auth locales (necesita Docker)
 npm run supabase:aplicar    # borra todo y aplica las migraciones desde cero
 npm run supabase:probar     # 63 pruebas de RLS, triggers y restricciones
 npm run supabase:funciones:probar  # 53 pruebas de las Edge Functions, por HTTP
+npm run probar:sincronizacion      # un kiosco de verdad contra esta base (28)
+npm run supabase:codigo            # un codigo de alta para el kiosco de desarrollo
 npx supabase stop           # cuando termines
 ```
 
@@ -173,8 +175,12 @@ llama con su sesión. Ver D-031.
 *(No hay función de fotos: **las fotos nunca salen del kiosco**. A la nube
 sólo llega su hash. Ver CLAUDE.md 5.1.)*
 
+## Datos de prueba (`seed.sql`)
+
+`db reset` carga, sólo en local, los mismos 20 empleados que el kiosco siembra
+en desarrollo (PIN 1234) y un jefe con contraseña de kiosco `jefe` /
+`jefe-de-prueba`. Nunca llegan a la nube real.
+
 ## Qué falta
 
-- **Bloque 6:** que el kiosco use estas funciones (enrolarse, mandar su bandeja
-  de salida, bajar el catálogo, latir).
 - **Bloques 7–8:** el panel, que llama a las funciones de la base de la 0014.

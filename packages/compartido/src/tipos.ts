@@ -240,6 +240,26 @@ export type ResultadoRegistro =
 //  Estado del kiosco (lo que se pinta en la barra de estado)
 // ----------------------------------------------------------------------------
 
+/**
+ * La conexion con la nube, en una palabra (CLAUDE.md 7):
+ *
+ *   apagada        SINCRONIZACION.activa = false, o no hay direccion: todo local.
+ *   sin_alta       nunca se ha dado de alta: falta teclear el codigo.
+ *   conectando     dado de alta, todavia sin la primera respuesta.
+ *   en_linea       la ultima peticion salio bien.
+ *   sin_conexion   la red o el servidor no responden; se reintenta solo.
+ *   revocado       el jefe lo dio de baja en el panel.
+ *   no_reconocido  el servidor no reconoce su token (p. ej. se borro la base).
+ */
+export type EstadoNube =
+  | 'apagada'
+  | 'sin_alta'
+  | 'conectando'
+  | 'en_linea'
+  | 'sin_conexion'
+  | 'revocado'
+  | 'no_reconocido';
+
 export interface EstadoKiosco {
   /** `true` si logro hablar con Supabase recientemente. */
   enLinea: boolean;
@@ -251,8 +271,14 @@ export interface EstadoKiosco {
   ultimaSincronizacion: string | null;
   /** Version de la app, util para el soporte a distancia. */
   version: string;
-  /** `true` mientras el kiosco no ha sido enrolado contra el panel. */
+  /** `true` si hace falta teclear un codigo de alta: sin alta, revocado o no reconocido. */
   requiereEnrolamiento: boolean;
+
+  /** Como esta la conexion con la oficina. Ver `EstadoNube`. */
+  nube: EstadoNube;
+
+  /** El nombre que el jefe le dio a este kiosco en el panel, o `null` sin alta. */
+  nombreKiosco: string | null;
 
   /**
    * `true` si alguien pauso el kiosco para usar la computadora.

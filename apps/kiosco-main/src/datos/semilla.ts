@@ -27,6 +27,7 @@ import { generarUsuario } from '@kiosko/compartido';
 import { buscarAdministrador, guardarAdministrador } from './repositorio-admin';
 import { buscarPorUsuario, contarEmpleados, guardarEmpleado } from './repositorio-empleados';
 import { hashearPin } from '../servicios/autenticacion';
+import { leerCredencial } from '../servicios/credencial-kiosco';
 
 /**
  * Personal de prueba.
@@ -87,6 +88,10 @@ const PERSONAL_DE_PRUEBA = [
  */
 export function sembrarEmpleadosDePrueba(): void {
   if (app.isPackaged) return;
+  // Dado de alta, los empleados vienen de la nube (el Supabase local trae
+  // los mismos 20, en supabase/seed.sql). Sembrar aqui los duplicaria con
+  // otros ids.
+  if (leerCredencial()) return;
 
   const ahora = new Date().toISOString();
   const usuariosCreados: string[] = [];

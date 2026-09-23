@@ -57,6 +57,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:
 import fs from 'node:fs';
 import path from 'node:path';
 import { CONFIG } from '@kiosko/compartido';
+import { umbralesDeCamara } from '../configuracion-vigente';
 import { carpetaDeDatos } from '../entorno';
 import { escribirAtomico, type Llave, prepararLlaveDeFotos } from './llave-fotos';
 
@@ -310,8 +311,6 @@ export function pareceObstruida(mediciones: {
   brilloPromedio: number;
   varianza: number;
 }): boolean {
-  const { umbralBrilloMinimo, umbralVarianzaMinima } = CONFIG.camara;
-  return (
-    mediciones.brilloPromedio < umbralBrilloMinimo || mediciones.varianza < umbralVarianzaMinima
-  );
+  const { brilloMinimo, varianzaMinima } = umbralesDeCamara();
+  return mediciones.brilloPromedio < brilloMinimo || mediciones.varianza < varianzaMinima;
 }

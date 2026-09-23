@@ -259,4 +259,22 @@ export const MIGRACIONES: Migracion[] = [
       CREATE INDEX idx_accesos_foto_marca ON accesos_foto (marca_id);
     `,
   },
+  {
+    version: 4,
+    descripcion: 'Sincronizacion: lo que la nube rechaza sale de la cola sin borrarse',
+    sql: `
+      -- ====================================================================
+      --  outbox.rechazado_en
+      -- ====================================================================
+      --  La nube puede rechazar algo PARA SIEMPRE: la marca de un empleado
+      --  que alla no existe, o una marca hecha despues de que el kiosco se
+      --  dio de baja. Reintentarlo cada 30 segundos no lo arregla nunca.
+      --
+      --  Esos renglones salen de la cola (ya no cuentan como "por enviar")
+      --  pero NO se borran: quedan con la fecha y el motivo en ultimo_error,
+      --  para que alguien los revise. Borrarlos seria perder asistencia en
+      --  silencio (CLAUDE.md 3.3).
+      ALTER TABLE outbox ADD COLUMN rechazado_en TEXT;
+    `,
+  },
 ];

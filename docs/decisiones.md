@@ -1015,6 +1015,56 @@ panel puede ofrecer "usar la misma" al ponerla, sabiendo el riesgo.
 
 ---
 
+## D-032 · Cómo se sincroniza el kiosco
+
+**Decidido:**
+
+- **Un solo ciclo** en el proceso principal: cada 30 s sube la bandeja de
+  salida; cada 5 min baja el catálogo; cada minuto late. Tras una marca, la
+  siguiente vuelta se adelanta a 3 s, para juntar la fila de las 6 AM en un
+  solo viaje. Si falla la red, espera 2 s, 4 s, 8 s… hasta 5 min.
+- **Lo que la nube rechaza para siempre** (empleado desconocido, kiosco dado
+  de baja, forma inválida) sale de la cola con `outbox.rechazado_en` y su
+  motivo. **No se borra.**
+- **Un renglón mal formado no atora a los demás.** Si la nube rechaza un lote
+  entero (400), se reenvía de uno en uno y sólo el malo queda rechazado.
+- **En un conflicto de usuario, manda la nube.** Si baja "dgomez" con otro id,
+  el "dgomez" local se desactiva y se renombra (`dgomez.anterior.xxxx`), pero
+  no se borra: sus marcas lo siguen nombrando.
+- **Dar de alta no pide sesión de administrador.** Un kiosco nuevo todavía no
+  tiene administradores: bajan con el catálogo, después del alta. Lo que
+  protege es el código. El botón sólo aparece si hace falta (sin alta, dado de
+  baja o no reconocido).
+- **La configuración del jefe se obedece dentro de un rango.** Intentos de
+  PIN, bloqueo, umbrales de cámara y de reloj, y retención de fotos se leen en
+  cada uso desde `configuracion_cache`. Un valor absurdo ("0 intentos") se
+  ignora y se usa el de `configuracion.ts`.
+- **Desfase del reloj:** con la hora que trae cada respuesta, suponiendo que el
+  servidor la escribió a la mitad del viaje. Si el viaje tardó más de 5 s, no
+  se mide. Se recuerda entre arranques.
+- **Direcciones:** en desarrollo, el Supabase local; en el `.exe`,
+  `urlFuncionesProduccion`, que está vacía hasta crear la cuenta. Vacía
+  significa "sin nube", igual que `SINCRONIZACION.activa = false`.
+
+**Descartado:**
+
+- *Tres temporizadores independientes.* Podrían correr a la vez y pelearse la
+  misma bandeja. Con un solo ciclo y un candado (`enCurso`), nunca hay dos
+  envíos simultáneos.
+- *Reintentar para siempre lo rechazado.* Una marca de un empleado que la nube
+  no conoce no se arregla reintentando. Sólo ocuparía la cola, y el contador
+  "por enviar" nunca bajaría a cero.
+- *Pedir sesión de administrador para dar de alta.* Un kiosco recién
+  instalado no podría darse de alta nunca.
+
+**Por qué:** la regla de oro (nunca impedir que alguien registre) y "nunca
+descartar en silencio" (CLAUDE.md 3.3) mandan sobre la comodidad.
+
+**Reconsiderar si:** hay muchos rechazos. Entonces conviene una pantalla en el
+modo administrador para verlos y reenviarlos a mano.
+
+---
+
 ## Plantilla para decisiones nuevas
 
 ```markdown
