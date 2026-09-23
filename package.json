@@ -21,7 +21,8 @@
     "supabase:revisar": "node supabase/revisar-migraciones.mjs",
     "supabase:local": "supabase start",
     "supabase:aplicar": "supabase db reset",
-    "supabase:probar": "node supabase/probar-esquema.mjs"
+    "supabase:probar": "node supabase/probar-esquema.mjs",
+    "supabase:funciones:probar": "node supabase/probar-funciones.mjs"
   },
   "engines": {
     "node": ">=20"

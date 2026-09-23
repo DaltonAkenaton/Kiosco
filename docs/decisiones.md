@@ -972,6 +972,49 @@ no se editó (una queja formal, por ejemplo). Para esa exportación se enciende
 
 ---
 
+## D-031 · Edge Functions sólo para el kiosco, y una contraseña del jefe aparte para el kiosco
+
+**Decidido:**
+
+- Hay **cuatro Edge Functions**, todas del kiosco: `enrolar-kiosco`,
+  `recibir-registros`, `catalogo` y `latido`. El kiosco se identifica con su
+  token en `x-kiosco-token`, y por eso las cuatro llevan `verify_jwt = false`.
+- Lo que hace el **panel** (generar el código de enrolamiento, revocar un
+  kiosco, poner credenciales) son **funciones de la base** con
+  `security definer`. Cada una comprueba el rol por dentro.
+- Las reglas de guardado (idempotencia, kiosco revocado, cuarentena) viven en
+  `recibir_registros()`, en SQL. La Edge Function sólo valida la forma y quién
+  llama.
+- El jefe tiene una **contraseña para el modo administrador del kiosco**
+  (`administradores.usuario_kiosco` y `contrasena_kiosco_hash`) **distinta** de
+  la del panel.
+- El nombre del kiosco lo pone el jefe **al generar el código**. Quien instala
+  sólo teclea el código.
+
+**Descartado:**
+
+- *Generar códigos y revocar con Edge Functions*, como decía el comentario de
+  la 0004. Lo que se quería evitar era generar el código en el navegador, y una
+  función de la base también corre en el servidor, con el generador de pgcrypto.
+  Así es más simple y se prueba igual que el resto del esquema.
+- *Que el kiosco use la misma contraseña del panel*, leyendo el hash de
+  `auth.users`. Ese hash bajaría a cada kiosco. Quien se robe un disco podría
+  adivinarla en su casa sin límite de intentos y entrar al panel desde
+  cualquier lado. Separadas, lo peor que consigue es la del kiosco que ya se
+  llevó. Además, depender de una tabla interna de Supabase Auth ata el sistema
+  a un detalle que puede cambiar.
+- *La llave `anon` dentro del `.exe` para llamar a las funciones.* No agrega
+  seguridad (todo lo del `.exe` es público, CLAUDE.md 3.2). Lo que identifica al
+  kiosco es su token.
+
+**Por qué:** cada pieza queda en el lugar donde se prueba mejor y donde un
+error cuesta menos.
+
+**Reconsiderar si:** el jefe no quiere recordar dos contraseñas. Entonces el
+panel puede ofrecer "usar la misma" al ponerla, sabiendo el riesgo.
+
+---
+
 ## Plantilla para decisiones nuevas
 
 ```markdown

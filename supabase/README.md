@@ -40,6 +40,10 @@ migración fallará y nadie sabrá por qué.
 | 0008 | `correcciones_e_incidencias` | Cómo se arregla algo sin editar una marca |
 | 0009 | `bitacora_auditoria` | Quién cambió qué, llenada por triggers |
 | 0010 | `fotos` | Hash y estado de la foto, bitácora de consultas |
+| 0011 | `eventos_de_fotos` | Eventos de la llave y la retención de fotos |
+| 0012 | `modo_admin_kiosco` | "Conservar" y los eventos del modo administrador |
+| 0013 | `exportacion_usb` | El evento de cada exportación a USB |
+| 0014 | `enrolamiento_y_sincronizacion` | Generar códigos, revocar kioscos, contraseña del kiosco; recibir y bajar datos (lo usan las Edge Functions) |
 
 ---
 
@@ -101,7 +105,8 @@ gigabytes; después arranca en menos de un minuto.
 ```bash
 npx supabase start          # levanta Postgres y Auth locales (necesita Docker)
 npm run supabase:aplicar    # borra todo y aplica las migraciones desde cero
-npm run supabase:probar     # 46 pruebas de RLS, triggers y restricciones
+npm run supabase:probar     # 63 pruebas de RLS, triggers y restricciones
+npm run supabase:funciones:probar  # 53 pruebas de las Edge Functions, por HTTP
 npx supabase stop           # cuando termines
 ```
 
@@ -148,21 +153,28 @@ Y las llaves van en variables de entorno, **nunca en el repositorio**.
 
 ---
 
-## Qué falta
+## Las Edge Functions del kiosco
 
-Estas migraciones son el **bloque 4** del plan: el esquema, las reglas de
-acceso y los triggers.
-
-Lo siguiente (bloque 5) son las **Edge Functions**, que es el único camino por
-el que el kiosco habla con todo esto:
+Están en `functions/`. Son el **único** camino por el que el kiosco habla con
+la nube. El kiosco no tiene sesión de Supabase: se identifica con su token en el
+encabezado `x-kiosco-token`. Por eso `config.toml` les pone `verify_jwt = false`.
 
 | Función | Para qué |
 |---|---|
-| `enrolar-dispositivo` | canjea el código de un solo uso por un token |
-| `recibir-marcas` | inserción idempotente de la bandeja de salida |
-| `recibir-eventos` | eventos y consultas de foto del kiosco |
-| `bajar-catalogo` | empleados, hashes de PIN y configuración |
-| `heartbeat` | el kiosco reporta que sigue vivo |
+| `enrolar-kiosco` | canjea el código de 8 caracteres por el token del kiosco |
+| `recibir-registros` | marcas, eventos, accesos a fotos y estados de foto. Idempotente; un kiosco revocado deja lo anterior a su baja en cuarentena |
+| `catalogo` | empleados (con hash de PIN), administradores con contraseña de kiosco, configuración y última marca de cada quien. Incremental |
+| `latido` | versión, cámara, pendientes y desfase de reloj del kiosco |
+
+Generar un código y revocar un kiosco **no** son Edge Functions: son funciones
+de la base (`generar_codigo_enrolamiento`, `revocar_dispositivo`) que el panel
+llama con su sesión. Ver D-031.
 
 *(No hay función de fotos: **las fotos nunca salen del kiosco**. A la nube
 sólo llega su hash. Ver CLAUDE.md 5.1.)*
+
+## Qué falta
+
+- **Bloque 6:** que el kiosco use estas funciones (enrolarse, mandar su bandeja
+  de salida, bajar el catálogo, latir).
+- **Bloques 7–8:** el panel, que llama a las funciones de la base de la 0014.
