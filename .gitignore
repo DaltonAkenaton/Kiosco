@@ -1,0 +1,39 @@
+# Dependencias
+node_modules/
+
+# Compilados
+dist/
+build/
+out/
+release/
+*.tsbuildinfo
+
+# Instalador generado por electron-builder (pesa cientos de MB)
+dist-instalador/
+
+# Angular
+.angular/
+
+# Secretos: NUNCA se suben al repositorio
+.env
+.env.*
+!.env.ejemplo
+
+# Base de datos local y fotos del kiosco (datos personales)
+*.db
+*.db-wal
+*.db-shm
+fotos_pendientes/
+
+# Fotos cifradas y la llave que las abre (CLAUDE.md 5.1). Viven en AppData, no
+# aqui; estas lineas son por si alguien las copia al proyecto por error. La
+# llave va envuelta, pero junto con las fotos seria regalar las dos mitades.
+fotos/
+*.jpg.enc
+llave-fotos*.json
+
+# Sistema operativo / editores
+Thumbs.db
+.DS_Store
+.vscode/*
+!.vscode/extensions.json

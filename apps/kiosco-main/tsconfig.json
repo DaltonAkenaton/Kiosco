@@ -1,0 +1,18 @@
+{
+  // El proceso principal NO corre en un navegador: corre en Node.js dentro de
+  // Electron. Por eso su configuracion es distinta a la de Angular.
+  //
+  // Nota: aqui TypeScript solo REVISA los tipos ("noEmit": true).
+  // Quien genera el JavaScript final es esbuild (ver construir.mjs), que es
+  // muchisimo mas rapido y ademas junta todo en un archivo.
+  //
+  // Los atajos de importacion (@kiosko/compartido) se heredan de
+  // tsconfig.base.json; no hay que repetirlos aqui.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts"]
+}

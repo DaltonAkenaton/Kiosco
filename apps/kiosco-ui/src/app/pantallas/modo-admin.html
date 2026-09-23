@@ -1,0 +1,574 @@
+<!--
+  ============================================================================
+   MODO ADMINISTRADOR  (CLAUDE.md 5.2)
+  ============================================================================
+   Cubre toda la pantalla. Mientras esta abierto, el kiosco no registra: es
+   una revision rapida, y se cierra solo a los 2 minutos sin actividad.
+-->
+<div class="fixed inset-0 z-50 flex flex-col" style="background-color: var(--kiosko-fondo)">
+  @if (!sesion()) {
+    <!-- ====================== INICIO DE SESION ====================== -->
+    <div class="flex flex-1 items-center justify-center p-8">
+      <form
+        class="bg-superficie border-borde flex w-full max-w-xl flex-col gap-5 rounded-3xl border-2 p-10"
+        (submit)="$event.preventDefault(); entrar()"
+      >
+        <div>
+          <h2 class="text-3xl font-bold">Modo administrador</h2>
+          <p class="text-texto-suave mt-2 text-lg">
+            Para revisar los registros y sus fotos.
+          </p>
+        </div>
+
+        <label class="flex flex-col gap-2 text-xl">
+          Usuario
+          <input
+            type="text"
+            autocomplete="off"
+            autofocus
+            class="border-borde rounded-xl border-2 bg-transparent px-4 py-3 text-2xl"
+            [value]="usuario()"
+            (input)="usuario.set(valorDe($event))"
+          />
+        </label>
+
+        <label class="flex flex-col gap-2 text-xl">
+          Contraseña
+          <div class="flex gap-3">
+            <input
+              class="border-borde min-w-0 flex-1 rounded-xl border-2 bg-transparent px-4 py-3 text-2xl"
+              autocomplete="off"
+              [type]="mostrarContrasena() ? 'text' : 'password'"
+              [value]="contrasena()"
+              (input)="contrasena.set(valorDe($event))"
+              (keydown)="revisarMayusculas($event)"
+              (keyup)="revisarMayusculas($event)"
+            />
+            <!-- Con palabras y no con un ojito: no todos saben que el ojito se pica. -->
+            <button
+              type="button"
+              class="border-borde boton-tactil rounded-xl border-2 px-4 text-lg"
+              (click)="mostrarContrasena.set(!mostrarContrasena())"
+            >
+              {{ mostrarContrasena() ? 'Ocultar' : 'Mostrar' }}
+            </button>
+          </div>
+        </label>
+
+        @if (mayusculasActivadas()) {
+          <p
+            class="rounded-xl px-4 py-3 text-lg font-bold"
+            style="background-color: rgb(234 179 8 / 0.18); color: var(--kiosko-atencion)"
+          >
+            ⚠ Las MAYÚSCULAS están activadas (tecla Bloq Mayús).
+          </p>
+        }
+
+        <div class="flex gap-4">
+          <button
+            type="submit"
+            class="boton-tactil flex-1 rounded-2xl px-6 py-4 text-2xl font-bold"
+            style="background-color: var(--kiosko-institucion-primario)"
+            [disabled]="entrando()"
+          >
+            {{ entrando() ? 'Revisando...' : 'Entrar' }}
+          </button>
+          <button
+            type="button"
+            class="border-borde boton-tactil rounded-2xl border-2 px-6 py-4 text-xl"
+            (click)="cerrar.emit(null)"
+          >
+            Cancelar
+          </button>
+        </div>
+
+        <p class="text-texto-suave text-base">
+          Si los datos no son correctos, regresarás a la pantalla principal y el intento quedará
+          registrado.
+        </p>
+      </form>
+    </div>
+  } @else {
+    @let s = sesion()!;
+
+    <!-- ====================== ENCABEZADO ====================== -->
+    <header class="border-borde flex shrink-0 items-center justify-between gap-4 border-b px-8 py-4">
+      <div>
+        <h2 class="text-2xl font-bold">Modo administrador</h2>
+        <p class="text-texto-suave text-base">
+          {{ s.nombre }} · se cierra solo tras {{ s.minutosDeInactividad }} min sin usarse
+          <kiosco-ayuda titulo="¿Por qué se cierra solo?" [texto]="AYUDA.inactividad" alinear="izquierda" />
+        </p>
+      </div>
+      <button
+        type="button"
+        class="bg-superficie border-borde hover:bg-borde boton-tactil rounded-2xl border-2 px-8 py-3 text-xl font-bold"
+        (click)="salir()"
+      >
+        Salir
+      </button>
+    </header>
+
+    <!-- ====================== CONTRASENA DE RECUPERACION ====================== -->
+    @if (s.tieneContrasenaDeRecuperacion && !definiendoRecuperacion()) {
+      <!-- Ya definida: solo una linea discreta, con la opcion de cambiarla. -->
+      @if (s.rol === 'admin') {
+        <p class="text-texto-suave mx-8 mt-3 text-base">
+          Contraseña de recuperación de las fotos: <b class="text-texto">definida</b>.
+          <kiosco-ayuda titulo="Contraseña de recuperación" [texto]="AYUDA.recuperacion" alinear="izquierda" />
+          <button
+            type="button"
+            class="boton-tactil hover:text-texto ml-2 underline underline-offset-4"
+            (click)="definiendoRecuperacion.set(true)"
+          >
+            Cambiarla
+          </button>
+        </p>
+      }
+    } @else {
+      <div
+        class="mx-8 mt-4 rounded-2xl px-6 py-4"
+        style="background-color: rgb(234 179 8 / 0.14); border: 2px solid var(--kiosko-atencion)"
+      >
+        @if (s.tieneContrasenaDeRecuperacion) {
+          <p class="text-lg font-bold" style="color: var(--kiosko-atencion)">
+            Cambiar la contraseña de recuperación de las fotos
+            <kiosco-ayuda titulo="Contraseña de recuperación" [texto]="AYUDA.recuperacion" alinear="izquierda" />
+          </p>
+          <p class="mt-1 text-base">
+            La nueva reemplaza a la anterior para las fotos de esta computadora. Guarda también la hoja
+            vieja: si este kiosco heredó fotos de una PC anterior, esas siguen abriéndose con la
+            contraseña de entonces.
+          </p>
+        } @else {
+          <p class="text-lg font-bold" style="color: var(--kiosko-atencion)">
+            Falta la contraseña de recuperación de las fotos
+            <kiosco-ayuda titulo="Contraseña de recuperación" [texto]="AYUDA.recuperacion" alinear="izquierda" />
+          </p>
+          <p class="mt-1 text-base">
+            Sin ella, si se reinstala Windows o se cambia esta computadora, las fotos ya no se podrán
+            abrir nunca.
+          </p>
+        }
+
+        @if (s.rol !== 'admin') {
+          <p class="text-texto-suave mt-2 text-base">Pide al administrador principal que la defina.</p>
+        } @else if (!definiendoRecuperacion()) {
+          <button
+            type="button"
+            class="boton-tactil mt-3 rounded-xl px-5 py-2 text-lg font-bold"
+            style="background-color: var(--kiosko-institucion-primario)"
+            (click)="definiendoRecuperacion.set(true)"
+          >
+            Definirla ahora
+          </button>
+        } @else {
+          <div class="mt-3 flex flex-wrap items-end gap-3">
+            <label class="flex flex-col gap-1 text-base">
+              Contraseña de recuperación
+              <input
+                type="text"
+                autocomplete="off"
+                class="border-borde w-80 rounded-xl border-2 bg-transparent px-3 py-2 text-lg"
+                [value]="recuperacion1()"
+                (input)="recuperacion1.set(valorDe($event))"
+              />
+            </label>
+            <label class="flex flex-col gap-1 text-base">
+              Escríbela otra vez
+              <input
+                type="text"
+                autocomplete="off"
+                class="border-borde w-80 rounded-xl border-2 bg-transparent px-3 py-2 text-lg"
+                [value]="recuperacion2()"
+                (input)="recuperacion2.set(valorDe($event))"
+              />
+            </label>
+            <button
+              type="button"
+              class="boton-tactil rounded-xl px-5 py-2 text-lg font-bold"
+              style="background-color: var(--kiosko-institucion-primario)"
+              (click)="guardarRecuperacion()"
+            >
+              Guardar
+            </button>
+            <button
+              type="button"
+              class="border-borde boton-tactil rounded-xl border-2 px-5 py-2 text-lg"
+              (click)="definiendoRecuperacion.set(false)"
+            >
+              Cancelar
+            </button>
+          </div>
+          <p class="text-texto-suave mt-2 text-base">
+            Escríbela en la hoja de credenciales y guárdala. Ni el sistema ni nadie puede recuperarla
+            si se olvida. Se muestra al escribir a propósito, para que la copies bien.
+          </p>
+          @if (mensajeRecuperacion(); as mensaje) {
+            <p class="mt-2 text-base font-bold" style="color: var(--kiosko-peligro)">{{ mensaje }}</p>
+          }
+        }
+      </div>
+    }
+
+    <!-- ====================== FILTROS ====================== -->
+    <div class="flex shrink-0 flex-wrap items-end gap-4 px-8 py-4 text-lg">
+      <label class="flex flex-col gap-1">
+        Desde
+        <input
+          type="date"
+          class="border-borde rounded-xl border-2 bg-transparent px-3 py-2"
+          [value]="filtros().desde ?? ''"
+          (change)="cambiarFiltro('desde', valorDe($event) || null)"
+        />
+      </label>
+      <label class="flex flex-col gap-1">
+        Hasta
+        <input
+          type="date"
+          class="border-borde rounded-xl border-2 bg-transparent px-3 py-2"
+          [value]="filtros().hasta ?? ''"
+          (change)="cambiarFiltro('hasta', valorDe($event) || null)"
+        />
+      </label>
+      <label class="flex flex-col gap-1">
+        Empleado
+        <select
+          class="border-borde bg-superficie rounded-xl border-2 px-3 py-2"
+          (change)="cambiarFiltro('empleadoId', valorDe($event) || null)"
+        >
+          <option value="">Todos</option>
+          @for (e of empleados(); track e.id) {
+            <option [value]="e.id">{{ e.numeroEmpleado ? '#' + e.numeroEmpleado + ' · ' : '' }}{{ e.nombreCompleto }}</option>
+          }
+        </select>
+      </label>
+      <label class="flex flex-col gap-1">
+        <span>Revisión <kiosco-ayuda titulo="Revisión" [texto]="AYUDA.revision" /></span>
+        <select
+          class="border-borde bg-superficie rounded-xl border-2 px-3 py-2"
+          (change)="cambiarFiltro('bandera', valorDe($event) || null)"
+        >
+          <option value="">Todas</option>
+          @for (b of BANDERAS; track b) {
+            <option [value]="b">{{ NOMBRES_DE_BANDERAS[b] }}</option>
+          }
+        </select>
+      </label>
+      <label class="flex items-center gap-2 pb-2">
+        <input
+          type="checkbox"
+          class="h-6 w-6"
+          [checked]="filtros().soloConFoto"
+          (change)="cambiarFiltro('soloConFoto', !filtros().soloConFoto)"
+        />
+        Solo con foto
+        <kiosco-ayuda titulo="Solo con foto" [texto]="AYUDA.soloConFoto" />
+      </label>
+      <span class="text-texto-suave pb-2">
+        {{ buscando() ? 'Buscando...' : registros().length + ' registro(s)' }}
+      </span>
+    </div>
+
+    @if (error(); as mensaje) {
+      <p class="mx-8 mb-2 text-lg font-bold" style="color: var(--kiosko-peligro)">{{ mensaje }}</p>
+    }
+
+    <!-- ====================== TABLA + FOTO ====================== -->
+    <div class="flex min-h-0 flex-1 gap-6 px-8 pb-6">
+      <div class="min-h-0 flex-1 overflow-y-auto">
+        @if (registros().length === 0 && !buscando()) {
+          <p class="text-texto-suave mt-12 text-center text-2xl">
+            No hay registros con estos filtros. Prueba con otras fechas.
+          </p>
+        } @else {
+          <table class="w-full border-collapse text-left">
+            <thead>
+              <tr class="text-texto-suave border-borde border-b text-base uppercase tracking-wide">
+                <th class="py-2 pr-3 font-semibold">Fecha</th>
+                <th class="py-2 pr-3 font-semibold">Hora</th>
+                <th class="py-2 pr-3 font-semibold">Quién</th>
+                <th class="py-2 pr-3 font-semibold">Qué</th>
+                <th class="py-2 pr-3 font-semibold">Foto</th>
+                <th class="py-2 font-semibold">Revisión</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of registros(); track r.id) {
+                <tr
+                  class="border-borde hover:bg-superficie cursor-pointer border-b text-lg"
+                  [class.bg-superficie]="seleccionada()?.id === r.id"
+                  (click)="abrirFoto(r)"
+                >
+                  <td class="py-3 pr-3 tabular-nums">{{ fecha(r.horaEstimadaMs) }}</td>
+                  <td class="py-3 pr-3 tabular-nums font-bold">{{ hora(r.horaEstimadaMs) }}</td>
+                  <td class="py-3 pr-3">
+                    <span class="font-semibold">{{ r.nombreCompleto }}</span>
+                    @if (r.numeroEmpleado) {
+                      <span class="text-texto-suave"> · #{{ r.numeroEmpleado }}</span>
+                    }
+                  </td>
+                  <td
+                    class="py-3 pr-3 font-bold"
+                    [style.color]="r.tipo === 'entrada' ? 'var(--kiosko-entrada)' : 'var(--kiosko-salida)'"
+                  >
+                    {{ r.tipo === 'entrada' ? '→ ENTRADA' : '← SALIDA' }}
+                  </td>
+                  <td class="py-3 pr-3">
+                    @switch (r.fotoEstado) {
+                      @case ('disponible') {
+                        Ver foto <kiosco-ayuda titulo="Foto guardada" [texto]="AYUDA.disponible" />
+                      }
+                      @case ('conservada') {
+                        Ver foto · <b>Conservada</b>
+                        <kiosco-ayuda titulo="Conservada" [texto]="AYUDA.conservada" />
+                      }
+                      @case ('eliminada_por_antiguedad') {
+                        <span class="text-texto-suave">Borrada (30 días)</span>
+                        <kiosco-ayuda titulo="Foto borrada" [texto]="AYUDA.borrada" />
+                      }
+                      @default {
+                        <span class="text-texto-suave">Sin foto</span>
+                        <kiosco-ayuda titulo="Sin foto" [texto]="AYUDA.sinFoto" />
+                      }
+                    }
+                  </td>
+                  <td class="py-3" style="color: var(--kiosko-atencion)">
+                    @for (b of r.banderas; track b) {
+                      <span class="mr-3 inline-flex items-center gap-1 whitespace-nowrap">
+                        {{ NOMBRES_DE_BANDERAS[b] ?? b }}
+                        @if (AYUDA_BANDERAS[b]; as explicacion) {
+                          <kiosco-ayuda [titulo]="NOMBRES_DE_BANDERAS[b] ?? b" [texto]="explicacion" alinear="derecha" />
+                        }
+                      </span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+
+      <!-- ---------- La foto del registro elegido ---------- -->
+      @if (seleccionada(); as r) {
+        <aside class="bg-superficie border-borde flex w-[34rem] shrink-0 flex-col gap-4 overflow-y-auto rounded-3xl border-2 p-5">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xl font-bold">Foto del registro</h3>
+            <button
+              type="button"
+              class="border-borde boton-tactil rounded-xl border-2 px-4 py-1 text-lg"
+              (click)="cerrarFoto()"
+            >
+              Cerrar (Esc)
+            </button>
+          </div>
+
+          @if (cargandoFoto()) {
+            <p class="text-texto-suave text-lg">Abriendo la foto...</p>
+          } @else if (foto(); as f) {
+            @if (f.estado === 'con_foto') {
+              <!--
+                Los datos van ENCIMA de la foto, no dentro de ella: la imagen
+                guardada queda limpia (D-025). Que datos, lo decide
+                MODO_ADMIN.datosSobreLaFoto.
+              -->
+              <!-- Clic en la foto (o en "Ampliar") abre el visor con zoom. -->
+              <button
+                type="button"
+                class="relative block cursor-zoom-in overflow-hidden rounded-2xl text-left"
+                title="Ampliar"
+                (click)="abrirAmpliada()"
+              >
+                <img [src]="f.jpegDataUrl" alt="Foto del registro" class="block w-full" />
+                <ng-container *ngTemplateOutlet="datosSobreLaFoto; context: { $implicit: r, s: s }" />
+              </button>
+              <button
+                type="button"
+                class="boton-tactil self-start rounded-xl px-5 py-2 text-lg font-bold"
+                style="background-color: var(--kiosko-institucion-primario)"
+                (click)="abrirAmpliada()"
+              >
+                🔍 Ampliar
+              </button>
+              <p class="text-texto-suave text-sm">
+                Huella de la foto: {{ f.hashCorto }}… (coincide con la del registro)
+                <kiosco-ayuda titulo="Huella de la foto" [texto]="AYUDA.huella" alinear="izquierda" />
+              </p>
+            } @else {
+              <p class="rounded-xl px-4 py-4 text-lg" style="background-color: rgb(234 179 8 / 0.14)">
+                {{ explicacion(f.estado) }}
+              </p>
+            }
+          }
+
+          <!-- ---------- Conservar (casos en disputa) ---------- -->
+          @if (r.fotoEstado === 'disponible' || r.fotoEstado === 'conservada') {
+            <div class="border-borde border-t pt-4">
+              @if (r.fotoEstado === 'conservada') {
+                <p class="mb-2 text-base">
+                  <b>Conservada:</b> no se borrará a los 30 días hasta que se le quite la marca.
+                  <kiosco-ayuda titulo="Conservada" [texto]="AYUDA.conservada" alinear="derecha" />
+                </p>
+              } @else {
+                <p class="text-texto-suave mb-2 text-base">
+                  Esta foto se borrará sola al cumplir 30 días. Si hay una queja o una duda sobre este
+                  registro, márcala para conservarla.
+                </p>
+              }
+
+              @if (!pidiendoMotivo()) {
+                <button
+                  type="button"
+                  class="boton-tactil rounded-xl px-5 py-2 text-lg font-bold"
+                  style="background-color: var(--kiosko-institucion-primario)"
+                  (click)="pidiendoMotivo.set(true)"
+                >
+                  {{ r.fotoEstado === 'conservada' ? 'Quitar "Conservar"' : 'Conservar esta foto' }}
+                </button>
+              } @else {
+                <label class="flex flex-col gap-1 text-base">
+                  ¿Por qué? (queda anotado)
+                  <input
+                    type="text"
+                    class="border-borde rounded-xl border-2 bg-transparent px-3 py-2 text-lg"
+                    placeholder="Ej.: queja del empleado del 22 de septiembre"
+                    [value]="motivo()"
+                    (input)="motivo.set(valorDe($event))"
+                  />
+                </label>
+                <div class="mt-2 flex gap-3">
+                  <button
+                    type="button"
+                    class="boton-tactil rounded-xl px-5 py-2 text-lg font-bold"
+                    style="background-color: var(--kiosko-institucion-primario)"
+                    [disabled]="motivo().trim().length < 3"
+                    (click)="confirmarConservar()"
+                  >
+                    Confirmar
+                  </button>
+                  <button
+                    type="button"
+                    class="border-borde boton-tactil rounded-xl border-2 px-5 py-2 text-lg"
+                    (click)="pidiendoMotivo.set(false)"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              }
+            </div>
+          }
+        </aside>
+      }
+    </div>
+
+    <!--
+      Los datos que van ENCIMA de la foto, no dentro de ella: la imagen
+      guardada queda limpia (D-025). Cuales, lo decide
+      MODO_ADMIN.datosSobreLaFoto. Se usa en el panel y en el visor ampliado.
+    -->
+    <ng-template #datosSobreLaFoto let-r let-s="s">
+      <div
+        class="absolute inset-x-0 bottom-0 flex flex-col gap-0.5 px-4 py-3 text-white"
+        style="background: linear-gradient(to top, rgb(0 0 0 / 0.85), rgb(0 0 0 / 0.55))"
+      >
+        @if (s.datosSobreLaFoto.tipo || s.datosSobreLaFoto.fechaHora) {
+          <span class="text-2xl font-black">
+            @if (s.datosSobreLaFoto.tipo) {
+              <span [style.color]="r.tipo === 'entrada' ? 'var(--kiosko-entrada)' : 'var(--kiosko-salida)'">
+                {{ r.tipo === 'entrada' ? 'ENTRADA' : 'SALIDA' }}
+              </span>
+            }
+            @if (s.datosSobreLaFoto.fechaHora) {
+              {{ fecha(r.horaEstimadaMs) }} {{ hora(r.horaEstimadaMs) }}
+            }
+          </span>
+        }
+        @if (s.datosSobreLaFoto.numeroEmpleado || s.datosSobreLaFoto.nombre) {
+          <span class="text-lg">
+            @if (s.datosSobreLaFoto.numeroEmpleado && r.numeroEmpleado) {
+              #{{ r.numeroEmpleado }}
+            }
+            @if (s.datosSobreLaFoto.nombre) {
+              {{ r.nombreCompleto }}
+            }
+          </span>
+        }
+      </div>
+    </ng-template>
+
+    <!-- ====================== VISOR AMPLIADO CON ZOOM ====================== -->
+    @if (ampliada() && seleccionada(); as r) {
+      @if (foto(); as f) {
+        @if (f.estado === 'con_foto') {
+          <div class="fixed inset-0 z-[60] flex flex-col" style="background-color: rgb(0 0 0 / 0.95)">
+            <!-- Botones con palabras, grandes: no todos saben usar la rueda del raton. -->
+            <div class="flex shrink-0 flex-wrap items-center justify-center gap-3 px-6 py-4 text-white">
+              <button
+                type="button"
+                class="boton-tactil rounded-xl border-2 border-white/40 px-5 py-2 text-xl font-bold"
+                [disabled]="zoom() <= 1"
+                (click)="alejar()"
+              >
+                − Alejar
+              </button>
+              <span class="w-20 text-center text-xl tabular-nums">{{ zoom() * 100 }} %</span>
+              <button
+                type="button"
+                class="boton-tactil rounded-xl border-2 border-white/40 px-5 py-2 text-xl font-bold"
+                [disabled]="zoom() >= s.zoomMaximoFoto"
+                (click)="acercar()"
+              >
+                + Acercar
+              </button>
+              <button
+                type="button"
+                class="boton-tactil rounded-xl border-2 border-white/40 px-5 py-2 text-xl"
+                (click)="restablecerZoom()"
+              >
+                Tamaño normal
+              </button>
+              <button
+                type="button"
+                class="boton-tactil ml-6 rounded-xl px-6 py-2 text-xl font-bold"
+                style="background-color: var(--kiosko-institucion-primario)"
+                (click)="cerrarAmpliada()"
+              >
+                Cerrar (Esc)
+              </button>
+            </div>
+
+            <div
+              class="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden"
+              (wheel)="alGirarRueda($event)"
+            >
+              <img
+                [src]="f.jpegDataUrl"
+                alt="Foto del registro, ampliada"
+                draggable="false"
+                class="max-h-full max-w-full select-none object-contain"
+                [class.cursor-grab]="zoom() > 1 && !arrastrando()"
+                [class.cursor-grabbing]="arrastrando()"
+                [class.cursor-zoom-in]="zoom() === 1"
+                [style.transform]="'scale(' + zoom() + ') translate(' + desplazamiento().x + 'px, ' + desplazamiento().y + 'px)'"
+                [style.transition]="arrastrando() ? 'none' : 'transform 120ms ease-out'"
+                style="image-rendering: auto"
+                (dblclick)="alternarZoom()"
+                (pointerdown)="empezarArrastre($event)"
+                (pointermove)="moverArrastre($event)"
+                (pointerup)="soltarArrastre()"
+                (pointercancel)="soltarArrastre()"
+              />
+              <ng-container *ngTemplateOutlet="datosSobreLaFoto; context: { $implicit: r, s: s }" />
+            </div>
+
+            <p class="shrink-0 py-2 text-center text-base text-white/70">
+              Rueda del ratón o botones para acercar · Arrastra para moverte · Doble clic para acercar
+              o volver
+            </p>
+          </div>
+        }
+      }
+    }
+  }
+</div>

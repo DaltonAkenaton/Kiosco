@@ -1,0 +1,27 @@
+/* ==========================================================================
+   ARCHIVO GENERADO AUTOMATICAMENTE - NO LO EDITES A MANO
+   ==========================================================================
+
+   Se genera a partir de:  packages/compartido/src/tema.json
+   Lo genera el script:    apps/kiosco-ui/generar-tema.mjs
+
+   Cualquier cambio que escribas aqui se va a perder la proxima vez que
+   arranques o compiles la interfaz.
+
+   Para cambiar un color:  edita tema.json y guarda.
+   ========================================================================== */
+
+:root {
+  --kiosko-institucion-primario: #003d5c;
+  --kiosko-institucion-secundario: #bb4b26;
+  --kiosko-institucion-terciario: #c86f54;
+  --kiosko-fondo: #0f172a;
+  --kiosko-superficie: #1e293b;
+  --kiosko-borde: #334155;
+  --kiosko-texto: #f1f5f9;
+  --kiosko-texto-suave: #94a3b8;
+  --kiosko-entrada: #10b981;
+  --kiosko-salida: #f59e0b;
+  --kiosko-peligro: #ef4444;
+  --kiosko-atencion: #eab308;
+}

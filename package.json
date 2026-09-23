@@ -1,0 +1,33 @@
+{
+  "name": "kiosko",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sistema de control de asistencia para personal de limpieza (offline-first)",
+  "license": "UNLICENSED",
+  "workspaces": [
+    "packages/compartido",
+    "apps/kiosco-main",
+    "apps/kiosco-ui"
+  ],
+  "scripts": {
+    "kiosco:compilar": "npm run compilar --workspace=@kiosko/kiosco-main",
+    "ui:servir": "npm start --workspace=@kiosko/kiosco-ui",
+    "ui:compilar": "npm run build --workspace=@kiosko/kiosco-ui",
+    "kiosco:dev": "npm run dev --workspace=@kiosko/kiosco-main",
+    "revisar-tipos": "npm run revisar-tipos --workspace=@kiosko/kiosco-main",
+    "probar": "npm run probar --workspace=@kiosko/kiosco-main",
+    "empaquetar": "npm run empaquetar --workspace=@kiosko/kiosco-main",
+    "probar:empaquetado": "npm run probar:empaquetado --workspace=@kiosko/kiosco-main",
+    "supabase:revisar": "node supabase/revisar-migraciones.mjs",
+    "supabase:local": "supabase start",
+    "supabase:aplicar": "supabase db reset",
+    "supabase:probar": "node supabase/probar-esquema.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "libpg-query": "^18.1.5",
+    "pg": "^8.23.0"
+  }
+}

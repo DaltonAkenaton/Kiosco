@@ -1,0 +1,168 @@
+# La base de datos en la nube (Supabase)
+
+Aquí vive todo lo que corre en el servidor: las tablas, las reglas de quién
+puede ver qué, y las funciones que el kiosco y el panel llaman.
+
+> **Si sólo quieres entender qué hace cada cosa**, no hace falta que leas SQL.
+> Cada archivo de `migrations/` empieza con una explicación larga de qué
+> resuelve y por qué está hecho así.
+
+---
+
+## Qué es una migración
+
+Un archivo `.sql` numerado que **cambia la base de datos un paso**. Se aplican
+en orden, del `0001` en adelante, y nunca se modifica uno ya aplicado: si hay
+que corregir algo, se agrega el siguiente número.
+
+¿Por qué tan estricto? Porque es lo que hace que la base de pruebas y la de
+producción sean idénticas. Sin migraciones, "funciona en mi máquina" se
+convierte en "y en el servidor quién sabe", y averiguar la diferencia entre dos
+bases de datos a mano es un trabajo horrible.
+
+**Nunca se hacen cambios a mano en producción** (CLAUDE.md 16). Ni uno. El día
+que alguien agregue una columna desde el panel de Supabase, la siguiente
+migración fallará y nadie sabrá por qué.
+
+---
+
+## Las migraciones, en orden
+
+| # | Archivo | Qué crea |
+|---|---|---|
+| 0001 | `cimientos` | Extensiones, funciones de tiempo, tabla `configuracion` |
+| 0002 | `administradores` | Quién entra al panel, y las dos funciones de permisos |
+| 0003 | `empleados` | El personal, sus PINes hasheados |
+| 0004 | `dispositivos` | Los kioscos y sus códigos de enrolamiento |
+| 0005 | `marcas` | **La tabla inmutable.** Entradas y salidas |
+| 0006 | `eventos_dispositivo` | Cámara caída, kiosco pausado: lo que explica los huecos |
+| 0007 | `turnos` | Horarios, asignaciones, días festivos |
+| 0008 | `correcciones_e_incidencias` | Cómo se arregla algo sin editar una marca |
+| 0009 | `bitacora_auditoria` | Quién cambió qué, llenada por triggers |
+| 0010 | `fotos` | Hash y estado de la foto, bitácora de consultas |
+
+---
+
+## Las cinco reglas que gobiernan todo esto
+
+### 1. La llave `service_role` nunca sale de aquí
+
+Supabase tiene dos llaves. La `anon` es pública y puede ir en cualquier lado.
+La **`service_role` se salta todas las reglas de seguridad** y sólo puede vivir
+dentro de una Edge Function.
+
+Nunca en el `.exe` del kiosco. Nunca en el panel. Nunca en el repositorio
+(CLAUDE.md 3.2).
+
+### 2. RLS en todas las tablas, negando por defecto
+
+*Row Level Security* es la función de Postgres que decide, fila por fila, quién
+puede ver qué. Se activa en cuanto la tabla nace, y sin políticas significa
+**nadie ve nada**. Después se abre sólo lo justo.
+
+Lo importante: **la RLS no aplica a `service_role`**. Las Edge Functions pasan
+por encima de todo. Por eso las reglas que no pueden saltarse —la
+inmutabilidad de las marcas, por ejemplo— están escritas como *triggers* y no
+como políticas.
+
+### 3. Aquí no hay ni una sola fotografía
+
+El cliente pidió que las fotos se queden en el kiosco (CLAUDE.md 1.1). A la
+nube llega sólo el **hash SHA-256** y el **estado** de cada foto, que es lo que
+permite al panel decir "esta marca tiene foto, ve al kiosco de la entrada" o
+"esta foto debería estar y no está".
+
+Por eso **no existe ningún bucket de Storage**. Un bucket vacío "por si acaso"
+es una puerta abierta esperando a que alguien la use.
+
+### 4. Las marcas no se editan ni se borran
+
+Ni el panel, ni una Edge Function, ni una consulta corrida a mano. Hay un
+trigger que lo impide (migración 0005).
+
+Corregir sí se puede: se agrega una fila en `correcciones`, con motivo
+obligatorio y firmada. Las dos versiones quedan.
+
+### 5. Todo en UTC, la zona horaria en la tabla
+
+Cada columna de tiempo es `timestamptz`. La conversión a hora local se hace
+sólo al mostrar, y siempre con la función `zona_horaria()`.
+
+**Prohibido** escribir `America/Mexico_City` o `-06:00` en cualquier consulta:
+Nuevo Laredo está en la franja fronteriza y sí tiene horario de verano.
+
+---
+
+## Cómo probar los cambios en tu máquina
+
+Necesitas **Docker Desktop corriendo**. La primera vez descarga varios
+gigabytes; después arranca en menos de un minuto.
+
+```bash
+npx supabase start          # levanta Postgres y Auth locales (necesita Docker)
+npm run supabase:aplicar    # borra todo y aplica las migraciones desde cero
+npm run supabase:probar     # 46 pruebas de RLS, triggers y restricciones
+npx supabase stop           # cuando termines
+```
+
+Y sin Docker, para cazar lo tonto en dos segundos:
+
+```bash
+npm run supabase:revisar    # sintaxis de las migraciones
+```
+
+> **`supabase:revisar` NO prueba que funcionen.** Las 10 migraciones pasaban esa
+> revisión y la quinta reventó al aplicarla de verdad (E-018). La sintaxis es el
+> primer filtro, no el último.
+
+`db reset` es el comando que importa: **aplica las migraciones en orden, desde
+la nada**, que es exactamente lo que va a pasar en el servidor de verdad. Si
+funciona ahí, funciona allá.
+
+Cuando termina, `supabase start` imprime la URL local y las llaves. El panel de
+Supabase local queda en <http://localhost:54323>.
+
+---
+
+## Los dos proyectos: pruebas y producción
+
+CLAUDE.md 13.3 pide **dos proyectos de Supabase separados**, con variables de
+entorno distintas. Nunca se prueba contra producción.
+
+No es exageración: una prueba de sincronización manda marcas inventadas, y una
+marca inventada en producción es un registro de asistencia falso de una persona
+real. No hay forma limpia de deshacerlo, porque las marcas no se borran.
+
+Todavía no existe ninguno de los dos proyectos: hace falta la cuenta de correo
+dedicada al sistema (CLAUDE.md 1.1). Mientras tanto, todo se prueba en local
+con Docker, que es gratis y no le puede pasar nada a nadie.
+
+### Cuando se creen
+
+```bash
+npx supabase link --project-ref <ref-del-proyecto>
+npx supabase db push     # aplica las migraciones pendientes
+```
+
+Y las llaves van en variables de entorno, **nunca en el repositorio**.
+
+---
+
+## Qué falta
+
+Estas migraciones son el **bloque 4** del plan: el esquema, las reglas de
+acceso y los triggers.
+
+Lo siguiente (bloque 5) son las **Edge Functions**, que es el único camino por
+el que el kiosco habla con todo esto:
+
+| Función | Para qué |
+|---|---|
+| `enrolar-dispositivo` | canjea el código de un solo uso por un token |
+| `recibir-marcas` | inserción idempotente de la bandeja de salida |
+| `recibir-eventos` | eventos y consultas de foto del kiosco |
+| `bajar-catalogo` | empleados, hashes de PIN y configuración |
+| `heartbeat` | el kiosco reporta que sigue vivo |
+
+*(No hay función de fotos: **las fotos nunca salen del kiosco**. A la nube
+sólo llega su hash. Ver CLAUDE.md 5.1.)*

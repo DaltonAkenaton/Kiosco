@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Control de Asistencia</title>
+
+    <!--
+      La "base" le dice al navegador desde donde resolver las rutas.
+      "./" (relativa) es obligatorio aqui: en produccion la app se abre como
+      archivo local (file://...) dentro de Electron, y una base absoluta "/"
+      apuntaria a la raiz del disco C: y no cargaria nada.
+    -->
+    <base href="./" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+  </head>
+  <body>
+    <!-- Angular sustituye esta etiqueta por la aplicacion completa. -->
+    <app-root></app-root>
+  </body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "name": "@kiosko/compartido",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Configuracion y tipos compartidos entre el kiosco, el panel y las Edge Functions",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts"
+}

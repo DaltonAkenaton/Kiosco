@@ -1,0 +1,167 @@
+## ============================================================================
+##  COMO SE ARMA EL INSTALADOR DEL KIOSCO
+## ============================================================================
+##
+##  Este archivo le dice a electron-builder como convertir la carpeta `dist/`
+##  en un `.exe` que se instala con doble clic en una PC limpia.
+##
+##  Se ejecuta con:      npm run empaquetar
+##  El resultado queda:  apps/kiosco-main/dist-instalador/
+##
+##  ---------------------------------------------------------------------------
+##  ¿QUE METE ADENTRO?
+##  ---------------------------------------------------------------------------
+##  Menos de lo que parece. El proceso principal y el preload ya vienen
+##  compilados y EMPAQUETADOS por esbuild en dos archivos (`dist/main.js` y
+##  `dist/preload.js`), con bcryptjs y zod ya metidos adentro. La interfaz de
+##  Angular ya viene compilada en `dist/interfaz/`.
+##
+##  Por eso la lista de `files` de abajo es tan corta: casi todo el trabajo ya
+##  esta hecho antes de que electron-builder empiece.
+
+## ---------------------------------------------------------------------------
+##  EMPAQUETAR SIN INTERNET
+## ---------------------------------------------------------------------------
+##  `electronDist` le dice a electron-builder que use la copia de Electron que
+##  ya esta en `node_modules`, en vez de ir a descargarla de GitHub.
+##
+##  ¿Por que hace falta? Porque sin esto, generar el instalador EXIGE internet
+##  — y lo exige en un momento raro: la descarga esta en cache casi siempre, y
+##  el dia que la cache se invalida el empaquetado falla con
+##  `getaddrinfo ENOTFOUND github.com`, que no se parece en nada a "te falta
+##  internet".
+##
+##  Paso de verdad, y en el peor momento: preparando una demostracion.
+##
+##  Y encaja con el proyecto: el CLAUDE.md dice desde la primera linea que
+##  "internet y luz fallan ocasionalmente". Si el kiosco esta pensado para
+##  funcionar sin red, generar el kiosco tambien deberia poder.
+##
+##  La ruta es relativa a este archivo. La version de Electron que se empaqueta
+##  pasa a ser exactamente la que `npm install` dejo ahi, que ademas esta
+##  fijada sin `^` en package.json: dos formas distintas de que no cambie sola.
+electronDist: ../../node_modules/electron/dist
+
+appId: mx.edu.uat.fcacs.kiosco-asistencia
+
+## El nombre que la gente ve: en el instalador, en el menu de inicio, en el
+## Panel de control. Sale de la configuracion central para que no pueda quedar
+## distinto del titulo de la ventana.
+productName: Control de Asistencia
+
+copyright: Universidad Autonoma de Tamaulipas
+
+directories:
+  ## Fuera de `dist/`, que es donde escriben los compiladores. Si compartieran
+  ## carpeta, un `dist/` borrado por una recompilacion se llevaria tambien el
+  ## instalador, y al reves: el empaquetador leeria restos de compilaciones
+  ## viejas.
+  output: dist-instalador
+  buildResources: recursos-instalador
+
+files:
+  ## Lo unico que hace falta para correr.
+  - dist/**/*
+  - package.json
+
+  ## Y lo que NO debe viajar, aunque este dentro de `dist/`:
+  ## - los mapas de depuracion (regalan el codigo fuente);
+  ## - el paquete de pruebas, que expone funciones internas a proposito
+  ##   (ver el encabezado de construir-pruebas.mjs).
+  - '!dist/**/*.map'
+  - '!dist/prueba-bundle.js'
+
+## `asar` empaqueta todo en un solo archivo.
+##
+## No es proteccion —se puede abrir con herramientas comunes— pero si evita
+## que alguien edite un .js suelto dentro de "Archivos de programa" y cambie
+## el comportamiento del kiosco sin que nadie se entere. Para la seguridad de
+## verdad estan las reglas del CLAUDE.md 3.
+asar: true
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+
+  ## Sin `icon`: todavia no hay escudo oficial de la UAT en formato .ico
+  ## (CLAUDE.md 14, pendiente del manual de identidad grafica). Mientras
+  ## tanto se usa el icono por defecto de Electron. Cuando llegue el oficial,
+  ## se pone en `recursos-instalador/icon.ico` y esto se resuelve solo.
+
+  ## El .exe no va firmado digitalmente. Windows SmartScreen mostrara un aviso
+  ## la primera vez que se instale, y hay que darle a "Mas informacion" ->
+  ## "Ejecutar de todas formas". Firmarlo requiere un certificado de pago a
+  ## nombre de la institucion; queda anotado en el manual tecnico como una
+  ## decision de la facultad, no como algo olvidado.
+
+nsis:
+  ## `oneClick: false` = instalador con pantallas, no uno que se instala solo
+  ## en cuanto lo abres. Para quien instala (una persona, una vez por PC) ver
+  ## lo que esta pasando vale mas que ahorrarse dos clics.
+  oneClick: false
+
+  ## ------------------------------------------------------------------------
+  ##  LA OPCION MAS IMPORTANTE DE TODO EL ARCHIVO
+  ## ------------------------------------------------------------------------
+  ##  `perMachine: false` instala SOLO para el usuario actual, dentro de su
+  ##  perfil, y por lo tanto NO pide contrasena de administrador.
+  ##
+  ##  Eso encaja exactamente con el kiosco descrito en CLAUDE.md 13: "cuenta
+  ##  estandar sin privilegios". Con `perMachine: true`, instalar exigiria que
+  ##  alguien con Administrador este presente en cada PC, cada vez — incluidas
+  ##  las actualizaciones automaticas, que entonces simplemente no podrian
+  ##  instalarse solas.
+  perMachine: false
+  allowElevation: false
+
+  ## La ruta de instalacion no se pregunta: es un kiosco, no un programa de
+  ## escritorio. Una PC con el kiosco instalado en una carpeta rara es una PC
+  ## que nadie va a saber reparar dentro de dos anos.
+  allowToChangeInstallationDirectory: false
+
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Control de Asistencia
+
+  ## Abrir el kiosco al terminar de instalar: quien instala comprueba en el
+  ## momento que funciona, en vez de irse y enterarse despues.
+  runAfterFinish: true
+
+  ## ------------------------------------------------------------------------
+  ##  DESINSTALAR NUNCA BORRA LOS DATOS
+  ## ------------------------------------------------------------------------
+  ##  `deleteAppDataOnUninstall: false` deja intacta la carpeta de datos
+  ##  (la base SQLite y las fotos que todavia no se han subido).
+  ##
+  ##  Es una decision seria, no un descuido. Desinstalar suele ser el primer
+  ##  paso de "reinstalar porque algo anda mal", y si eso borrara la base de
+  ##  datos se perderian las marcas que aun no han llegado a la nube: las de
+  ##  la manana en que se fue el internet, justamente.
+  ##
+  ##  Los datos se borran a mano, siguiendo el manual tecnico, y despues de
+  ##  comprobar que ya no hay nada pendiente.
+  deleteAppDataOnUninstall: false
+
+  ## Nombre del archivo final. Sin espacios a proposito: viaja por correo, por
+  ## WhatsApp y por memorias USB, y los espacios en un nombre de archivo se
+  ## convierten en "%20" o en comillas olvidadas en el momento menos oportuno.
+  artifactName: ControlDeAsistencia-Instalador-${version}.${ext}
+
+## ============================================================================
+##  PUBLICACION  (actualizaciones automaticas)
+## ============================================================================
+##
+##  Mientras esta seccion no exista, electron-updater se queda quieto a
+##  proposito: sin ella no hay a donde preguntar, y preguntar igual solo
+##  llenaria el registro de errores en cada arranque. Ver `actualizaciones.ts`.
+##
+##  Para encenderlo hace falta primero decidir DONDE se publican las versiones
+##  (lo natural es GitHub Releases, en el repositorio de la cuenta del sistema
+##  de la que habla CLAUDE.md 1.1). Es trabajo del bloque 10.
+##
+# publish:
+#   provider: github
+#   owner: <la cuenta del sistema>
+#   repo: <el repositorio>

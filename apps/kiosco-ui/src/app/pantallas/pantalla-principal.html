@@ -1,0 +1,1122 @@
+<!--
+  ============================================================================
+   PANTALLA PRINCIPAL DEL KIOSCO
+  ============================================================================
+
+     ┌──────────────────────────────────────────────────┐
+     │  [ VIDEO EN VIVO ]  │  reloj grande              │
+     │                     │  instruccion               │
+     │                     │  usuario / lista / numero  │
+     │                     │  ● ● ○ ○   (PIN)           │
+     ├──────────────────────────────────────────────────┤
+     │  ● En linea   0 pendientes   Camara OK    v0.1.0 │
+     └──────────────────────────────────────────────────┘
+
+   Ningun color esta escrito a mano: todos vienen de tema.json.
+-->
+
+<!--
+  ============================================================================
+   CONFIRMACION DEL REGISTRO
+  ============================================================================
+
+   Esta pantalla lleva DOS rediseños, los dos por probarla con una persona.
+
+   Primera version: una tarjeta chica en una esquina.
+       "ni siquiera pude leer todo lo que decia, solo mire algo verde y
+        algo amarillo"
+
+   Segunda version: la pantalla ENTERA pintada de verde o ambar.
+       "se mira bastante mal, es un jumpscare de color para los ojos"
+
+   Las dos fallaban, y por razones opuestas. El equilibrio esta aqui:
+
+     - El fondo oscuro SE QUEDA. Solo se atenua un poco. A las 6 de la
+       manana, en un pasillo con poca luz, inundar la pantalla de verde
+       brillante es agresivo de verdad.
+
+     - El color es el ACENTO, no el fondo: el circulo del icono, la palabra
+       ENTRADA y el borde. Ocupa quiza un 15% de la pantalla en vez del 100%,
+       y aun asi se identifica al instante desde lejos.
+
+     - Aparece con una transicion de 180 ms. El mismo contenido apareciendo
+       de golpe se siente como un golpe; apareciendo suave, se siente como
+       algo que llega.
+
+   Lo que NO cambio, porque venia del problema de fondo que describio:
+
+       "tengo un lector de huella y no se bien si agarro mi huella o
+        realmente marque entrada... y regreso a checar"
+
+   La duda hace que la gente cheque dos veces, y esa segunda marca ensucia
+   el registro. Por eso la confirmacion sigue siendo grande, explicita, en
+   primera persona, y dura 6 segundos.
+
+   Y sigue usando COLOR + TEXTO + ICONO a la vez. Si fuera solo color, una
+   persona daltonica no podria distinguir entrada de salida — y el verde con
+   el ambar estan justo entre los pares que mas se confunden.
+-->
+<!--
+  ============================================================================
+   CONFIRMACION ANTES DE REGISTRAR   (CLAUDE.md 4.4)
+  ============================================================================
+
+   "Hola, [Nombre] - Registrando ENTRADA 06:02", con boton para cambiar la
+   accion, boton para cancelar, y confirmacion automatica a los 3 segundos.
+
+   TRES DECISIONES DE DISENO QUE VALE LA PENA EXPLICAR
+   --------------------------------------------------
+
+   1. NO se cierra al hacer clic en el fondo.
+      La tarjeta de EXITO si: ya esta hecho, quitarla no tiene consecuencias.
+      Esta no, porque un clic fuera podria significar "cancelar" o "confirmar"
+      y no hay forma de saber cual. Aqui solo cuentan los tres botones.
+
+   2. Los botones llevan un NUMERO grande.
+      Es el mismo lenguaje de la lista de empleados, y es lo que permite
+      manejar toda la pantalla con el teclado numerico, que es el que va a
+      estar conectado (CLAUDE.md 13.1). Con guantes, a las 6 AM, teclear "1"
+      es mas rapido y mas seguro que apuntarle a un boton con el raton.
+
+   3. La barra de la cuenta se ENCOGE hacia la izquierda.
+      Una barra que crece se lee como "cargando, espera". Una que se vacia se
+      lee como "te queda este tiempo", que es exactamente lo que pasa.
+-->
+<!--
+  ============================================================================
+   PANTALLA DE REGISTROS
+  ============================================================================
+
+   La tabla de lo que se ha guardado. Es la PRIMERA VERSION de la pantalla de
+   auditoria del modo administrador (CLAUDE.md 5.2, bloque 3.b): manana queda
+   detras de usuario y contrasena, y cada renglon lleva su foto al lado.
+
+   Responde la pregunta que cualquiera hace al ver un checador: "muy bien, ¿y
+   donde queda eso?". La pantalla de exito demuestra que la app RESPONDE; esta
+   demuestra que GUARDA, que es lo que de verdad importa.
+-->
+@if (registros(); as lista) {
+  <div
+    class="fixed inset-0 z-50 flex flex-col"
+    style="background-color: var(--kiosko-fondo)"
+  >
+    <!-- Encabezado -->
+    <header class="border-borde flex shrink-0 items-center justify-between border-b px-8 py-5">
+      <div>
+        <h2 class="texto-nombre-grande font-bold">Registros guardados</h2>
+        <p class="text-texto-suave mt-1 text-lg">
+          @if (cargandoRegistros()) {
+            Cargando...
+          } @else if (lista.length === 0) {
+            Todavía no hay ningún registro
+          } @else {
+            Los últimos {{ lista.length }}, del más reciente al más antiguo
+          }
+        </p>
+      </div>
+
+      <button
+        type="button"
+        class="bg-superficie border-borde hover:bg-borde boton-tactil rounded-2xl border-2
+               px-8 py-4 text-xl font-bold"
+        (click)="cerrarRegistros()"
+      >
+        Cerrar <span class="text-texto-suave text-base">(Esc)</span>
+      </button>
+    </header>
+
+    <!--
+      `min-h-0` otra vez: sin él, esta caja no se encoge y la tabla se sale de
+      la pantalla en vez de desplazarse por dentro. Es el mismo detalle de
+      flexbox del E-010.
+    -->
+    <div class="min-h-0 flex-1 overflow-y-auto px-8 py-4">
+      @if (lista.length === 0 && !cargandoRegistros()) {
+        <p class="text-texto-suave mt-16 text-center text-2xl">
+          Registra una entrada y vuelve aquí para verla.
+        </p>
+      } @else {
+        <table class="w-full border-collapse text-left">
+          <thead>
+            <tr class="text-texto-suave border-borde border-b text-lg uppercase tracking-wide">
+              <th class="py-3 pr-4 font-semibold">Cuándo</th>
+              <th class="py-3 pr-4 font-semibold">Quién</th>
+              <th class="py-3 pr-4 font-semibold">Qué</th>
+              <th class="py-3 pr-4 font-semibold">Foto</th>
+              <th class="py-3 font-semibold">Revisión</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            @for (registro of lista; track registro.id) {
+              <tr class="border-borde border-b text-xl">
+                <td class="py-4 pr-4 tabular-nums">{{ fechaHoraDe(registro.horaEstimadaMs) }}</td>
+
+                <td class="py-4 pr-4 font-semibold">{{ registro.nombre }}</td>
+
+                <!-- Color + palabra + icono, igual que en la confirmación: si
+                     fuera sólo color, una persona daltónica no distinguiría
+                     entrada de salida. -->
+                <td class="py-4 pr-4">
+                  <span
+                    class="rounded-xl px-4 py-2 font-bold"
+                    [style.background-color]="
+                      registro.tipo === 'entrada'
+                        ? 'rgb(34 197 94 / 0.18)'
+                        : 'rgb(234 179 8 / 0.18)'
+                    "
+                    [style.color]="
+                      registro.tipo === 'entrada'
+                        ? 'var(--kiosko-entrada)'
+                        : 'var(--kiosko-salida)'
+                    "
+                  >
+                    {{ registro.tipo === 'entrada' ? '→ ENTRADA' : '← SALIDA' }}
+                  </span>
+                </td>
+
+                <td class="py-4 pr-4">
+                  @if (registro.tieneFoto) {
+                    <span style="color: var(--kiosko-entrada)">&check; sí</span>
+                  } @else {
+                    <span class="text-texto-suave">— no</span>
+                  }
+                </td>
+
+                <!-- Las banderas: lo que el jefe tendría que mirar. -->
+                <td class="py-4">
+                  @if (registro.banderas.length === 0) {
+                    <span class="text-texto-suave">—</span>
+                  } @else {
+                    <span class="text-atencion">
+                      @for (bandera of registro.banderas; track bandera; let ultimo = $last) {
+                        {{ textoDeBandera(bandera) }}{{ ultimo ? '' : ', ' }}
+                      }
+                    </span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+
+    <!--
+      El pie dice de dónde salen estos datos. En una demostración es la mitad
+      del punto: no es una tabla dibujada, es la base de datos del kiosco.
+    -->
+    <footer class="border-borde text-texto-suave shrink-0 border-t px-8 py-3 text-base">
+      Guardados en la base de datos local de esta computadora. Funciona sin
+      internet; cuando haya nube, estos mismos registros se sincronizan.
+    </footer>
+  </div>
+}
+
+<!--
+  ============================================================================
+   CODIGO PARA PRESTAR LA COMPUTADORA
+  ============================================================================
+
+   Se pide un codigo, y conviene ser honesto sobre lo que hace y lo que no.
+
+   NO ES SEGURIDAD. El CLAUDE.md 3.2 dice que todo lo empaquetado en el .exe
+   se considera publico, asi que ese codigo se puede averiguar. Es un TOPE
+   CONTRA EL USO CASUAL, y con eso basta: pausar el kiosco no da acceso a
+   nada —las marcas ya estan guardadas y no se pueden editar desde aqui—, la
+   pausa vuelve sola, y queda registrada.
+
+   Lo unico que evita este codigo es que alguien lo presione por curiosidad, y
+   que un empleado se acostumbre a "apagar el checador un ratito".
+
+   El codigo NO viaja a esta pantalla: aqui solo se sabe cuantos digitos tiene,
+   para dibujar los puntos. Quien compara es el proceso principal.
+-->
+@if (pidiendoCodigoDePausa()) {
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center px-10"
+    style="background-color: rgb(15 23 42 / 0.82); backdrop-filter: blur(6px)"
+    (click)="cerrarPausa()"
+  >
+    <!--
+      `$event.stopPropagation()` para que un clic DENTRO de la tarjeta no
+      cierre el dialogo. Sin eso, teclear en la tarjeta la cerraria.
+    -->
+    <div
+      class="aparecer-suave bg-superficie border-borde w-full max-w-xl overflow-hidden
+             rounded-3xl border-2 shadow-2xl"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="flex flex-col items-center gap-5 px-12 py-10 text-center">
+        <p class="texto-nombre-grande font-bold">Usar esta computadora</p>
+
+        <p class="text-texto-suave text-xl">
+          El checador se va a minimizar y volverá solo en
+          <span class="text-texto font-bold">{{ config()?.minutosDePausa }} minutos</span>.
+        </p>
+
+        <!--
+          El aviso que de verdad importa. Con el kiosco abajo NADIE PUEDE
+          CHECAR, y eso choca con la regla de oro del proyecto. Quien pide
+          prestada la computadora tiene que saberlo antes, no despues.
+        -->
+        <p class="text-atencion max-w-md text-lg">
+          Mientras tanto nadie podrá registrar su entrada o salida. Queda
+          anotado para que el jefe pueda explicarlo.
+        </p>
+
+        <p class="text-texto-suave texto-instruccion mt-2">Escribe el código</p>
+
+        <!-- Los mismos puntos del PIN: cuántos llevas, nunca cuáles. -->
+        <div class="flex gap-5">
+          @for (lleno of puntosDelCodigo(); track $index) {
+            <div
+              class="punto-pin rounded-full border-4 transition-colors"
+              [class.punto-llenado]="lleno"
+              [style.background-color]="lleno ? 'var(--kiosko-texto)' : 'transparent'"
+              [style.border-color]="lleno ? 'var(--kiosko-texto)' : 'var(--kiosko-borde)'"
+            ></div>
+          }
+        </div>
+
+        <!--
+          TECLADO EN PANTALLA, SIEMPRE — no sólo cuando está activado el de la
+          pantalla principal.
+
+          Aquí no es un respaldo opcional, es necesario. Este diálogo es la
+          puerta de mantenimiento, y una puerta de mantenimiento que sólo se
+          abre con el teclado físico no sirve el día que lo que falló fue el
+          teclado. Que es, justamente, un día en que habrá que entrar.
+
+          De paso arregla el caso obvio: alguien probando la app con el ratón.
+        -->
+        <div class="mt-2 grid grid-cols-5 gap-2">
+          @for (tecla of ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']; track tecla) {
+            <button
+              type="button"
+              class="bg-superficie border-borde hover:bg-borde boton-tactil rounded-xl border-2
+                     py-4 text-2xl font-bold tabular-nums"
+              (click)="agregarDigitoDePausa(tecla)"
+            >
+              {{ tecla }}
+            </button>
+          }
+        </div>
+
+        <button
+          type="button"
+          class="bg-superficie border-borde hover:bg-borde boton-tactil text-texto-suave
+                 rounded-xl border-2 px-6 py-2 text-base"
+          (click)="borrarDigitoDePausa()"
+        >
+          Borrar
+        </button>
+
+        @if (errorDePausa(); as mensaje) {
+          <p
+            class="sacudir rounded-2xl px-6 py-3 text-2xl font-bold"
+            style="background-color: rgb(239 68 68 / 0.18); color: var(--kiosko-peligro)"
+          >
+            {{ mensaje }}
+          </p>
+        }
+
+        <!--
+          El diagnóstico. Si el código fue correcto, se dice AQUÍ, antes de
+          cerrar el diálogo.
+
+          Sin esto, "no funciona" es ambiguo: el empleado ve el diálogo
+          desaparecer y el kiosco seguir ahí, que es exactamente lo mismo que
+          vería si el código hubiera estado mal. Son dos problemas distintos
+          con dos arreglos distintos, y hay que poder distinguirlos sin abrir
+          una terminal.
+        -->
+        @if (estadoDePausa(); as estado) {
+          <p
+            class="rounded-2xl px-6 py-3 text-2xl font-bold"
+            style="background-color: rgb(34 197 94 / 0.18); color: var(--kiosko-entrada)"
+          >
+            {{ estado }}
+          </p>
+        }
+
+        <button
+          type="button"
+          class="bg-superficie border-borde hover:bg-borde boton-tactil text-texto-suave mt-2
+                 rounded-2xl border-2 px-8 py-3 text-xl font-bold"
+          (click)="cerrarPausa()"
+        >
+          Cancelar <span class="text-base opacity-70">(Esc)</span>
+        </button>
+
+        <!--
+          PAUSAR NO ES CERRAR, y aquí es donde hay que decirlo.
+
+          Quien abre este diálogo suele querer una de dos cosas, y desde fuera
+          se parecen: "quítate un rato" o "ciérrate". La pausa hace la primera.
+          Si alguien viene buscando la segunda y no lo dice nadie, teclea el
+          código, ve que el kiosco sigue ahí, y concluye que el código está mal.
+
+          Es exactamente lo que pasó la primera vez que se probó.
+        -->
+        <p class="text-texto-suave mt-4 border-t border-dashed pt-4 text-base opacity-70"
+           style="border-color: var(--kiosko-borde)">
+          Esto <span class="text-texto">minimiza</span> el checador; vuelve solo.<br />
+          Para cerrarlo por completo (mantenimiento):
+          <span class="text-texto font-semibold">Ctrl + Alt + Shift + Q</span>
+        </p>
+      </div>
+    </div>
+  </div>
+}
+
+@if (pendiente(); as registro) {
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center px-10"
+    style="background-color: rgb(15 23 42 / 0.82); backdrop-filter: blur(6px)"
+  >
+    <div
+      class="aparecer-suave bg-superficie w-full max-w-3xl overflow-hidden rounded-3xl border-4 shadow-2xl"
+      [style.border-color]="
+        registro.tipo === 'entrada' ? 'var(--kiosko-entrada)' : 'var(--kiosko-salida)'
+      "
+    >
+      <!--
+        LA BARRA DE LA CUENTA REGRESIVA.
+
+        `transform: scaleX(...)` en vez de `width: N%`: escalar lo resuelve la
+        tarjeta grafica sin recalcular la pagina, y esto se refresca 20 veces
+        por segundo. `origin-left` hace que se encoja hacia la izquierda en
+        vez de hacia el centro.
+
+        Sin `transition` propia: el valor ya llega suavizado desde el
+        componente cada 50 ms. Poner ademas una transicion CSS haria que la
+        barra fuera SIEMPRE un poco por detras de la cuenta real, y al final
+        seguiria moviendose despues de que la marca ya se guardo.
+      -->
+      <div
+        class="h-3 w-full origin-left"
+        [style.background-color]="
+          registro.tipo === 'entrada' ? 'var(--kiosko-entrada)' : 'var(--kiosko-salida)'
+        "
+        [style.transform]="'scaleX(' + fraccionRestante() + ')'"
+      ></div>
+
+      <div class="flex flex-col items-center gap-3 px-12 py-8 text-center">
+        <!-- Quien es. Va primero: responde "¿me reconocio?" antes que nada. -->
+        <p class="texto-nombre-grande font-bold">Hola, {{ registro.nombre }}</p>
+
+        <p class="text-texto-suave texto-instruccion">Vas a registrar</p>
+
+        <!-- La accion: color + palabra + icono, los tres a la vez -->
+        <div class="flex items-center gap-5">
+          <div
+            class="icono-accion flex items-center justify-center rounded-full font-bold"
+            [style.background-color]="
+              registro.tipo === 'entrada' ? 'var(--kiosko-entrada)' : 'var(--kiosko-salida)'
+            "
+            style="color: var(--kiosko-fondo)"
+          >
+            {{ registro.tipo === 'entrada' ? '→' : '←' }}
+          </div>
+
+          <p
+            class="texto-accion font-extrabold leading-none tracking-tight"
+            [style.color]="
+              registro.tipo === 'entrada' ? 'var(--kiosko-entrada)' : 'var(--kiosko-salida)'
+            "
+          >
+            {{ registro.tipo === 'entrada' ? 'ENTRADA' : 'SALIDA' }}
+          </p>
+        </div>
+
+        <!--
+          La hora. No es `new Date()` de la pantalla: es la que el proceso
+          principal guardo al validar el PIN, y es EXACTAMENTE la que va a
+          quedar registrada.
+        -->
+        <p class="texto-hora-grande font-bold tabular-nums">{{ registro.hora }}</p>
+
+        @if (paso() === 'guardando') {
+          <!-- Ya no hay nada que decidir: se esta escribiendo en disco. -->
+          <p class="text-texto-suave texto-instruccion mt-2">Guardando...</p>
+        } @else {
+          <p class="text-texto-suave mt-1 text-lg">
+            Se registra solo en
+            <span class="text-texto font-bold tabular-nums">{{ segundosRestantes() }}</span>
+            @if (segundosRestantes() === 1) { segundo } @else { segundos }
+          </p>
+
+          <!-- ================= Los tres botones ================= -->
+          <div class="mt-3 grid w-full grid-cols-3 gap-3">
+            <!-- [1] CONFIRMAR -->
+            <button
+              type="button"
+              class="boton-tactil boton-confirmacion flex flex-col items-center gap-1 rounded-2xl
+                     border-2 px-4 py-4 font-bold"
+              [style.border-color]="
+                registro.tipo === 'entrada' ? 'var(--kiosko-entrada)' : 'var(--kiosko-salida)'
+              "
+              [style.background-color]="
+                registro.tipo === 'entrada'
+                  ? 'rgb(34 197 94 / 0.18)'
+                  : 'rgb(234 179 8 / 0.18)'
+              "
+              (click)="confirmarRegistro()"
+            >
+              <span class="numero-tecla">1</span>
+              <span>Si, registrar</span>
+            </button>
+
+            <!-- [2] CAMBIAR LA ACCION  <- la razon de ser de esta pantalla -->
+            <button
+              type="button"
+              class="bg-superficie border-borde hover:bg-borde boton-tactil boton-confirmacion
+                     flex flex-col items-center gap-1 rounded-2xl border-2 px-4 py-4 font-bold"
+              (click)="cambiarAccion()"
+            >
+              <span class="numero-tecla">2</span>
+              <span>
+                Cambiar a
+                <span
+                  [style.color]="
+                    tipoContrario() === 'entrada' ? 'var(--kiosko-entrada)' : 'var(--kiosko-salida)'
+                  "
+                >
+                  {{ tipoContrario() === 'entrada' ? 'ENTRADA' : 'SALIDA' }}
+                </span>
+              </span>
+            </button>
+
+            <!-- [0] CANCELAR -->
+            <button
+              type="button"
+              class="bg-superficie border-borde hover:bg-borde boton-tactil boton-confirmacion
+                     text-texto-suave flex flex-col items-center gap-1 rounded-2xl border-2
+                     px-4 py-4 font-bold"
+              (click)="cancelarConfirmacion()"
+            >
+              <span class="numero-tecla">0</span>
+              <span>Cancelar</span>
+            </button>
+          </div>
+
+          <p class="text-texto-suave mt-2 text-sm opacity-70">
+            Tambien puedes presionar <span class="text-texto">Enter</span> para registrar o
+            <span class="text-texto">Esc</span> para cancelar
+          </p>
+        }
+      </div>
+    </div>
+  </div>
+}
+
+@if (exito(); as registro) {
+  <!--
+    Un clic en cualquier parte quita la tarjeta. Los 6 segundos son para
+    quien necesita leerla con calma; quien ya la leyo no tiene por que
+    esperar. Cualquier tecla hace lo mismo (ver alPresionarTecla).
+  -->
+  <div
+    class="fixed inset-0 z-50 flex cursor-pointer items-center justify-center px-10"
+    style="background-color: rgb(15 23 42 / 0.82); backdrop-filter: blur(6px)"
+    (click)="descartarExito()"
+  >
+    <div
+      class="aparecer-suave bg-superficie w-full max-w-3xl overflow-hidden rounded-3xl border-4 shadow-2xl"
+      [style.border-color]="
+        registro.tipo === 'entrada' ? 'var(--kiosko-entrada)' : 'var(--kiosko-salida)'
+      "
+    >
+      <!-- Franja de color arriba: se identifica de lejos sin deslumbrar -->
+      <div
+        class="h-3 w-full"
+        [style.background-color]="
+          registro.tipo === 'entrada' ? 'var(--kiosko-entrada)' : 'var(--kiosko-salida)'
+        "
+      ></div>
+
+      <div class="flex flex-col items-center gap-5 px-12 py-10 text-center">
+        <!-- Icono dentro de un circulo de color -->
+        <div
+          class="icono-accion flex items-center justify-center rounded-full font-bold"
+          [style.background-color]="
+            registro.tipo === 'entrada' ? 'var(--kiosko-entrada)' : 'var(--kiosko-salida)'
+          "
+          style="color: var(--kiosko-fondo)"
+        >
+          {{ registro.tipo === 'entrada' ? '→' : '←' }}
+        </div>
+
+        <!-- La accion, en color y enorme: es lo que hay que leer de lejos -->
+        <p
+          class="texto-accion font-extrabold leading-none tracking-tight"
+          [style.color]="
+            registro.tipo === 'entrada' ? 'var(--kiosko-entrada)' : 'var(--kiosko-salida)'
+          "
+        >
+          {{ registro.tipo === 'entrada' ? 'ENTRADA' : 'SALIDA' }}
+        </p>
+
+        <p class="texto-instruccion font-medium">registrada a las</p>
+
+        <p class="texto-hora-grande font-bold tabular-nums">{{ registro.hora }}</p>
+
+        <!-- Quien checo: responde el "¿si fui yo?" -->
+        <p class="text-texto-suave texto-nombre-grande font-semibold">{{ registro.nombre }}</p>
+
+        <p class="text-texto-suave texto-instruccion mt-1">Ya puedes retirarte</p>
+
+        <p class="text-texto-suave mt-2 text-sm opacity-60">
+          Toca la pantalla o presiona una tecla para continuar
+        </p>
+
+        <!--
+          Si hubo algo raro, el empleado se entera AQUI y no dentro de un mes.
+          Fijate en el tono: "quedo marcado para revision", nunca "hubo un
+          error". Su registro SI se guardo, y eso es lo que necesita saber.
+        -->
+        @if (registro.banderas.length > 0) {
+          <div
+            class="border-atencion mt-3 w-full rounded-2xl border-2 px-6 py-4 text-left"
+            style="background-color: rgb(234 179 8 / 0.12)"
+          >
+            <p class="text-atencion text-xl font-bold">
+              Quedo marcado para revision:
+              @for (bandera of registro.banderas; track bandera; let ultimo = $last) {
+                {{ textoDeBandera(bandera) }}{{ ultimo ? '.' : ', ' }}
+              }
+            </p>
+            <p class="text-texto-suave mt-1 text-lg">
+              Avisa a tu jefe. Tu asistencia si quedo guardada.
+            </p>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}
+
+<div class="relative flex h-full min-h-0 flex-col">
+  <!--
+    `min-h-0` no es decoracion: sin el, esta reja NO SE ENCOGE.
+
+    Por defecto, un hijo de flexbox tiene `min-height: auto`, que significa
+    "nunca te hagas mas chico que tu contenido". Asi que cuando la lista de
+    empleados no cabe, en vez de ajustarse, EMPUJA hacia abajo y se sale de
+    la pantalla — que es justo lo que estaba pasando: Rosa M. no se veia y
+    la barra de estado tampoco.
+
+    Con `min-h-0` se le permite encoger, y entonces el contenido de adentro
+    puede acomodarse dentro del espacio que hay.
+  -->
+  <div class="grid min-h-0 flex-1 grid-cols-[2fr_3fr] items-center gap-8 px-8 py-4">
+    <!-- ================= Columna izquierda: la camara ================= -->
+    <section class="flex justify-center">
+      <div
+        class="border-borde relative aspect-4/3 max-h-[60vh] w-full max-w-lg overflow-hidden rounded-3xl border-4"
+        style="background-color: #000"
+      >
+        <!--
+          El video SIEMPRE esta en el HTML, aunque no haya camara.
+
+          Si lo metieramos dentro de un @if, Angular lo DESTRUIRIA al dar
+          falso (no lo esconde: lo saca del documento), y la referencia
+          `viewChild` del componente quedaria apuntando a un elemento muerto.
+          Al reconectar la camara, capturar() fallaria sin motivo aparente.
+          Por eso el aviso de abajo se dibuja ENCIMA, no en su lugar.
+
+          `muted` y `playsinline` son obligatorios para que el navegador deje
+          reproducir sin que nadie haga clic primero.
+        -->
+        <video
+          #video
+          class="h-full w-full object-cover"
+          [class.-scale-x-100]="config()?.videoEnEspejo"
+          autoplay
+          muted
+          playsinline
+        ></video>
+
+        <!--
+          Aviso de camara caida (CLAUDE.md 5).
+          Es grande y explicito a proposito: el empleado debe saber que su
+          registro quedara marcado para revision. Pero fijate en el texto:
+          nunca dice "no puedes registrar". Se registra igual.
+        -->
+        @if (!camara.disponible()) {
+          <div
+            class="absolute inset-0 flex flex-col items-center justify-center gap-3 p-8 text-center"
+            style="background-color: rgb(15 23 42 / 0.92)"
+          >
+            <span class="text-atencion text-5xl">&#9888;</span>
+            <p class="text-atencion text-3xl font-bold">Camara no disponible</p>
+            <p class="text-xl">Tu registro quedara marcado para revision.</p>
+            @if (camara.mensajeDeFalla(); as detalle) {
+              <p class="text-texto-suave text-base">{{ detalle }}</p>
+            }
+            <p class="text-texto-suave mt-2 text-base">Puedes checar normalmente.</p>
+          </div>
+        }
+      </div>
+    </section>
+
+    <!-- ================= Columna derecha: reloj e identificacion ======= -->
+    <!--
+      `max-w-3xl` y `gap-4` mantienen el bloque compacto.
+
+      En la prueba en pantalla completa se veia el problema contrario al de
+      la ventana chica: el contenido quedaba perdido entre dos huecos
+      enormes, porque se centraba en TODO el alto disponible sin limite de
+      ancho. Un bloque agrupado se lee mucho mas rapido que uno disperso.
+    -->
+    <section class="mx-auto flex h-full min-h-0 w-full max-w-3xl flex-col items-center justify-center gap-4">
+      @if (config(); as configuracion) {
+        <kiosco-reloj
+          [zonaHoraria]="configuracion.zonaHoraria"
+          [intervaloMs]="configuracion.intervaloRelojMs"
+        />
+      }
+
+      <p class="text-texto-suave texto-instruccion">{{ instruccion() }}</p>
+
+      <!-- ---------- PASO 1: identificador ---------- -->
+      @if (paso() === 'identificador') {
+        @switch (modo()) {
+          <!-- ····· Modo 'usuario': se teclea "dgomez" ····· -->
+          @case ('usuario') {
+            <div
+              class="bg-superficie border-borde flex h-20 min-w-96 items-center justify-center
+                     rounded-2xl border-2 px-8 text-4xl font-bold tracking-wide"
+            >
+              @if (identificador()) {
+                <span>{{ identificador() }}</span>
+                <!-- Cursor parpadeante: le dice a la gente que si esta escribiendo -->
+                <span class="ml-1 animate-pulse">|</span>
+              } @else {
+                <span class="text-texto-suave text-2xl font-normal">tu usuario</span>
+              }
+            </div>
+            <p class="text-texto-suave text-center text-base">
+              La primera letra de tu nombre y tu apellido, todo junto.<br />
+              Ejemplo: Dalton Gomez &rarr; <span class="text-texto font-semibold">dgomez</span>
+            </p>
+          }
+
+          <!-- ····· Modo 'lista': se elige el nombre ····· -->
+          @case ('lista') {
+            @if (empleados().length === 0) {
+              <p class="text-atencion max-w-md text-center text-xl">
+                Todavia no hay empleados cargados en este kiosco.
+              </p>
+            } @else {
+              <!--
+                Dos columnas en vez de una. Con 5 empleados, una sola
+                columna necesita el doble de alto del que hay, y ademas
+                desperdicia todo el ancho de una pantalla apaisada.
+
+                `overflow-y-auto` es el plan B: con hasta 6 empleados nunca
+                se usa, pero si algun dia hay 12 (el maximo del modo lista),
+                el ultimo sigue siendo alcanzable en vez de quedar invisible.
+              -->
+              <!--
+                Con dos digitos, el primero queda "en espera" del segundo.
+                Se muestra para que quien teclea sepa que el sistema lo oyo.
+              -->
+              @if (seleccionEnCurso(); as parcial) {
+                <p class="text-texto mb-1 text-center text-2xl font-bold tabular-nums">
+                  Numero: {{ parcial }}<span class="animate-pulse">_</span>
+                </p>
+                <!-- Que hacer ahora, en palabras: la segunda cifra, o Enter. -->
+                <p class="text-texto-suave mb-2 text-center text-lg">
+                  Teclea la segunda cifra, o <b class="text-texto">Enter</b> si eres el
+                  {{ parcial.padStart(digitosDeLista(), '0') }}
+                </p>
+              }
+              <!--
+                Con 20 personas (lo confirmado por el cliente) dos columnas
+                obligarian a desplazarse, y el ultimo de la lista no se veria.
+                A partir de 13 se pasa a tres columnas y botones compactos.
+              -->
+              <div
+                class="grid max-h-full w-full gap-3 overflow-y-auto"
+                [class.grid-cols-2]="empleados().length <= 12"
+                [class.grid-cols-3]="empleados().length > 12"
+                [class.lista-compacta]="empleados().length > 12"
+              >
+                @for (empleado of empleados(); track empleado.id; let i = $index) {
+                  <!--
+                    OJO CON LO QUE **NO** HACE ESTE BOTON:
+
+                    nunca se deshabilita. Se propuso deshabilitarlo despues de
+                    marcar salida, y seria un error grave: choca de frente con
+                    la regla de oro del proyecto ("nunca impedir que alguien
+                    registre").
+
+                    Casos reales en los que alguien marca salida y necesita
+                    volver a checar el mismo dia:
+                      - se le olvido algo y regresa;
+                      - le piden quedarse a cubrir un turno;
+                      - marco salida por equivocacion;
+                      - sale a comer y vuelve.
+
+                    Con el boton deshabilitado, esa persona NO PUEDE registrar
+                    y el jefe tiene que capturarlo a mano.
+
+                    Lo correcto es MOSTRAR el estado (que es lo util de la
+                    idea) y dejar que el sistema sugiera la accion correcta.
+                    Informar, no bloquear.
+                  -->
+                  <button
+                    type="button"
+                    class="bg-superficie border-borde hover:bg-borde boton-tactil entrar-escalonado
+                           texto-lista flex items-center gap-4 rounded-2xl border-2 px-5 py-4
+                           boton-lista
+                           text-left font-bold"
+                    [style.animation-delay]="i * 40 + 'ms'"
+                    [style.border-color]="
+                      empleado.estado === 'adentro' ? 'var(--kiosko-entrada)' : null
+                    "
+                    (click)="elegirEmpleado(empleado)"
+                  >
+                    <!-- El numero permite elegir con el teclado numerico -->
+                    <span
+                      class="numero-lista flex shrink-0 items-center justify-center rounded-xl font-black tabular-nums"
+                      [style.background-color]="
+                        empleado.estado === 'adentro'
+                          ? 'var(--kiosko-entrada)'
+                          : 'var(--kiosko-institucion-primario)'
+                      "
+                      [style.color]="
+                        empleado.estado === 'adentro' ? 'var(--kiosko-fondo)' : 'var(--kiosko-texto)'
+                      "
+                    >
+                      {{ numeroEnLista(i) }}
+                    </span>
+
+                    <span class="flex min-w-0 flex-1 flex-col">
+                      <span class="truncate">{{ empleado.nombreParaMostrar }}</span>
+
+                      <!--
+                        La etiqueta de estado responde de un vistazo la
+                        pregunta "¿ya marque?" sin teclear nada, que era justo
+                        el problema del lector de huella.
+                      -->
+                      @if (empleado.estado === 'adentro') {
+                        <span
+                          class="mt-0.5 flex items-center gap-1.5 text-sm font-medium"
+                          style="color: var(--kiosko-entrada)"
+                        >
+                          <span
+                            class="latir-suave inline-block h-2 w-2 rounded-full"
+                            style="background-color: var(--kiosko-entrada)"
+                          ></span>
+                          Adentro desde {{ empleado.horaUltimaMarca }}
+                        </span>
+                      } @else if (empleado.estado === 'afuera') {
+                        <span class="text-texto-suave mt-0.5 text-sm font-medium">
+                          Salio {{ empleado.horaUltimaMarca }}
+                        </span>
+                      }
+                    </span>
+
+                    <!-- Palomita: refuerza el estado sin depender solo del color -->
+                    @if (empleado.estado === 'adentro') {
+                      <span class="shrink-0 text-2xl" style="color: var(--kiosko-entrada)">
+                        &check;
+                      </span>
+                    }
+                  </button>
+                }
+              </div>
+            }
+          }
+
+          <!-- ····· Modo 'numero': se teclea el numero de empleado ····· -->
+          @case ('numero') {
+            <div
+              class="bg-superficie border-borde flex h-20 min-w-64 items-center justify-center
+                     rounded-2xl border-2 px-8 text-5xl font-bold tabular-nums tracking-widest"
+            >
+              {{ identificador() || '----' }}
+            </div>
+          }
+        }
+      }
+
+      <!-- ---------- PASO 2: PIN ---------- -->
+      @if (paso() === 'pin' || paso() === 'validando') {
+        <!--
+          Se muestra a quien se esta identificando. Es util para que el
+          empleado confirme que no se equivoco de usuario antes de teclear.
+        -->
+        <p class="texto-nombre-grande font-bold">{{ nombreEnProceso() }}</p>
+
+        <!--
+          Puntos de progreso del PIN.
+          Muestran CUANTOS digitos llevas, nunca CUALES.
+        -->
+        <div class="flex gap-5">
+          @for (lleno of puntosPin(); track $index) {
+            <div
+              class="punto-pin rounded-full border-4 transition-colors"
+              [class.punto-llenado]="lleno"
+              [style.background-color]="lleno ? 'var(--kiosko-texto)' : 'transparent'"
+              [style.border-color]="lleno ? 'var(--kiosko-texto)' : 'var(--kiosko-borde)'"
+            ></div>
+          }
+        </div>
+      }
+
+      <!-- ---------- Error ---------- -->
+      @if (error(); as mensaje) {
+        <p
+          class="sacudir max-w-xl rounded-2xl px-8 py-5 text-center text-3xl font-bold"
+          style="background-color: rgb(239 68 68 / 0.18); color: var(--kiosko-peligro)"
+        >
+          {{ mensaje }}
+        </p>
+      }
+
+      <!-- ---------- Aviso neutro ("Cancelado") ---------- -->
+      <!--
+        Deliberadamente distinto del error: sin rojo y sin sacudida.
+
+        Cancelar no es equivocarse, es una decision. Pintarlo de rojo le
+        diria a alguien que hizo bien su trabajo que hizo algo mal. Pero
+        tampoco se puede callar: el kiosco existe para quitar la duda de
+        "¿si quedo registrado?", y despues de cancelar hay que decir
+        explicitamente que NO.
+      -->
+      @if (aviso(); as mensaje) {
+        <p
+          class="aparecer-suave border-borde bg-superficie text-texto-suave max-w-xl rounded-2xl
+                 border-2 px-8 py-4 text-center text-2xl font-semibold"
+        >
+          {{ mensaje }}
+        </p>
+      }
+
+      <!-- ---------- Teclado en pantalla (respaldo) ---------- -->
+      @if (config()?.mostrarTecladoEnPantalla) {
+        <!--
+          Solo tiene numeros. En el modo 'usuario' no alcanza para escribir
+          letras: si el teclado fisico falla y ademas el modo es 'usuario',
+          hay que cambiar el modo a 'lista' en la configuracion. Queda
+          anotado aqui para que quien lo necesite lo encuentre.
+        -->
+        <kiosco-teclado-numerico
+          (digito)="teclearDigito($event)"
+          (borrar)="borrarCaracter()"
+          (aceptar)="aceptar()"
+        />
+      } @else {
+        <p class="text-texto-suave mt-1 text-center text-sm opacity-70">
+          <span class="text-texto">Esc</span> para empezar de nuevo
+        </p>
+      }
+    </section>
+  </div>
+
+  <!-- ============ SELECTOR DE MODO (SOLO EN DESARROLLO) ============ -->
+  <!--
+    Esta barra NO existe en el kiosco real.
+
+    Se muestra solo cuando el proceso principal dice `esDesarrollo: true`, y
+    ademas el propio proceso principal se niega a cambiar el modo si la app
+    esta empaquetada. Son dos candados: uno para que no se vea, otro para que
+    no funcione aunque alguien logre invocarlo.
+
+    Sirve para comparar los tres modos de identificacion sin recompilar.
+  -->
+  @if (mostrarSelectorDeModo()) {
+    <div
+      class="border-borde flex shrink-0 flex-wrap items-center gap-3 border-t px-8 py-2"
+      style="background-color: rgb(187 75 38 / 0.12)"
+    >
+      <span class="text-texto-suave text-sm uppercase tracking-wide">
+        Modo de identificacion
+      </span>
+
+      @for (opcion of MODOS; track opcion.valor) {
+        <button
+          type="button"
+          class="boton-tactil rounded-xl border px-4 py-2 text-base"
+          [class.border-borde]="modo() !== opcion.valor"
+          [class.bg-superficie]="modo() !== opcion.valor"
+          [style.background-color]="
+            modo() === opcion.valor ? 'var(--kiosko-institucion-primario)' : null
+          "
+          [style.border-color]="
+            modo() === opcion.valor ? 'var(--kiosko-institucion-secundario)' : null
+          "
+          [style.font-weight]="modo() === opcion.valor ? '700' : '400'"
+          (click)="cambiarModo(opcion.valor)"
+        >
+          {{ opcion.etiqueta }}
+          <span class="text-texto-suave ml-1 text-sm">({{ opcion.ayuda }})</span>
+        </button>
+      }
+
+      <!--
+        Medidor de la camara. Tapa el lente con el dedo y mira como bajan los
+        numeros: asi se calibran los umbrales con datos y no a ojo.
+      -->
+      @if (camara.ultimaMedicion(); as m) {
+        <span
+          class="ml-auto rounded-lg px-3 py-1 font-mono text-sm tabular-nums"
+          style="background-color: rgb(0 0 0 / 0.25)"
+          [style.color]="
+            obstruidaAhora() ? 'var(--kiosko-atencion)' : 'var(--kiosko-texto-suave)'
+          "
+        >
+          camara: brillo {{ m.brilloPromedio }} / varianza {{ m.varianza }}
+          @if (obstruidaAhora()) {
+            &mdash; TAPADA
+          }
+        </span>
+      } @else {
+        <span class="text-texto-suave ml-auto text-sm">Solo visible en desarrollo</span>
+      }
+    </div>
+  }
+
+  <!-- ==================== BARRA DE ESTADO ==================== -->
+  <!--
+    "Indicador DISCRETO de conexion y N registros pendientes" (CLAUDE.md 4.1).
+    Discreto es la palabra clave: el empleado no tiene que entender esto.
+    Esta ahi para que quien de soporte vea como anda el kiosco de un vistazo,
+    sin abrir nada.
+  -->
+  <footer
+    class="border-borde text-texto-suave flex shrink-0 items-center justify-between border-t px-8 py-3 text-lg"
+  >
+    <div class="flex items-center gap-6">
+      <span class="flex items-center gap-2">
+        <span
+          class="h-3 w-3 rounded-full"
+          [style.background-color]="
+            estado()?.enLinea ? 'var(--kiosko-entrada)' : 'var(--kiosko-texto-suave)'
+          "
+        ></span>
+        {{ estado()?.enLinea ? 'En linea' : 'Sin conexion' }}
+      </span>
+
+      <span>{{ estado()?.registrosPendientes ?? 0 }} pendientes</span>
+
+      <span [style.color]="camara.disponible() ? 'var(--kiosko-entrada)' : 'var(--kiosko-atencion)'">
+        {{ camara.disponible() ? 'Camara OK' : 'Sin camara' }}
+      </span>
+    </div>
+
+    <div class="flex items-center gap-5">
+      <!--
+        ============================================================
+         "USAR ESTA PC"
+        ============================================================
+
+         El kiosco instalado va en pantalla completa y no se deja cerrar. Si
+         la computadora resulta ser compartida —un maestro que necesita buscar
+         algo, alguien de soporte— eso es un estorbo serio, y la primera
+         reaccion de cualquiera seria desinstalar la aplicacion.
+
+         TRES DECISIONES:
+
+         1. Es VISIBLE. La otra salida que existe (Ctrl+Alt+Shift+Q) es
+            inutil para quien no la conoce, y nadie va a adivinarla. Una
+            salida que hay que saberse de memoria no es una salida.
+
+         2. MINIMIZA, no cierra. Quien necesita la PC diez minutos no quiere
+            cerrar el checador: quiere que se quite y vuelva solo.
+
+         3. Es DISCRETO. Vive en la barra de estado, en gris, del tamano del
+            resto de la barra. El empleado que viene a checar no tiene por que
+            fijarse en el; quien lo busca porque necesita la computadora, lo
+            encuentra.
+
+         Y desaparece si `pausaPermitida` esta apagada, para el caso en que la
+         PC sea solo para checar.
+      -->
+      <!--
+        "Ver registros" — la pantalla que demuestra que el kiosco GUARDA.
+
+        Vive junto a "Usar esta PC" y con el mismo aspecto discreto: el
+        empleado que viene a checar no tiene por qué fijarse en ninguno de los
+        dos.
+      -->
+      <!--
+        El ENGRANE: la entrada al modo administrador (CLAUDE.md 5.2).
+
+        Un boton y no una combinacion de teclas (decision del 22-09-2026): el
+        jefe puede no llevarse bien con la computadora, y cuatro teclas a la
+        vez se olvidan. Esta a la vista a proposito; lo que protege es la
+        contrasena, no que la puerta este escondida. Lleva la palabra ademas
+        del icono, porque un engrane solo no todos lo reconocen.
+      -->
+      <button
+        type="button"
+        class="boton-tactil hover:text-texto flex items-center gap-1.5 rounded-lg px-3 py-1 text-base
+               opacity-70 hover:opacity-100"
+        aria-label="Modo administrador"
+        (click)="abrirModoAdmin()"
+      >
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+        </svg>
+        Administrador
+      </button>
+
+      @if (mostrarBotonRegistros()) {
+        <button
+          type="button"
+          class="boton-tactil hover:text-texto rounded-lg px-3 py-1 text-base underline
+                 underline-offset-4 opacity-70 hover:opacity-100"
+          (click)="abrirRegistros()"
+        >
+          Ver registros
+        </button>
+      }
+
+      @if (pausaPermitida()) {
+        <button
+          type="button"
+          class="boton-tactil hover:text-texto rounded-lg px-3 py-1 text-base underline
+                 underline-offset-4 opacity-70 hover:opacity-100"
+          (click)="abrirPausa()"
+        >
+          Usar esta PC
+        </button>
+      }
+
+      <span>v{{ estado()?.version }}</span>
+    </div>
+  </footer>
+</div>
+
+<!--
+  ============================================================================
+   MODO ADMINISTRADOR  (ver modo-admin.html)
+  ============================================================================
+-->
+@if (modoAdminAbierto()) {
+  <kiosco-modo-admin (cerrar)="alCerrarModoAdmin($event)" />
+}
+
+<!--
+  El aviso al volver del modo administrador. Para un intento fallido dice
+  "Intento fallido. Quedo registrado con fecha y hora." — en grande y en rojo,
+  a proposito: a quien estaba probando contrasenas le tiene que quedar claro.
+  Y es verdad: cada fallo queda en la bitacora de eventos.
+-->
+@if (avisoAdmin(); as aviso) {
+  <div class="pointer-events-none fixed inset-x-0 top-24 z-40 flex justify-center px-8">
+    <p
+      class="entrar-escalonado rounded-2xl border-2 px-10 py-6 text-center text-3xl font-bold"
+      style="background-color: var(--kiosko-superficie); border-color: var(--kiosko-peligro); color: var(--kiosko-peligro)"
+    >
+      {{ aviso }}
+    </p>
+  </div>
+}

@@ -1,0 +1,38 @@
+{
+  "institucion": {
+    "nombre": "Universidad Autonoma de Tamaulipas",
+    "nombreCorto": "UAT",
+    "facultad": "FCACS Nuevo Laredo",
+    "facultadNombreCompleto": "Facultad de Comercio, Administracion y Ciencias Sociales",
+    "mostrarEnKiosco": true,
+    "logoArchivo": null
+  },
+
+  "colores": {
+    "institucionPrimario": "#003d5c",
+    "institucionSecundario": "#bb4b26",
+    "institucionTerciario": "#c86f54",
+
+    "fondo": "#0f172a",
+    "superficie": "#1e293b",
+    "borde": "#334155",
+    "texto": "#f1f5f9",
+    "textoSuave": "#94a3b8",
+
+    "entrada": "#10b981",
+    "salida": "#f59e0b",
+    "peligro": "#ef4444",
+    "atencion": "#eab308"
+  },
+
+  "excepcionesDeContraste": [
+    {
+      "par": ["institucionSecundario", "peligro"],
+      "motivo": "El naranja ladrillo de la UAT (#bb4b26) y el rojo de error (#ef4444) son parecidos, pero nunca compiten: el naranja aparece solo como una linea de 4 px bajo la cabecera, y el rojo solo en mensajes de error al centro de la pantalla. No hay ninguna decision en la que el usuario tenga que distinguirlos. Revisado el 2026-09-19."
+    },
+    {
+      "par": ["institucionTerciario", "peligro"],
+      "motivo": "Mismo caso: la terracota (#c86f54) es un color de apoyo para superficies institucionales, no se usa en botones ni en mensajes. Revisado el 2026-09-19."
+    }
+  ]
+}

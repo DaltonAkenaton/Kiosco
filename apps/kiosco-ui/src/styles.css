@@ -1,0 +1,461 @@
+/* ==========================================================================
+   ESTILOS GLOBALES DEL KIOSCO
+   ==========================================================================
+
+   Esta linea carga Tailwind CSS completo. Tailwind es una libreria de
+   "clases utilitarias": en vez de escribir CSS propio, pones clases en el
+   HTML que describen lo que quieres.
+
+       <button class="text-4xl font-bold rounded-xl">
+
+       text-4xl      -> letra muy grande
+       font-bold     -> negritas
+       rounded-xl    -> esquinas redondeadas
+
+   ¿Por que Tailwind aqui? Porque el CLAUDE.md pide "botones y textos grandes,
+   alto contraste, pensados para uso rapido a las 6 AM", y con Tailwind ajustas
+   un tamano cambiando una clase, sin pelearte con hojas de estilo aparte.
+   ========================================================================== */
+@import 'tailwindcss';
+
+/* --------------------------------------------------------------------------
+   LOS COLORES NO ESTAN AQUI.
+
+   Viven en:            packages/compartido/src/tema.json
+   Se convierten a CSS: apps/kiosco-ui/generar-tema.mjs  (corre solo)
+   Y aterrizan en:      src/tema.css  (archivo generado, no lo edites)
+
+   Un solo lugar manda sobre el color: `tema.json`. Ver el capitulo 06 del
+   curso para el porque.
+   -------------------------------------------------------------------------- */
+@import './tema.css';
+
+/* --------------------------------------------------------------------------
+   Puente entre las variables del tema y Tailwind.
+
+   A la izquierda, los nombres que entiende Tailwind (`--color-*`).
+   A la derecha, los que genera nuestro tema (`--kiosko-*`).
+
+   Son nombres DISTINTOS a proposito. Si los dos lados se llamaran igual, la
+   linea diria `--color-fondo: var(--color-fondo)`: una variable que se
+   apunta a si misma. El navegador descarta esas referencias circulares sin
+   avisar, y el color simplemente no aparece.
+
+   Gracias a esto puedes escribir clases como `bg-entrada`,
+   `text-institucion-primario` o `border-borde` directamente en el HTML.
+   -------------------------------------------------------------------------- */
+@theme inline {
+  --color-institucion-primario: var(--kiosko-institucion-primario);
+  --color-institucion-secundario: var(--kiosko-institucion-secundario);
+  --color-institucion-terciario: var(--kiosko-institucion-terciario);
+  --color-fondo: var(--kiosko-fondo);
+  --color-superficie: var(--kiosko-superficie);
+  --color-borde: var(--kiosko-borde);
+  --color-texto: var(--kiosko-texto);
+  --color-texto-suave: var(--kiosko-texto-suave);
+  --color-entrada: var(--kiosko-entrada);
+  --color-salida: var(--kiosko-salida);
+  --color-peligro: var(--kiosko-peligro);
+  --color-atencion: var(--kiosko-atencion);
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  background-color: var(--kiosko-fondo);
+  color: var(--kiosko-texto);
+  /* Fuente del sistema: siempre disponible, sin descargas ni dependencias. */
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+/* En un kiosco nadie necesita seleccionar texto con el raton, y permitirlo
+   solo invita a que la gente juegue con la pantalla. */
+body {
+  user-select: none;
+  cursor: default;
+  overflow: hidden;
+}
+
+/* ==========================================================================
+   BARRAS DE DESPLAZAMIENTO
+   ==========================================================================
+
+   La barra de desplazamiento que trae Windows por defecto es ancha, gris
+   claro y con flechitas: disena para un documento, no para un kiosco oscuro.
+   Rompe el aspecto de toda la pantalla.
+
+   Se estilan de DOS formas porque hay dos estandares:
+
+     scrollbar-width / scrollbar-color   el estandar moderno (Firefox y ya
+                                         tambien Chromium)
+     ::-webkit-scrollbar                 el de siempre en Chromium, que da
+                                         control mas fino (grosor exacto,
+                                         esquinas redondeadas)
+
+   Se ponen los dos: el estandar por si el primero no aplica, y el de webkit
+   porque Electron ES Chromium y ahi si podemos afinar.
+   ========================================================================== */
+* {
+  scrollbar-width: thin;
+  /* Primer color: el pulgar (lo que se arrastra). Segundo: el riel. */
+  scrollbar-color: var(--kiosko-borde) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  /* Riel invisible: no hay razon para dibujar un canal sobre el fondo. */
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--kiosko-borde);
+  border-radius: 999px;
+}
+
+/* Un poco mas visible al pasar el raton, para que se note que se puede
+   arrastrar. Nada de cambios bruscos. */
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--kiosko-texto-suave);
+}
+
+/* La esquina donde se cruzan las dos barras: que no quede un cuadrito gris. */
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ==========================================================================
+   TAMANOS QUE SE ADAPTAN A LA PANTALLA
+   ==========================================================================
+
+   EL PROBLEMA QUE RESUELVEN
+   -------------------------
+   No sabemos en que monitor va a correr el kiosco. Puede ser una pantalla
+   de 1920x1080 en el pasillo, una laptop de 1366x768, o lo que la facultad
+   tenga a la mano el dia de la instalacion.
+
+   Con tamanos fijos pasaban las dos cosas, y las dos se vieron en pruebas:
+
+     - En ventana grande sobraba muchisimo espacio arriba y abajo: el
+       contenido quedaba perdido entre dos huecos enormes.
+     - En ventana chica no cabia y salia una barra de desplazamiento, con la
+       lista de empleados cortada a la mitad.
+
+   LA SOLUCION: clamp()
+   --------------------
+   `clamp(minimo, ideal, maximo)` le dice al navegador:
+
+       "usa el valor IDEAL, pero nunca menos que el MINIMO
+        ni mas que el MAXIMO"
+
+   Y el ideal se expresa en `vh`, que significa "porcentaje de la ALTURA de
+   la ventana". Asi que:
+
+       clamp(2.5rem, 9vh, 5.5rem)
+
+   se lee: "que mida el 9% del alto de la pantalla, pero nunca menos de
+   2.5rem ni mas de 5.5rem".
+
+   Resultado: en pantalla grande el texto crece y llena el espacio; en una
+   chica se encoge y sigue cabiendo. Los topes evitan los dos extremos
+   ridiculos: letra microscopica o gigantesca.
+
+   Es la tecnica correcta para un kiosco precisamente porque el monitor es
+   una incognita hasta el dia de la instalacion.
+   ========================================================================== */
+
+.texto-reloj {
+  font-size: clamp(2.5rem, 9vh, 5.5rem);
+}
+
+.texto-fecha {
+  font-size: clamp(0.9rem, 2.2vh, 1.4rem);
+}
+
+.texto-instruccion {
+  font-size: clamp(1.1rem, 3vh, 1.9rem);
+}
+
+.texto-nombre-grande {
+  font-size: clamp(1.6rem, 4.5vh, 3rem);
+}
+
+/* Botones de la lista de empleados */
+.texto-lista {
+  font-size: clamp(1.1rem, 3vh, 2rem);
+}
+
+.numero-lista {
+  font-size: clamp(1rem, 2.8vh, 1.8rem);
+  width: clamp(2.2rem, 6vh, 3.5rem);
+  height: clamp(2.2rem, 6vh, 3.5rem);
+}
+
+/*
+  Lista con muchas personas (13 o mas): tres columnas y todo un poco mas
+  chico, para que las 20 quepan sin desplazarse. Sigue siendo legible desde
+  un paso de distancia, que es lo que importa a las 6 AM.
+*/
+.lista-compacta .boton-lista {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  gap: 0.75rem;
+}
+.lista-compacta .texto-lista {
+  font-size: clamp(1rem, 2.4vh, 1.5rem);
+}
+.lista-compacta .numero-lista {
+  font-size: clamp(0.9rem, 2.2vh, 1.4rem);
+  width: clamp(2rem, 4.8vh, 2.8rem);
+  height: clamp(2rem, 4.8vh, 2.8rem);
+}
+
+/* Confirmacion del registro */
+.texto-accion {
+  font-size: clamp(2.5rem, 8vh, 5rem);
+}
+
+.texto-hora-grande {
+  font-size: clamp(2rem, 6.5vh, 4rem);
+}
+
+.icono-accion {
+  font-size: clamp(2.5rem, 7vh, 4.5rem);
+  width: clamp(4rem, 11vh, 7rem);
+  height: clamp(4rem, 11vh, 7rem);
+}
+
+/* Botones de la pantalla de confirmacion.
+   Mas chicos que los de la lista: son tres en una fila y tienen que caber
+   sin que el texto se parta. */
+.boton-confirmacion {
+  font-size: clamp(0.95rem, 2.2vh, 1.35rem);
+}
+
+/* El numero que corresponde a la tecla, dentro de cada boton.
+   Grande a proposito: es lo que de verdad se usa cuando hay un teclado
+   numerico conectado, y el texto de abajo solo lo acompana. */
+.numero-tecla {
+  font-size: clamp(1.4rem, 3.6vh, 2.2rem);
+  font-weight: 900;
+  line-height: 1;
+  opacity: 0.55;
+}
+
+/* Puntos del PIN */
+.punto-pin {
+  width: clamp(1.1rem, 3vh, 1.9rem);
+  height: clamp(1.1rem, 3vh, 1.9rem);
+}
+
+/* ==========================================================================
+   ANIMACIONES
+   ==========================================================================
+
+   ¿LAS ANIMACIONES AFECTAN EL RENDIMIENTO?
+   ----------------------------------------
+   Depende ENTERAMENTE de que propiedad animes. No es una cuestion de
+   cantidad, sino de cual.
+
+   Para dibujar la pantalla, el navegador hace tres trabajos en orden:
+
+     1. LAYOUT    calcular donde va cada cosa y cuanto mide
+     2. PAINT     dibujar los pixeles de cada elemento
+     3. COMPOSITE juntar las capas ya dibujadas en la imagen final
+
+   Animar `width`, `height`, `top`, `left`, `margin` o `padding` obliga a
+   rehacer los TRES pasos, sesenta veces por segundo. Eso si se siente: la
+   animacion "tartamudea" y la maquina se calienta.
+
+   Animar `transform` y `opacity` solo toca el paso 3, que lo hace la tarjeta
+   grafica. Es practicamente gratis: una PC modesta mueve decenas de estas
+   animaciones sin despeinarse.
+
+   POR ESO TODAS LAS ANIMACIONES DE ABAJO USAN SOLO `transform` Y `opacity`.
+
+   Nunca veras aqui `width`, `height`, `top` ni `left` animados. Si algun dia
+   agregas una, aplica la misma regla: si no es transform u opacity, busca
+   otra forma de lograr el efecto.
+
+   (`scale`, `translate` y `rotate` son formas de `transform`, asi que todas
+   entran en la categoria barata.)
+
+   LA SEGUNDA REGLA: DISCRECION
+   ----------------------------
+   Este es un kiosco de asistencia, no una pagina de presentacion. Las
+   animaciones estan para dar RETROALIMENTACION —"si te hice caso", "esto
+   cambio"— no para lucirse. Todas duran entre 120 y 250 ms: lo suficiente
+   para percibirse, lo bastante poco para no hacer esperar a nadie.
+
+   Una animacion que hace esperar al empleado a las 6 de la manana es una
+   animacion mal puesta, por bonita que sea.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Aparicion de la tarjeta de confirmacion
+   -------------------------------------------------------------------------- */
+@keyframes aparecer-suave {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.aparecer-suave {
+  animation: aparecer-suave 180ms ease-out;
+}
+
+/* --------------------------------------------------------------------------
+   Entrada escalonada de la lista de empleados
+   --------------------------------------------------------------------------
+   Los botones aparecen uno tras otro con 40 ms de diferencia. El efecto
+   guia la mirada de arriba hacia abajo, que es justo el orden en que hay
+   que leer la lista.
+
+   El retraso se pone desde el HTML con `[style.animation-delay]`, calculado
+   a partir de la posicion de cada boton.
+   -------------------------------------------------------------------------- */
+@keyframes entrar-desde-abajo {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.entrar-escalonado {
+  /* `backwards` hace que el elemento se quede INVISIBLE durante su retraso.
+     Sin esto, todos aparecerian de golpe y luego harian la animacion, que
+     se ve peor que no animar nada. */
+  animation: entrar-desde-abajo 220ms ease-out backwards;
+}
+
+/* --------------------------------------------------------------------------
+   Punto del PIN que se llena
+   --------------------------------------------------------------------------
+   Un pequeño rebote al teclear cada digito. Es la unica confirmacion visual
+   de que la tecla se registro, y en un kiosco eso importa: sin ella, quien
+   no esta seguro vuelve a teclear y mete un digito de mas.
+   -------------------------------------------------------------------------- */
+@keyframes punto-llenado {
+  0% {
+    transform: scale(0.7);
+  }
+  60% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.punto-llenado {
+  animation: punto-llenado 200ms ease-out;
+}
+
+/* --------------------------------------------------------------------------
+   Sacudida del error
+   --------------------------------------------------------------------------
+   El movimiento lateral es un gesto que todo el mundo entiende como "no",
+   sin leer nada. Llega antes que el texto.
+   -------------------------------------------------------------------------- */
+@keyframes sacudir {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-8px);
+  }
+  40% {
+    transform: translateX(8px);
+  }
+  60% {
+    transform: translateX(-5px);
+  }
+  80% {
+    transform: translateX(5px);
+  }
+}
+
+.sacudir {
+  animation: sacudir 380ms ease-in-out;
+}
+
+/* --------------------------------------------------------------------------
+   Respuesta al presionar un boton
+   --------------------------------------------------------------------------
+   El boton se hunde un poco al presionarlo. Es el detalle mas pequeño de
+   todos y el que mas se nota cuando falta: sin el, la pantalla se siente
+   "muerta" y la gente duda de si su clic contó.
+   -------------------------------------------------------------------------- */
+.boton-tactil {
+  transition:
+    transform 120ms ease-out,
+    background-color 150ms ease-out,
+    border-color 150ms ease-out;
+}
+
+.boton-tactil:active {
+  transform: scale(0.97);
+}
+
+/* --------------------------------------------------------------------------
+   Latido del punto "adentro"
+   --------------------------------------------------------------------------
+   Muy suave y lento (2 segundos). Distingue "esta adentro AHORA" de un
+   simple adorno, sin llamar la atencion de forma molesta.
+   -------------------------------------------------------------------------- */
+@keyframes latir-suave {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(0.88);
+  }
+}
+
+.latir-suave {
+  animation: latir-suave 2s ease-in-out infinite;
+}
+
+/* --------------------------------------------------------------------------
+   Respeto por quien no quiere movimiento
+   --------------------------------------------------------------------------
+   Windows, macOS y Android tienen una opcion de accesibilidad para reducir
+   las animaciones. La usan personas con trastornos vestibulares, a quienes
+   el movimiento en pantalla les puede provocar mareo o nauseas de verdad.
+
+   `prefers-reduced-motion` es como el navegador nos comunica esa
+   preferencia. Respetarla son cuatro lineas y no cuesta nada.
+
+   Fijate en que NO se apagan las transiciones de color: el cambio de color
+   no produce mareo, y sigue siendo util como retroalimentacion.
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .aparecer-suave,
+  .entrar-escalonado,
+  .punto-llenado,
+  .sacudir,
+  .latir-suave {
+    animation: none;
+  }
+
+  .boton-tactil:active {
+    transform: none;
+  }
+}
