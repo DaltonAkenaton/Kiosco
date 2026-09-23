@@ -60,17 +60,17 @@ export class Camara {
   readonly mensajeDeFalla = computed(() => {
     switch (this._motivo()) {
       case 'permiso_denegado':
-        return 'La camara esta bloqueada por permisos.';
+        return 'Windows no le da permiso a este programa de usar la cámara.';
       case 'no_encontrada':
-        return 'No se encontro ninguna camara conectada.';
+        return 'No hay ninguna cámara conectada.';
       case 'en_uso_por_otra_app':
-        return 'Otra aplicacion esta usando la camara.';
+        return 'Otro programa está usando la cámara.';
       case 'no_soportada':
-        return 'Esta computadora no soporta la camara.';
+        return 'Esta computadora no puede usar la cámara.';
       case 'desconectada':
-        return 'Se desconecto la camara.';
+        return 'Se desconectó la cámara.';
       case 'error_desconocido':
-        return 'La camara no responde.';
+        return 'La cámara no responde.';
       default:
         return null;
     }

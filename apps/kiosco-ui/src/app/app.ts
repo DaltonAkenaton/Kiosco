@@ -40,7 +40,12 @@ export class App implements OnInit, OnDestroy {
     try {
       await this.puente.iniciar();
     } catch (fallo) {
-      this.errorDeArranque.set(fallo instanceof Error ? fallo.message : 'Error desconocido');
+      // El detalle tecnico va al registro, no a la pantalla: a quien viene a
+      // checar no le sirve, y le tiene que quedar claro que hacer.
+      console.error('[arranque] no se pudo iniciar', fallo);
+      this.errorDeArranque.set(
+        'El checador no pudo arrancar. Ciérralo y vuelve a abrirlo; si sigue igual, avisa a tu jefe para que registre tu asistencia.',
+      );
     } finally {
       // `finally` corre pase lo que pase. Sin esto, un fallo dejaria la
       // pantalla en "Conectando..." para siempre, y eso es justo lo que la

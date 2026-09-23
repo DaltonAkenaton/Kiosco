@@ -188,6 +188,23 @@ function horaLocalDe(milisegundos: number): string {
  * asi, el dia que se agregue un cuarto modo, hay un solo lugar que tocar y
  * TypeScript avisa si se olvida un caso.
  */
+/**
+ * "Usuario o PIN incorrecto", nombrando lo que el empleado tecleo en el
+ * modo vigente. Sirve igual para "no existe" y para "PIN malo": el mensaje
+ * NO dice cual de los dos fallo (eso regalaria la lista de empleados), pero
+ * si dice que revisar y que hacer si no lo recuerda.
+ */
+function mensajeDeDatosIncorrectos(): string {
+  switch (modoIdentificacionVigente()) {
+    case 'lista':
+      return 'PIN incorrecto. Revisa que elegiste tu nombre y vuelve a teclear tu PIN. Si no lo recuerdas, avisa a tu jefe.';
+    case 'numero':
+      return 'Número o PIN incorrecto. Vuelve a intentarlo. Si no los recuerdas, avisa a tu jefe.';
+    case 'usuario':
+      return 'Usuario o PIN incorrecto. Vuelve a intentarlo. Si no los recuerdas, avisa a tu jefe.';
+  }
+}
+
 function buscarSegunModo(identificador: string): EmpleadoEnCache | null {
   switch (modoIdentificacionVigente()) {
     case 'usuario':
@@ -250,7 +267,7 @@ export function registrarManejadoresIpc(): void {
             motivo: 'empleado_no_encontrado',
             // El mensaje es el MISMO que el de PIN incorrecto, a proposito.
             // Decir "ese usuario no existe" es regalar informacion.
-            mensaje: 'Datos incorrectos. Intenta de nuevo.',
+            mensaje: mensajeDeDatosIncorrectos(),
           };
         }
 
@@ -258,7 +275,7 @@ export function registrarManejadoresIpc(): void {
           return {
             ok: false,
             motivo: 'empleado_inactivo',
-            mensaje: 'Tu cuenta esta dada de baja. Avisa a tu jefe.',
+            mensaje: 'Tu registro en este sistema está dado de baja. Avisa a tu jefe para que registre tu asistencia.',
           };
         }
 
@@ -280,7 +297,7 @@ export function registrarManejadoresIpc(): void {
           return {
             ok: false,
             motivo: 'pin_incorrecto',
-            mensaje: 'Datos incorrectos. Intenta de nuevo.',
+            mensaje: mensajeDeDatosIncorrectos(),
           };
         }
 
@@ -342,7 +359,7 @@ export function registrarManejadoresIpc(): void {
 
       if (!validacion.success) {
         console.warn('[ipc] registrarMarca: datos invalidos');
-        return { ok: false, mensaje: 'No se pudo registrar: datos invalidos.' };
+        return { ok: false, mensaje: 'No se pudo registrar. Vuelve a empezar desde el principio.' };
       }
 
       const { tokenRegistro, tipo, fotoJpegBase64, medicionesImagen } = validacion.data;
@@ -362,7 +379,7 @@ export function registrarManejadoresIpc(): void {
           console.warn('[ipc] registrarMarca: pase invalido o vencido');
           return {
             ok: false,
-            mensaje: 'Se agoto el tiempo. Vuelve a teclear tu PIN.',
+            mensaje: 'Pasó demasiado tiempo y no se registró nada. Vuelve a empezar desde el principio.',
           };
         }
 
@@ -372,7 +389,7 @@ export function registrarManejadoresIpc(): void {
         const empleado = buscarPorId(pase.empleadoId);
         if (!empleado) {
           console.warn('[ipc] registrarMarca: el empleado del pase ya no existe');
-          return { ok: false, mensaje: 'No se pudo registrar. Avisa a tu jefe.' };
+          return { ok: false, mensaje: 'No se pudo registrar. Vuelve a intentarlo; si pasa otra vez, avisa a tu jefe para que registre tu asistencia.' };
         }
 
         // --- 3. El reloj YA estaba leido ----------------------------------
@@ -446,7 +463,7 @@ export function registrarManejadoresIpc(): void {
         console.error('[ipc] registrarMarca: error inesperado', fallo);
         return {
           ok: false,
-          mensaje: 'No se pudo guardar tu registro. Avisa a tu jefe de inmediato.',
+          mensaje: 'No se pudo guardar tu registro. Avisa hoy mismo a tu jefe para que registre tu asistencia.',
         };
       }
     },
@@ -576,7 +593,7 @@ export function registrarManejadoresIpc(): void {
         tambien a quien da mantenimiento.
       */
       console.warn('[ipc] pausarKiosco: el codigo no tiene forma valida (no es el codigo en si)');
-      return { ok: false, mensaje: 'Codigo incorrecto.' };
+      return { ok: false, mensaje: 'Código incorrecto. Vuelve a intentarlo.' };
     }
 
     return pausar(validacion.data.codigo);

@@ -125,11 +125,11 @@ export type ResultadoPausa =
  */
 export function pausar(codigo: string): ResultadoPausa {
   if (!CONFIG.pausa.permitida) {
-    return { ok: false, mensaje: 'La pausa esta desactivada en este kiosco.' };
+    return { ok: false, mensaje: 'En este kiosco la computadora es sólo para registrar la asistencia.' };
   }
 
   if (!ventanaPrincipal || ventanaPrincipal.isDestroyed()) {
-    return { ok: false, mensaje: 'No se pudo pausar.' };
+    return { ok: false, mensaje: 'No se pudo esconder el checador. Intenta de nuevo.' };
   }
 
   if (codigo !== CONFIG.pausa.codigo) {
@@ -140,7 +140,7 @@ export function pausar(codigo: string): ResultadoPausa {
       `[pausa] codigo rechazado: llegaron ${codigo.length} digitos, ` +
         `se esperaban ${CONFIG.pausa.codigo.length}`,
     );
-    return { ok: false, mensaje: 'Codigo incorrecto.' };
+    return { ok: false, mensaje: 'Código incorrecto. Vuelve a intentarlo.' };
   }
 
   const minutos = CONFIG.pausa.minutosParaVolver;

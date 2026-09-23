@@ -73,6 +73,7 @@ import type {
   MarcaParaMostrar,
   TipoMarca,
 } from '@kiosko/compartido';
+import { Ayuda } from '../componentes/ayuda';
 import { Reloj } from '../componentes/reloj';
 import { ModoAdmin } from './modo-admin';
 import { TecladoNumerico } from '../componentes/teclado-numerico';
@@ -140,7 +141,7 @@ const SEGUNDOS_DE_AVISO = 3;
 
 @Component({
   selector: 'kiosco-pantalla-principal',
-  imports: [Reloj, TecladoNumerico, ModoAdmin],
+  imports: [Ayuda, Reloj, TecladoNumerico, ModoAdmin],
   templateUrl: './pantalla-principal.html',
 })
 export class PantallaPrincipal implements OnInit, OnDestroy {
@@ -221,10 +222,10 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
   });
 
   protected readonly instruccion = computed(() => {
-    if (this.paso() === 'validando') return 'Verificando...';
-    if (this.paso() === 'guardando') return 'Guardando...';
+    if (this.paso() === 'validando') return 'Revisando tu PIN…';
+    if (this.paso() === 'guardando') return 'Guardando…';
     if (this.paso() === 'confirmando') return 'Confirma tu registro';
-    if (this.paso() === 'pin') return 'Ahora tu PIN';
+    if (this.paso() === 'pin') return 'Ahora teclea tu PIN';
 
     switch (this.modo()) {
       case 'usuario':
@@ -233,10 +234,10 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
         // Con dos cifras hay que DECIRLO: en la primera prueba real se
         // tecleo "1" + Enter esperando elegir al 01, y no paso nada.
         return this.digitosDeLista() > 1
-          ? 'Teclea el numero de tu nombre (ej.: 0 y 7 para el 07)'
-          : 'Elige tu nombre';
+          ? 'Teclea el número que está junto a tu nombre (ejemplo: 0 y 7 para el 07)'
+          : 'Teclea el número que está junto a tu nombre';
       case 'numero':
-        return 'Escribe tu numero de empleado';
+        return 'Escribe tu número de empleado';
     }
   });
 
@@ -591,7 +592,7 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
       this.elegirEmpleado(empleado);
     } else {
       const comoSeVe = String(numero).padStart(this.digitosDeLista(), '0');
-      this.error.set(`No hay nadie con el numero ${comoSeVe}. Busca tu nombre en la lista.`);
+      this.error.set(`No hay nadie con el número ${comoSeVe}. Busca tu nombre en la lista y teclea el número que tiene al lado.`);
     }
   }
 
@@ -608,11 +609,17 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
   //  Selector de modo (SOLO DESARROLLO)
   // --------------------------------------------------------------------------
 
+  /** El ⓘ de "N por enviar", en la barra de abajo. */
+  protected readonly AYUDA_POR_ENVIAR =
+    'Son los registros que ya quedaron guardados en esta computadora, pero que todavía no se ' +
+    'mandan al sistema de la oficina. Se mandan solos cuando hay internet. Tu registro ya cuenta ' +
+    'desde que ves "ENTRADA" o "SALIDA" en la pantalla: no tienes que hacer nada.';
+
   /** Los tres modos, para el selector. */
   protected readonly MODOS = [
     { valor: 'usuario' as const, etiqueta: 'Usuario', ayuda: 'teclea dgomez' },
     { valor: 'lista' as const, etiqueta: 'Lista', ayuda: 'elige tu nombre' },
-    { valor: 'numero' as const, etiqueta: 'Numero', ayuda: 'teclea 0123' },
+    { valor: 'numero' as const, etiqueta: 'Número', ayuda: 'teclea 0123' },
   ];
 
   /**
@@ -972,7 +979,7 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
      * "¿si agarro?, ¿si quedo?". Una pantalla que simplemente vuelve al
      * inicio deja esa duda abierta, y quien duda vuelve a checar.
      */
-    this.mostrarAviso('Cancelado. No se registro nada.');
+    this.mostrarAviso('Cancelado: no se registró nada. Si quieres registrar, empieza de nuevo.');
   }
 
   /**
@@ -1100,11 +1107,11 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
   protected textoDeBandera(bandera: string): string {
     switch (bandera) {
       case 'sin_camara':
-        return 'sin foto';
+        return 'la cámara no funcionaba y no hay foto';
       case 'foto_obstruida':
-        return 'la camara parece tapada';
+        return 'la cámara parecía tapada';
       case 'reloj_sospechoso':
-        return 'la hora de esta computadora no cuadra';
+        return 'la hora de esta computadora parecía mal';
       default:
         return bandera;
     }
@@ -1211,7 +1218,7 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
     if (largo === 0) {
       // Si esto pasara, el dialogo no dibujaria ni un punto y teclear no haria
       // nada — sin ningun error que lo explicara. Mejor decirlo.
-      this.errorDePausa.set('El kiosco no tiene codigo de pausa configurado.');
+      this.errorDePausa.set('Esta opción todavía no está lista. Avisa a quien le da soporte al sistema.');
       return;
     }
 
@@ -1249,7 +1256,7 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
   }
 
   private async intentarPausar(): Promise<void> {
-    this.estadoDePausa.set('Comprobando...');
+    this.estadoDePausa.set('Revisando…');
 
     const resultado = await this.puente.pausarKiosco(this.codigoDePausa());
 
@@ -1271,7 +1278,7 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
 
       Con este mensaje, "no funciona" deja de ser ambiguo.
     */
-    this.estadoDePausa.set('Codigo correcto. Minimizando...');
+    this.estadoDePausa.set('Código correcto. El checador se esconde…');
 
     // Se deja ver un momento. Si la ventana se minimiza —que es lo normal—
     // nadie alcanza a leerlo, y no estorba. Si NO se minimiza, es justo lo que

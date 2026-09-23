@@ -251,7 +251,7 @@
         <p class="texto-nombre-grande font-bold">Usar esta computadora</p>
 
         <p class="text-texto-suave text-xl">
-          El checador se va a minimizar y volverá solo en
+          El checador se va a esconder y volverá solo en
           <span class="text-texto font-bold">{{ config()?.minutosDePausa }} minutos</span>.
         </p>
 
@@ -361,7 +361,7 @@
         -->
         <p class="text-texto-suave mt-4 border-t border-dashed pt-4 text-base opacity-70"
            style="border-color: var(--kiosko-borde)">
-          Esto <span class="text-texto">minimiza</span> el checador; vuelve solo.<br />
+          Esto sólo <span class="text-texto">esconde</span> el checador un rato; vuelve solo.<br />
           Para cerrarlo por completo (mantenimiento):
           <span class="text-texto font-semibold">Ctrl + Alt + Shift + Q</span>
         </p>
@@ -465,7 +465,7 @@
               (click)="confirmarRegistro()"
             >
               <span class="numero-tecla">1</span>
-              <span>Si, registrar</span>
+              <span>Sí, registrar</span>
             </button>
 
             <!-- [2] CAMBIAR LA ACCION  <- la razon de ser de esta pantalla -->
@@ -502,7 +502,7 @@
           </div>
 
           <p class="text-texto-suave mt-2 text-sm opacity-70">
-            Tambien puedes presionar <span class="text-texto">Enter</span> para registrar o
+            También puedes presionar <span class="text-texto">Enter</span> para registrar o
             <span class="text-texto">Esc</span> para cancelar
           </p>
         }
@@ -568,7 +568,7 @@
         <p class="text-texto-suave texto-instruccion mt-1">Ya puedes retirarte</p>
 
         <p class="text-texto-suave mt-2 text-sm opacity-60">
-          Toca la pantalla o presiona una tecla para continuar
+          Da clic o presiona cualquier tecla para continuar
         </p>
 
         <!--
@@ -582,13 +582,13 @@
             style="background-color: rgb(234 179 8 / 0.12)"
           >
             <p class="text-atencion text-xl font-bold">
-              Quedo marcado para revision:
+              Quedó marcado para revisión:
               @for (bandera of registro.banderas; track bandera; let ultimo = $last) {
                 {{ textoDeBandera(bandera) }}{{ ultimo ? '.' : ', ' }}
               }
             </p>
             <p class="text-texto-suave mt-1 text-lg">
-              Avisa a tu jefe. Tu asistencia si quedo guardada.
+              Tu asistencia <b class="text-texto">sí quedó guardada</b>. Avisa a tu jefe para que lo revise.
             </p>
           </div>
         }
@@ -650,12 +650,14 @@
             style="background-color: rgb(15 23 42 / 0.92)"
           >
             <span class="text-atencion text-5xl">&#9888;</span>
-            <p class="text-atencion text-3xl font-bold">Camara no disponible</p>
-            <p class="text-xl">Tu registro quedara marcado para revision.</p>
+            <p class="text-atencion text-3xl font-bold">Cámara no disponible</p>
+            <p class="text-xl">Tu registro quedará marcado para revisión.</p>
             @if (camara.mensajeDeFalla(); as detalle) {
               <p class="text-texto-suave text-base">{{ detalle }}</p>
             }
-            <p class="text-texto-suave mt-2 text-base">Puedes checar normalmente.</p>
+            <p class="text-texto-suave mt-2 text-base">
+              Puedes registrarte normalmente. Avisa a tu jefe que la cámara no funciona.
+            </p>
           </div>
         }
       </div>
@@ -698,8 +700,8 @@
               }
             </div>
             <p class="text-texto-suave text-center text-base">
-              La primera letra de tu nombre y tu apellido, todo junto.<br />
-              Ejemplo: Dalton Gomez &rarr; <span class="text-texto font-semibold">dgomez</span>
+              La primera letra de tu nombre y tu apellido, todo junto y sin acentos.<br />
+              Ejemplo: Dalton Gómez &rarr; <span class="text-texto font-semibold">dgomez</span>
             </p>
           }
 
@@ -707,7 +709,8 @@
           @case ('lista') {
             @if (empleados().length === 0) {
               <p class="text-atencion max-w-md text-center text-xl">
-                Todavia no hay empleados cargados en este kiosco.
+                Todavía no hay empleados cargados en este kiosco. Avisa a tu jefe para que
+                registre tu asistencia.
               </p>
             } @else {
               <!--
@@ -725,7 +728,7 @@
               -->
               @if (seleccionEnCurso(); as parcial) {
                 <p class="text-texto mb-1 text-center text-2xl font-bold tabular-nums">
-                  Numero: {{ parcial }}<span class="animate-pulse">_</span>
+                  Número: {{ parcial }}<span class="animate-pulse">_</span>
                 </p>
                 <!-- Que hacer ahora, en palabras: la segunda cifra, o Enter. -->
                 <p class="text-texto-suave mb-2 text-center text-lg">
@@ -811,11 +814,11 @@
                             class="latir-suave inline-block h-2 w-2 rounded-full"
                             style="background-color: var(--kiosko-entrada)"
                           ></span>
-                          Adentro desde {{ empleado.horaUltimaMarca }}
+                          Adentro desde las {{ empleado.horaUltimaMarca }}
                         </span>
                       } @else if (empleado.estado === 'afuera') {
                         <span class="text-texto-suave mt-0.5 text-sm font-medium">
-                          Salio {{ empleado.horaUltimaMarca }}
+                          Salió a las {{ empleado.horaUltimaMarca }}
                         </span>
                       }
                     </span>
@@ -999,13 +1002,16 @@
             estado()?.enLinea ? 'var(--kiosko-entrada)' : 'var(--kiosko-texto-suave)'
           "
         ></span>
-        {{ estado()?.enLinea ? 'En linea' : 'Sin conexion' }}
+        {{ estado()?.enLinea ? 'Con internet' : 'Sin internet' }}
       </span>
 
-      <span>{{ estado()?.registrosPendientes ?? 0 }} pendientes</span>
+      <span class="flex items-center gap-1">
+        {{ estado()?.registrosPendientes ?? 0 }} por enviar
+        <kiosco-ayuda titulo="Registros por enviar" [texto]="AYUDA_POR_ENVIAR" alinear="izquierda" />
+      </span>
 
       <span [style.color]="camara.disponible() ? 'var(--kiosko-entrada)' : 'var(--kiosko-atencion)'">
-        {{ camara.disponible() ? 'Camara OK' : 'Sin camara' }}
+        {{ camara.disponible() ? 'Cámara funcionando' : 'Sin cámara' }}
       </span>
     </div>
 

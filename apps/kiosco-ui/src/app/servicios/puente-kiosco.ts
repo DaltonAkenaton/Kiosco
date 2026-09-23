@@ -128,7 +128,7 @@ export class PuenteKiosco {
       return {
         ok: false,
         motivo: 'error_interno',
-        mensaje: 'La aplicacion no esta conectada al sistema.',
+        mensaje: 'El programa no está funcionando bien. Avisa a tu jefe para que registre tu asistencia.',
       };
     }
     return window.kiosco.identificar(solicitud);
@@ -157,7 +157,7 @@ export class PuenteKiosco {
   /** Guarda la marca de entrada o salida. */
   async registrarMarca(solicitud: SolicitudRegistro): Promise<ResultadoRegistro> {
     if (!window.kiosco) {
-      return { ok: false, mensaje: 'La aplicacion no esta conectada al sistema.' };
+      return { ok: false, mensaje: 'El programa no está funcionando bien. Avisa a tu jefe para que registre tu asistencia.' };
     }
     return window.kiosco.registrarMarca(solicitud);
   }
@@ -188,7 +188,7 @@ export class PuenteKiosco {
    */
   async pausarKiosco(codigo: string): Promise<ResultadoPausa> {
     if (!window.kiosco) {
-      return { ok: false, mensaje: 'La aplicacion no esta conectada al sistema.' };
+      return { ok: false, mensaje: 'El programa no está funcionando bien. Avisa a tu jefe para que registre tu asistencia.' };
     }
     return window.kiosco.pausarKiosco(codigo);
   }
