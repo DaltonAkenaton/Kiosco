@@ -1,0 +1,24 @@
+# ============================================================================
+#  FINALES DE LINEA
+# ============================================================================
+#  Todo archivo de texto se guarda y se descarga con LF (el final de linea de
+#  Linux), igual que pide .editorconfig. Sin esto, Git en Windows convierte a
+#  CRLF al descargar, y un dia marca archivos como "cambiados" sin que nadie
+#  los haya tocado: solo cambiaron los finales de linea, que no se ven.
+#
+#  Manda sobre la configuracion de cada computadora (core.autocrlf), asi que
+#  el repositorio se comporta igual en cualquier PC donde se clone.
+* text=auto eol=lf
+
+# Binarios: nunca se tocan. Si Git los tratara como texto, los corromperia.
+*.ico    binary
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.webp   binary
+*.woff   binary
+*.woff2  binary
+*.ttf    binary
+*.zip    binary
+*.exe    binary
