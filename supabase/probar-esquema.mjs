@@ -541,6 +541,7 @@ for (const tipo of [
   'modo_admin_abierto', // 0012
   'modo_admin_intento_fallido', // 0012
   'modo_admin_bloqueado', // 0012
+  'exportacion_usb', // 0013
   'camara_desconectada', // los de la 0006 siguen valiendo
 ]) {
   await bd.query('savepoint evento_de_foto');
@@ -559,7 +560,7 @@ for (const tipo of [
 // 0012: "Conservar" queda en la bitacora de fotos, igual que "ver".
 {
   const marcaDePrueba = (await bd.query('select id from marcas limit 1')).rows[0];
-  for (const accion of ['ver', 'conservar', 'quitar_conservar']) {
+  for (const accion of ['ver', 'exportar', 'conservar', 'quitar_conservar']) {
     await bd.query('savepoint acceso_foto');
     try {
       await bd.query(

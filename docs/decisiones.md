@@ -917,6 +917,61 @@ bajar `fallosAntesDeEsperar`.
 
 ---
 
+## D-030 · La exportación a USB: sólo fotos marcadas, a una memoria elegida de una lista
+
+**Decidido:**
+
+- El ZIP lleva **sólo las fotos con marca de agua** (`fotos/`), más
+  `registros.csv` y `LEEME.txt`. Las originales, sin marca, **no** van por
+  defecto (`EXPORTACION.incluirOriginales: false`).
+- Lo que se graba es lo que pide el CLAUDE.md 5.1: fecha, hora, tipo, número de
+  empleado y kiosco. **No el nombre** (`datosGrabados.nombre: false`). Si el
+  empleado no tiene número, se graba su usuario, para que la foto no quede
+  anónima.
+- El CSV lleva la huella SHA-256 **de la original**, que es la que tiene la
+  nube. El kiosco la comprueba antes de exportar (si no cuadra, la foto no sale
+  y el CSV dice "alterada").
+- El destino se elige de una **lista de memorias USB** que arma el proceso
+  principal (Windows, `DriveType = 2`). La pantalla manda sólo la letra, y el
+  proceso principal vuelve a comprobar que sea una memoria conectada.
+- Existe "Elegir otra carpeta…" para discos USB grandes que Windows presenta
+  como disco fijo. **Nunca** deja guardar en el disco del kiosco ni en una
+  carpeta de red (salvo en desarrollo).
+- Primero se anota **cada foto** en `accesos_foto` (`exportar`), y después se
+  escribe. Además, un evento `exportacion_usb` por exportación, aunque no lleve
+  fotos: el CSV también son datos personales.
+- Sin librerías: el ZIP (método "store", porque los JPEG no se comprimen más) y
+  la letra de 5×7 puntos están escritos a mano. `nativeImage` de Electron abre y
+  guarda los JPEG.
+
+**Descartado:**
+
+- *Incluir siempre las originales.* Permitirían comprobar la huella fuera del
+  kiosco, pero son fotos sin ningún dato: separadas del CSV no dicen de quién
+  son. Justo el problema que la marca de agua resuelve (D-025).
+- *La ventana "Guardar como" de Windows como camino principal.* A una persona
+  poco acostumbrada la pierde entre carpetas. Además, en el kiosco es una
+  puerta al explorador de archivos. Se quedó sólo como opción secundaria.
+- *Poner el número o el nombre del empleado en el nombre de cada archivo.* Van
+  grabados en la foto y en el CSV. El nombre del archivo lleva fecha, hora, tipo
+  y UUID, igual que en el kiosco (CLAUDE.md 5.1).
+- *Marcar la foto en la pantalla (canvas) y mandarla de vuelta.* El proceso
+  principal tendría que creer lo que le devuelve la pantalla.
+- *Proteger el ZIP con contraseña.* El cifrado estándar de ZIP es débil, y el
+  fuerte (AES) no lo abre Windows sin programas extra. Una contraseña que da
+  falsa seguridad es peor que un aviso claro: "las fotos salen sin candado".
+
+**Por qué:** la memoria USB es el único lugar donde las fotos existen sin
+cifrar fuera del kiosco. Todo apunta a que lo que sale se entienda solo (marca
+de agua, CSV, LEEME), a que salga lo mínimo (sin nombres, sin originales) y a
+que quede rastro de cada foto.
+
+**Reconsiderar si:** alguien necesita demostrar fuera del sistema que una foto
+no se editó (una queja formal, por ejemplo). Para esa exportación se enciende
+`incluirOriginales`.
+
+---
+
 ## Plantilla para decisiones nuevas
 
 ```markdown

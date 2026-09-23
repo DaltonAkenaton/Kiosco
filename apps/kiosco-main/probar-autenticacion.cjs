@@ -530,6 +530,147 @@ app.whenReady().then(async () => {
     enEspera.ok === false && /Espera \d+ segundos/.test(enEspera.mensaje), enEspera.mensaje);
 
   // ======================================================================
+  //  EXPORTACION A USB  (CLAUDE.md 5.2, cierre del 3.b)
+  // ======================================================================
+  //  La unica salida de las fotos. Lo que no puede fallar en silencio: que
+  //  el ZIP abra, que cada foto quede en la bitacora, y que la marca de agua
+  //  de verdad este grabada en los pixeles.
+  console.log('\n--- exportacion a USB ---');
+
+  const { nativeImage } = require('electron');
+
+  // --- El ZIP ---
+  const carpetaExport = pathMod.join(os.tmpdir(), 'kiosko-export-' + Date.now());
+  fs2.mkdirSync(carpetaExport, { recursive: true });
+  const rutaZipPrueba = pathMod.join(carpetaExport, 'prueba.zip');
+  const hora = { ano: 2026, mes: 9, dia: 23, hora: 6, minuto: 2, segundo: 15 };
+  const escritor = new bd.EscritorZip(rutaZipPrueba, hora);
+  const binario = crypto.randomBytes(5000);
+  escritor.agregar('fotos/año.bin', binario);
+  escritor.agregar('texto.txt', Buffer.from('hola'));
+  escritor.cerrar();
+  const leidoZip = bd.leerZipSinComprimir(fs2.readFileSync(rutaZipPrueba));
+  comprobar('el ZIP se vuelve a leer con sus dos archivos', leidoZip.size === 2);
+  comprobar('los bytes salen identicos (y el nombre con ñ intacto)',
+    leidoZip.get('fotos/año.bin')?.equals(binario) === true);
+
+  // --- La letra de la marca de agua ---
+  comprobar('el texto se pasa a mayusculas sin acentos, respetando la Ñ',
+    bd.textoDibujable('Gómez Ñoño é%') === 'GOMEZ ÑOÑO E?', bd.textoDibujable('Gómez Ñoño é%'));
+
+  // --- La marca de agua, sobre una foto de 640x480 gris ---
+  const gris = Buffer.alloc(640 * 480 * 4, 128);
+  const jpegGris = nativeImage.createFromBitmap(gris, { width: 640, height: 480 }).toJPEG(70);
+  const marcada = bd.grabarMarcaDeAgua(
+    jpegGris,
+    [{ texto: 'ENTRADA 23/09/2026 06:02:15', color: { r: 255, g: 255, b: 255 } }],
+    { escalaMaxima: 3, opacidadDeFranja: 0.7, calidadJpeg: 85 },
+  );
+  const pixelesMarcados = marcada && nativeImage.createFromBuffer(marcada).toBitmap();
+  const pixel = (x, y) => pixelesMarcados[(y * 640 + x) * 4 + 1]; // canal verde
+  let blancosAbajo = 0;
+  for (let y = 440; y < 480; y++) for (let x = 0; x < 640; x++) if (pixel(x, y) > 200) blancosAbajo++;
+  comprobar('la foto marcada sigue siendo un JPEG de 640x480',
+    marcada && JSON.stringify(nativeImage.createFromBuffer(marcada).getSize()) === '{"width":640,"height":480}');
+  comprobar('arriba la foto queda igual (gris)', marcada && Math.abs(pixel(320, 100) - 128) < 12, marcada && String(pixel(320, 100)));
+  comprobar('abajo hay franja oscura', marcada && pixel(630, 475) < 60, marcada && String(pixel(630, 475)));
+  comprobar('y texto blanco grabado en los pixeles', blancosAbajo > 500, String(blancosAbajo));
+
+  // Un renglon demasiado largo se achica o se corta, pero nunca se sale.
+  const angosto = Buffer.alloc(40 * 30 * 4, 128);
+  let sinReventar = true;
+  try {
+    bd.pintarMarcaDeAgua(angosto, 40, 30, [{ texto: 'X'.repeat(200), color: { r: 255, g: 255, b: 255 } }],
+      { escalaMaxima: 3, opacidadDeFranja: 0.7 });
+  } catch (e) { sinReventar = false; }
+  comprobar('un texto larguisimo en una foto chica no revienta', sinReventar && angosto.length === 40 * 30 * 4);
+
+  // --- Memorias USB: lo que contesta PowerShell ---
+  comprobar('una sola memoria (objeto, no lista) se entiende',
+    bd.interpretarRespuesta('{"DeviceID":"E:","VolumeName":"KINGSTON","FreeSpace":1000,"Size":2000}').length === 1);
+  comprobar('un lector de tarjetas vacio (sin tamano) no se ofrece',
+    bd.interpretarRespuesta('[{"DeviceID":"E:","VolumeName":"","FreeSpace":null,"Size":null},{"DeviceID":"F:","VolumeName":"USB","FreeSpace":5,"Size":9}]')
+      .map((m) => m.unidad).join() === 'F:');
+  comprobar('sin memorias (respuesta vacia) da lista vacia', bd.interpretarRespuesta('').length === 0);
+  comprobar('basura no revienta', bd.interpretarRespuesta('no es json').length === 0);
+
+  const discoSistema = (process.env.SystemDrive || 'C:') + '\\';
+  comprobar('el disco del sistema NO es destino valido', bd.esDiscoDeEstaComputadora(discoSistema + 'Usuarios\\x'));
+  comprobar('una carpeta de red tampoco', bd.esDiscoDeEstaComputadora('\\\\servidor\\compartida'));
+  comprobar('otra letra (una USB) si', !bd.esDiscoDeEstaComputadora('Q:\\'));
+
+  comprobar('a la exportacion solo se le manda una letra, no una ruta',
+    bd.EsquemaExportarAUsb.safeParse({ token: 'a'.repeat(64), filtros: { desde: null, hasta: null, empleadoId: null, bandera: null, soloConFoto: false }, unidad: 'C:\\Windows' }).success === false);
+
+  // --- La exportacion completa ---
+  // Una marca nueva con una foto de verdad (640x480) para dgomez.
+  const idExportada = bd.nuevoIdDeMarca();
+  const relojExport = bd.leerReloj();
+  const fotoExport = bd.guardarFoto(idExportada, 'data:image/jpeg;base64,' + jpegGris.toString('base64'), relojExport.horaEstimadaMs);
+  bd.guardarMarca({ id: idExportada, empleadoId: dgomez.id, usuario: dgomez.usuario, tipo: 'entrada', reloj: relojExport, banderas: ['reloj_sospechoso'], foto: fotoExport });
+
+  const filtrosDalton = { desde: null, hasta: null, empleadoId: dgomez.id, bandera: null, soloConFoto: false };
+  const marcasDalton = bd.buscarMarcasParaExportar(filtrosDalton);
+  const conFotoDalton = marcasDalton.filter((m) => m.fotoEstado === 'disponible' || m.fotoEstado === 'conservada');
+  const adminIdPrueba = buena.ok ? buena.sesion.adminId : '';
+
+  const accesosEnBandejaAntes = bd.baseDeDatos().prepare("SELECT COUNT(*) AS n FROM outbox WHERE tipo_registro = 'acceso_foto'").get().n;
+  const exportado = await bd.exportarRegistros(filtrosDalton, carpetaExport, { id: adminIdPrueba, nombre: 'Admin de prueba' }, 'usb');
+  comprobar('la exportacion termina bien', exportado.ok === true, exportado.ok ? '' : exportado.mensaje);
+
+  const archivosEnCarpeta = fs2.readdirSync(carpetaExport);
+  comprobar('no queda ningun archivo .incompleto', !archivosEnCarpeta.some((a) => a.endsWith('.incompleto')), archivosEnCarpeta.join());
+
+  if (exportado.ok) {
+    const r = exportado.resultado;
+    comprobar('el nombre del ZIP no dice de quien es', /^asistencia_inicio_a_hoy_hecho-\d{4}-\d{2}-\d{2}_\d{4}\.zip$/.test(r.archivo), r.archivo);
+    comprobar('cuenta todos los registros', r.registros === marcasDalton.length, `${r.registros} de ${marcasDalton.length}`);
+    comprobar('cada foto disponible sale o se reporta con problema',
+      r.fotos + r.fotosConProblema === conFotoDalton.length && r.fotos >= 1, `${r.fotos}+${r.fotosConProblema} de ${conFotoDalton.length}`);
+
+    const contenido = bd.leerZipSinComprimir(fs2.readFileSync(pathMod.join(carpetaExport, r.archivo)));
+    const nombres = [...contenido.keys()];
+    comprobar('el ZIP trae registros.csv y LEEME.txt', contenido.has('registros.csv') && contenido.has('LEEME.txt'));
+    const fotosEnZip = nombres.filter((n) => n.startsWith('fotos/'));
+    comprobar('trae una foto por cada foto exportada', fotosEnZip.length === r.fotos, String(fotosEnZip.length));
+    comprobar('los nombres de las fotos no dicen de quien son', !fotosEnZip.some((n) => /dgomez|dalton|gomez|1001/i.test(n)));
+    comprobar('sin originales (EXPORTACION.incluirOriginales = false)', !nombres.some((n) => n.startsWith('originales/')));
+
+    const fotoDelZip = contenido.get(fotosEnZip.find((n) => n.includes(idExportada)) ?? '');
+    comprobar('la foto nueva va en el ZIP', !!fotoDelZip);
+    comprobar('la foto exportada NO es la original: lleva la marca grabada',
+      fotoDelZip && crypto.createHash('sha256').update(fotoDelZip).digest('hex') !== fotoExport.hash);
+
+    const csv = contenido.get('registros.csv').toString('utf8');
+    comprobar('el CSV empieza con BOM (para que Excel lea los acentos)', csv.charCodeAt(0) === 0xfeff);
+    const lineasCsv = csv.slice(1).trim().split('\r\n');
+    comprobar('el CSV trae encabezado + un renglon por registro', lineasCsv.length === marcasDalton.length + 1, String(lineasCsv.length));
+    const renglonNuevo = lineasCsv.find((l) => l.startsWith(idExportada)) ?? '';
+    comprobar('el renglon lleva la huella ORIGINAL (la que tiene la nube)', renglonNuevo.includes(fotoExport.hash));
+    comprobar('y la revision en palabras', renglonNuevo.includes('Hora dudosa'), renglonNuevo);
+
+    const accesosExport = bd.accesosDeFoto(idExportada).filter((a) => a.accion === 'exportar');
+    comprobar('la foto exportada queda en la bitacora accesos_foto', accesosExport.length === 1 && accesosExport[0].adminId === adminIdPrueba);
+    const accesosEnBandejaDespues = bd.baseDeDatos().prepare("SELECT COUNT(*) AS n FROM outbox WHERE tipo_registro = 'acceso_foto'").get().n;
+    comprobar('y cada acceso va a la bandeja de salida', accesosEnBandejaDespues - accesosEnBandejaAntes === conFotoDalton.length, `${accesosEnBandejaDespues - accesosEnBandejaAntes}`);
+
+    const eventoExport = bd.eventosPendientes(1000).find((e) => e.payload.includes('exportacion_usb'));
+    comprobar('la exportacion entera deja un evento', !!eventoExport);
+    comprobar('el evento no lleva nombres ni la ruta',
+      eventoExport && !/Dalton|dgomez|kiosko-export|asistencia_/.test(eventoExport.payload), eventoExport && eventoExport.payload);
+  }
+
+  const vacia = await bd.exportarRegistros(
+    { desde: '2001-01-01', hasta: '2001-01-02', empleadoId: null, bandera: null, soloConFoto: false },
+    carpetaExport, { id: adminIdPrueba, nombre: 'x' }, 'usb');
+  comprobar('sin registros no se crea nada y se explica por que', vacia.ok === false && /No hay registros/.test(vacia.mensaje));
+
+  const noExiste = await bd.exportarRegistros(filtrosDalton, pathMod.join(carpetaExport, 'no', 'existe'), { id: adminIdPrueba, nombre: 'x' }, 'usb');
+  comprobar('si la memoria ya no esta, error entendible (no una ruta)', noExiste.ok === false && /memoria/.test(noExiste.mensaje) && !/kiosko-export/.test(noExiste.mensaje));
+
+  fs2.rmSync(carpetaExport, { recursive: true, force: true });
+
+  // ======================================================================
   //  VALIDACION DE LO QUE LLEGA DE LA PANTALLA
   // ======================================================================
   //  Estas pruebas nacen de E-019: una expresión regular a la que le faltaba

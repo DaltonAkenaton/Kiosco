@@ -91,6 +91,12 @@ export const CANALES = {
   adminVerFoto: 'admin:ver-foto',
   adminConservarFoto: 'admin:conservar-foto',
   adminDefinirRecuperacion: 'admin:definir-recuperacion',
+  /** Que memorias USB hay conectadas. */
+  adminBuscarMemoriasUsb: 'admin:buscar-memorias-usb',
+  /** Guarda el ZIP en una de esas memorias. */
+  adminExportarAUsb: 'admin:exportar-a-usb',
+  /** Guarda el ZIP donde el administrador elija con la ventana de Windows. */
+  adminExportarACarpeta: 'admin:exportar-a-carpeta',
   /** Un solo sentido: la sesion se cerro sola por inactividad. */
   adminSesionCerrada: 'admin:sesion-cerrada',
 } as const;
@@ -290,6 +296,33 @@ export interface SesionAdminParaInterfaz {
   segundosEntreAvisosDeActividad: number;
   zoomMaximoFoto: number;
   pasoZoomFoto: number;
+  /** ¿Se ofrece "Elegir otra carpeta" al exportar? (EXPORTACION.permitirElegirCarpeta) */
+  permitirElegirCarpeta: boolean;
+  /** Tope de registros por exportacion, para decirlo en pantalla. */
+  maximoRegistrosExportacion: number;
+}
+
+/** Una memoria USB conectada. La pantalla solo la muestra y la elige por su letra. */
+export interface MemoriaUsb {
+  /** "E:" */
+  unidad: string;
+  /** Lo que Windows llama "etiqueta": "KINGSTON". Puede venir vacio. */
+  etiqueta: string;
+  /** Espacio libre, o `null` si Windows no lo dijo. */
+  bytesLibres: number | null;
+}
+
+/** Como termino una exportacion. */
+export interface ResultadoExportacion {
+  /** Nombre del archivo ZIP, sin carpeta. */
+  archivo: string;
+  /** Donde quedo: "E:" o la carpeta elegida. */
+  ubicacion: string;
+  registros: number;
+  /** Fotos que si van en el ZIP. */
+  fotos: number;
+  /** Fotos que deberian estar y no se pudieron incluir (faltantes, alteradas...). */
+  fotosConProblema: number;
 }
 
 export interface FiltrosAuditoria {
@@ -350,6 +383,18 @@ export interface ApiAdmin {
     motivo: string,
   ): Promise<ResultadoAdmin<{ conservar: boolean }>>;
   definirRecuperacion(token: string, contrasena: string): Promise<ResultadoAdmin<null>>;
+  buscarMemoriasUsb(token: string): Promise<ResultadoAdmin<MemoriaUsb[]>>;
+  /** Exporta lo que cumpla los filtros a la memoria de esa letra. */
+  exportarAUsb(
+    token: string,
+    filtros: FiltrosAuditoria,
+    unidad: string,
+  ): Promise<ResultadoAdmin<ResultadoExportacion>>;
+  /** Igual, pero la carpeta se elige en la ventana de Windows. `null` si se cancelo. */
+  exportarACarpeta(
+    token: string,
+    filtros: FiltrosAuditoria,
+  ): Promise<ResultadoAdmin<ResultadoExportacion | null>>;
   /** La sesion se cerro sola (inactividad). */
   alCerrarSesion(callback: () => void): () => void;
 }

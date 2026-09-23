@@ -12,16 +12,21 @@
  *  separados hace facil revisar de un vistazo que ninguno se salte la sesion.
  */
 
-import { ipcMain } from 'electron';
+import { BrowserWindow, dialog, ipcMain } from 'electron';
 import {
   CANALES,
   CONFIG,
   type EmpleadoParaFiltro,
   type FotoParaAuditoria,
   type MarcaParaAuditoria,
+  type MemoriaUsb,
   type ResultadoAdmin,
+  type ResultadoExportacion,
   type SesionAdminParaInterfaz,
 } from '@kiosko/compartido';
+import { ES_DESARROLLO } from '../entorno';
+import { exportarRegistros } from '../servicios/exportacion';
+import { buscarMemoriasUsb, esDiscoDeEstaComputadora } from '../servicios/memorias-usb';
 import {
   buscarMarcasParaAuditoria,
   empleadosParaFiltro,
@@ -45,6 +50,8 @@ import {
   EsquemaConservarFoto,
   EsquemaDefinirRecuperacion,
   EsquemaEntradaAdmin,
+  EsquemaExportarACarpeta,
+  EsquemaExportarAUsb,
   EsquemaSoloToken,
   EsquemaVerFoto,
 } from './esquemas';
@@ -118,6 +125,8 @@ export function registrarManejadoresAdmin(): void {
             segundosEntreAvisosDeActividad: CONFIG.modoAdmin.segundosEntreAvisosDeActividad,
             zoomMaximoFoto: CONFIG.modoAdmin.zoomMaximoFoto,
             pasoZoomFoto: CONFIG.modoAdmin.pasoZoomFoto,
+            permitirElegirCarpeta: CONFIG.exportacion.permitirElegirCarpeta,
+            maximoRegistrosExportacion: CONFIG.exportacion.maximoRegistros,
           },
         };
       } catch (fallo) {
@@ -224,4 +233,68 @@ export function registrarManejadoresAdmin(): void {
       return null;
     }),
   );
+
+  // ---------------------------------------------------------------------
+  //  Exportacion a USB: la unica salida de las fotos (CLAUDE.md 5.2)
+  // ---------------------------------------------------------------------
+  ipcMain.handle(
+    CANALES.adminBuscarMemoriasUsb,
+    conSesion(EsquemaSoloToken, (): Promise<MemoriaUsb[]> => buscarMemoriasUsb()),
+  );
+
+  ipcMain.handle(
+    CANALES.adminExportarAUsb,
+    conSesion(EsquemaExportarAUsb, async (datos, sesion): Promise<ResultadoExportacion> => {
+      // La letra llego de la pantalla: se vuelve a preguntar a Windows si de
+      // verdad es una memoria USB conectada, en vez de creerle.
+      const memorias = await buscarMemoriasUsb();
+      if (!memorias.some((m) => m.unidad === datos.unidad)) {
+        throw new ErrorParaMostrar('Esa memoria ya no está conectada. Pulsa "Buscar otra vez".');
+      }
+      return exportarOMostrarError(datos.filtros, `${datos.unidad}\\`, sesion, 'usb');
+    }),
+  );
+
+  ipcMain.handle(
+    CANALES.adminExportarACarpeta,
+    conSesion(EsquemaExportarACarpeta, async (datos, sesion): Promise<ResultadoExportacion | null> => {
+      if (!CONFIG.exportacion.permitirElegirCarpeta) throw new ErrorParaMostrar('Esta opción está apagada.');
+
+      // La ventana de Windows la abre el proceso principal, y la ruta elegida
+      // nunca pasa por la pantalla (CLAUDE.md 3.1).
+      const ventana = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+      const opciones: Electron.OpenDialogOptions = {
+        title: 'Elige la memoria o el disco USB donde guardar',
+        buttonLabel: 'Guardar aquí',
+        properties: ['openDirectory', 'createDirectory'],
+      };
+      const eleccion = ventana
+        ? await dialog.showOpenDialog(ventana, opciones)
+        : await dialog.showOpenDialog(opciones);
+      const carpeta = eleccion.filePaths[0];
+      if (eleccion.canceled || !carpeta) return null;
+
+      if (!ES_DESARROLLO && esDiscoDeEstaComputadora(carpeta)) {
+        throw new ErrorParaMostrar(
+          'Esa carpeta está en esta misma computadora. Las fotos salen sin candado y no deben ' +
+            'quedarse aquí. Elige la memoria o el disco USB.',
+        );
+      }
+      return exportarOMostrarError(datos.filtros, carpeta, sesion, 'carpeta');
+    }),
+  );
+}
+
+async function exportarOMostrarError(
+  filtros: Parameters<typeof exportarRegistros>[0],
+  carpeta: string,
+  sesion: SesionAdmin,
+  destino: 'usb' | 'carpeta',
+): Promise<ResultadoExportacion> {
+  const resultado = await exportarRegistros(filtros, carpeta, { id: sesion.adminId, nombre: sesion.nombre }, destino);
+  if (!resultado.ok) throw new ErrorParaMostrar(resultado.mensaje);
+  // Exportar un mes puede tardar: se cuenta como actividad, para que la
+  // sesion no se venza justo mientras la persona espera el resultado.
+  validarSesionAdmin(sesion.token);
+  return resultado.resultado;
 }

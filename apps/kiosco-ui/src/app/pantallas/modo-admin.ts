@@ -37,13 +37,16 @@ import {
   output,
   signal,
 } from '@angular/core';
-import type {
-  EmpleadoParaFiltro,
-  FiltrosAuditoria,
-  FotoParaAuditoria,
-  MarcaParaAuditoria,
-  ResultadoAdmin,
-  SesionAdminParaInterfaz,
+import {
+  NOMBRES_DE_BANDERAS as NOMBRES_DE_BANDERAS_COMPARTIDOS,
+  type EmpleadoParaFiltro,
+  type FiltrosAuditoria,
+  type FotoParaAuditoria,
+  type MarcaParaAuditoria,
+  type MemoriaUsb,
+  type ResultadoAdmin,
+  type ResultadoExportacion,
+  type SesionAdminParaInterfaz,
 } from '@kiosko/compartido';
 import { Ayuda } from '../componentes/ayuda';
 import { PuenteKiosco } from '../servicios/puente-kiosco';
@@ -51,15 +54,8 @@ import { PuenteKiosco } from '../servicios/puente-kiosco';
 /** Lo que se le dice a la pantalla principal cuando la sesion se cierra sola. */
 const MENSAJE_SESION_CERRADA = 'La sesión de administrador se cerró porque nadie la usó por un rato.';
 
-/** Las banderas, en palabras. Las que no esten aqui se muestran tal cual. */
-const NOMBRES_DE_BANDERAS: Record<string, string | undefined> = {
-  sin_camara: 'Sin cámara',
-  foto_obstruida: 'Foto tapada',
-  reloj_sospechoso: 'Hora dudosa',
-  dispositivo_revocado: 'Kiosco dado de baja',
-  manual: 'Captura manual',
-  cierre_automatico: 'Sin salida',
-};
+/** Las banderas, en palabras (compartido/tipos.ts). Las que no esten ahi se muestran tal cual. */
+const NOMBRES_DE_BANDERAS: Record<string, string | undefined> = NOMBRES_DE_BANDERAS_COMPARTIDOS;
 
 /**
  * ============================================================================
@@ -122,6 +118,18 @@ const AYUDA = {
   zoom:
     'Para ver mejor la cara: usa "+ Acercar" y "− Alejar", o la rueda del ratón. Cuando la foto está ' +
     'acercada, arrástrala con el ratón para moverte.',
+  exportar:
+    'Copia a una memoria USB los registros que cumplen los filtros de arriba (fechas, empleado, ' +
+    'revisión), con sus fotos, en un solo archivo. Cada foto lleva escritos la fecha, la hora, si ' +
+    'fue entrada o salida, el número de empleado y el kiosco. Los registros van en una tabla que ' +
+    'se abre con Excel. Queda anotado quién lo hizo y cuándo.',
+  sinCandado:
+    'En esta computadora las fotos están guardadas con candado: nadie puede abrirlas fuera de este ' +
+    'programa. En la memoria salen SIN candado: cualquiera que la tenga puede verlas. Por eso ' +
+    'guárdala bajo llave, no la prestes y borra los archivos cuando ya no los necesites.',
+  otraCarpeta:
+    'Algunos discos USB grandes no aparecen en la lista de memorias. Con este botón se abre la ' +
+    'ventana de Windows para elegirlos a mano. No deja guardar en el disco de esta computadora.',
 } as const;
 
 /** Lo que significa cada estado de una foto que no se pudo mostrar. */
@@ -199,6 +207,16 @@ export class ModoAdmin implements OnInit, OnDestroy {
   protected readonly recuperacion2 = signal('');
   protected readonly mensajeRecuperacion = signal<string | null>(null);
 
+  // --------------------------------------------------------------------------
+  //  Exportacion a USB
+  // --------------------------------------------------------------------------
+  /** `null`: el panel esta cerrado. */
+  protected readonly exportacion = signal<'eligiendo' | 'guardando' | 'lista' | null>(null);
+  /** `null` mientras se busca. */
+  protected readonly memorias = signal<MemoriaUsb[] | null>(null);
+  protected readonly resultadoExportacion = signal<ResultadoExportacion | null>(null);
+  protected readonly errorExportacion = signal<string | null>(null);
+
   protected readonly NOMBRES_DE_BANDERAS = NOMBRES_DE_BANDERAS;
   protected readonly AYUDA_BANDERAS = AYUDA_BANDERAS;
   protected readonly AYUDA = AYUDA;
@@ -243,6 +261,8 @@ export class ModoAdmin implements OnInit, OnDestroy {
   protected alPresionarEscape(): void {
     if (!this.sesion()) {
       this.terminar(null);
+    } else if (this.exportacion()) {
+      this.cerrarExportacion();
     } else if (this.ampliada()) {
       this.cerrarAmpliada();
     } else if (this.seleccionada()) {
@@ -508,6 +528,99 @@ export class ModoAdmin implements OnInit, OnDestroy {
     this.definiendoRecuperacion.set(false);
     this.mensajeRecuperacion.set(null);
     this.sesion.update((s) => (s ? { ...s, tieneContrasenaDeRecuperacion: true } : s));
+  }
+
+  // --------------------------------------------------------------------------
+  //  Exportacion a USB
+  // --------------------------------------------------------------------------
+  //  La pantalla nunca manda una ruta: elige una LETRA de la lista que le dio
+  //  el proceso principal, o le pide a este que abra la ventana de Windows.
+
+  protected abrirExportacion(): void {
+    this.resultadoExportacion.set(null);
+    this.errorExportacion.set(null);
+    this.exportacion.set('eligiendo');
+    void this.buscarMemorias();
+  }
+
+  protected cerrarExportacion(): void {
+    // Mientras se escribe no se cierra: la persona tiene que ver como termino.
+    if (this.exportacion() === 'guardando') return;
+    this.exportacion.set(null);
+  }
+
+  protected async buscarMemorias(): Promise<void> {
+    const sesion = this.sesion();
+    if (!sesion) return;
+    this.memorias.set(null);
+    const resultado = await this.puente.admin?.buscarMemoriasUsb(sesion.token);
+    if (resultado && !resultado.ok && resultado.sesionVencida) {
+      this.terminar(MENSAJE_SESION_CERRADA);
+      return;
+    }
+    this.memorias.set(resultado?.ok ? resultado.datos : []);
+  }
+
+  protected exportarAUsb(unidad: string): Promise<void> {
+    return this.exportar((token, filtros) => this.puente.admin?.exportarAUsb(token, filtros, unidad));
+  }
+
+  protected exportarACarpeta(): Promise<void> {
+    return this.exportar((token, filtros) => this.puente.admin?.exportarACarpeta(token, filtros));
+  }
+
+  private async exportar(
+    pedir: (
+      token: string,
+      filtros: FiltrosAuditoria,
+    ) => Promise<ResultadoAdmin<ResultadoExportacion | null>> | undefined,
+  ): Promise<void> {
+    const sesion = this.sesion();
+    if (!sesion || this.exportacion() === 'guardando') return;
+
+    this.errorExportacion.set(null);
+    this.exportacion.set('guardando');
+    const resultado = await pedir(sesion.token, this.filtros());
+
+    if (!resultado) {
+      this.exportacion.set('eligiendo');
+      return;
+    }
+    if (!resultado.ok) {
+      if (resultado.sesionVencida) {
+        this.exportacion.set(null);
+        this.terminar(MENSAJE_SESION_CERRADA);
+        return;
+      }
+      this.errorExportacion.set(resultado.mensaje);
+      this.exportacion.set('eligiendo');
+      return;
+    }
+    // `null`: cerro la ventana de Windows sin elegir. Se regresa a la lista.
+    if (!resultado.datos) {
+      this.exportacion.set('eligiendo');
+      return;
+    }
+    this.resultadoExportacion.set(resultado.datos);
+    this.exportacion.set('lista');
+  }
+
+  /** 15 032 385 536 -> "14 GB" */
+  protected espacio(bytes: number | null): string {
+    if (bytes === null) return '';
+    const gb = bytes / 1024 ** 3;
+    return gb >= 1 ? `${Math.floor(gb)} GB libres` : `${Math.floor(bytes / 1024 ** 2)} MB libres`;
+  }
+
+  /** "22/09/2026" a partir de "2026-09-22", para repetir los filtros con palabras. */
+  protected fechaDeFiltro(fecha: string | null): string {
+    if (!fecha) return '';
+    const [ano, mes, dia] = fecha.split('-');
+    return `${dia}/${mes}/${ano}`;
+  }
+
+  protected nombreDeEmpleado(id: string | null): string {
+    return this.empleados().find((e) => e.id === id)?.nombreCompleto ?? '';
   }
 
   // --------------------------------------------------------------------------

@@ -49,6 +49,20 @@ export type BanderaMarca =
   | 'cierre_automatico';
 
 /**
+ * Cada bandera en palabras, para quien no sabe que es "reloj_sospechoso".
+ * Las usan la pantalla de auditoria y el CSV que se exporta a USB: asi el
+ * archivo dice lo mismo que la pantalla.
+ */
+export const NOMBRES_DE_BANDERAS: Record<BanderaMarca, string> = {
+  sin_camara: 'Sin cámara',
+  foto_obstruida: 'Foto tapada',
+  reloj_sospechoso: 'Hora dudosa',
+  dispositivo_revocado: 'Kiosco dado de baja',
+  manual: 'Captura manual',
+  cierre_automatico: 'Sin salida',
+};
+
+/**
  * Las lecturas de tiempo que se guardan JUNTO a cada marca (CLAUDE.md 6).
  * La idea de fondo: no confiamos en la hora de Windows, asi que guardamos
  * varias mediciones distintas para poder detectar despues si alguien la movio.

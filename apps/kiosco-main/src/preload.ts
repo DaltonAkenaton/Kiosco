@@ -159,6 +159,15 @@ const api: ApiKiosco = {
     definirRecuperacion(token: string, contrasena: string) {
       return ipcRenderer.invoke(CANALES.adminDefinirRecuperacion, { token, contrasena });
     },
+    buscarMemoriasUsb(token: string) {
+      return ipcRenderer.invoke(CANALES.adminBuscarMemoriasUsb, { token });
+    },
+    exportarAUsb(token: string, filtros: FiltrosAuditoria, unidad: string) {
+      return ipcRenderer.invoke(CANALES.adminExportarAUsb, { token, filtros, unidad });
+    },
+    exportarACarpeta(token: string, filtros: FiltrosAuditoria) {
+      return ipcRenderer.invoke(CANALES.adminExportarACarpeta, { token, filtros });
+    },
     alCerrarSesion(callback: () => void): () => void {
       const escucha = (): void => callback();
       ipcRenderer.on(CANALES.adminSesionCerrada, escucha);

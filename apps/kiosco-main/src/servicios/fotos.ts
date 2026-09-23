@@ -16,10 +16,11 @@
  *  ¿Por que el hash se saca ANTES de cifrar?
  *  ---------------------------------------------------------------------------
  *  Porque lo que queremos poder comprobar despues es la FOTO, no el archivo
- *  cifrado. El dia que se exporte descifrada a una USB, cualquiera puede
- *  sacar el SHA-256 de ese JPEG y compararlo con el que tiene la nube. Si el
- *  hash fuera del archivo cifrado, esa comprobacion seria imposible fuera de
- *  la app.
+ *  cifrado. Al abrirla, el kiosco compara la foto descifrada con el hash de
+ *  la marca (y con el que tiene la nube). Y si se exporta la ORIGINAL a una
+ *  USB (EXPORTACION.incluirOriginales, D-030), cualquiera puede repetir la
+ *  comparacion fuera de la app. Con el hash del archivo cifrado, ninguna de
+ *  las dos cosas seria posible.
  *
  *  ---------------------------------------------------------------------------
  *  Como es un archivo .jpg.enc por dentro

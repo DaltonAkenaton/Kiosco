@@ -71,7 +71,13 @@ export type TipoDeEvento =
   /** Alguien intento entrar al modo administrador y fallo. */
   | 'modo_admin_intento_fallido'
   /** Muchos fallos seguidos: hay que esperar antes del siguiente intento. */
-  | 'modo_admin_bloqueado';
+  | 'modo_admin_bloqueado'
+  /**
+   * Un administrador saco registros (y fotos) a una memoria USB. Cada foto
+   * queda ademas en `accesos_foto`; este evento cubre la exportacion entera,
+   * incluso cuando no llevaba ninguna foto (el CSV tambien son datos personales).
+   */
+  | 'exportacion_usb';
 
 /**
  * Deja constancia de un evento.

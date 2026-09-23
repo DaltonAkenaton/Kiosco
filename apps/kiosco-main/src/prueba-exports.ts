@@ -88,3 +88,9 @@ export {
   segundosDeEsperaTras,
   MENSAJE_INTENTO_FALLIDO,
 } from './servicios/sesion-admin';
+export { buscarMarcasParaExportar, registrarAccesosFoto } from './datos/repositorio-admin';
+export { EscritorZip, leerZipSinComprimir } from './servicios/zip';
+export { pintarMarcaDeAgua, grabarMarcaDeAgua, textoDibujable } from './servicios/marca-de-agua';
+export { exportarRegistros, renglonesDeMarca } from './servicios/exportacion';
+export { interpretarRespuesta, esDiscoDeEstaComputadora } from './servicios/memorias-usb';
+export { EsquemaExportarAUsb } from './ipc/esquemas';

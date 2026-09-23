@@ -96,20 +96,36 @@ export type AccionSobreFoto = 'ver' | 'exportar' | 'conservar' | 'quitar_conserv
  * no debe mostrar la foto si no pudo anotar que la mostro.
  */
 export function registrarAccesoFoto(marcaId: string, adminId: string, accion: AccionSobreFoto): void {
-  const id = randomUUID();
+  registrarAccesosFoto([marcaId], adminId, accion);
+}
+
+/**
+ * Lo mismo, para muchas fotos a la vez (una exportacion). Todo o nada: si una
+ * no se puede anotar, no se anota ninguna, y quien llama no debe exportar.
+ */
+export function registrarAccesosFoto(
+  marcaIds: readonly string[],
+  adminId: string,
+  accion: AccionSobreFoto,
+): void {
   const ahoraIso = new Date().toISOString();
 
   enTransaccion(() => {
     const bd = baseDeDatos();
-    bd.prepare(
+    const enBitacora = bd.prepare(
       `INSERT INTO accesos_foto (id, marca_id, admin_id, accion, consultado_en)
        VALUES (?, ?, ?, ?, ?)`,
-    ).run(id, marcaId, adminId, accion, ahoraIso);
-
-    bd.prepare(
+    );
+    const enBandeja = bd.prepare(
       `INSERT INTO outbox (id, tipo_registro, payload, intentos, creado_en)
        VALUES (?, 'acceso_foto', ?, 0, ?)`,
-    ).run(id, JSON.stringify({ id, marcaId, adminId, accion, consultadoEn: ahoraIso }), ahoraIso);
+    );
+
+    for (const marcaId of marcaIds) {
+      const id = randomUUID();
+      enBitacora.run(id, marcaId, adminId, accion, ahoraIso);
+      enBandeja.run(id, JSON.stringify({ id, marcaId, adminId, accion, consultadoEn: ahoraIso }), ahoraIso);
+    }
   });
 }
 
@@ -158,7 +174,28 @@ export function inicioDelDiaLocal(fecha: string, zona: string): number {
 }
 
 
+/** Un renglon de auditoria con lo que ademas hace falta para exportar su foto. */
+export interface MarcaParaExportar extends MarcaParaAuditoria {
+  fotoHash: string | null;
+  fotoRutaRelativa: string | null;
+}
+
+/** La consulta de la pantalla de auditoria: lo mas reciente primero, con tope. */
 export function buscarMarcasParaAuditoria(filtros: FiltrosAuditoria): MarcaParaAuditoria[] {
+  return consultarMarcas(filtros, CONFIG.modoAdmin.maximoRegistrosPorConsulta).map(
+    ({ fotoHash: _hash, fotoRutaRelativa: _ruta, ...marca }) => marca,
+  );
+}
+
+/**
+ * Los mismos filtros, para exportar: en orden de hora (como se lee un
+ * reporte) y con el tope de la exportacion, no el de la pantalla.
+ */
+export function buscarMarcasParaExportar(filtros: FiltrosAuditoria): MarcaParaExportar[] {
+  return consultarMarcas(filtros, CONFIG.exportacion.maximoRegistros).reverse();
+}
+
+function consultarMarcas(filtros: FiltrosAuditoria, limite: number): MarcaParaExportar[] {
   const zona = CONFIG.reloj.zonaHorariaPorDefecto;
   const condiciones: string[] = [];
   const valores: (string | number)[] = [];
@@ -194,9 +231,9 @@ export function buscarMarcasParaAuditoria(filtros: FiltrosAuditoria): MarcaParaA
 
   const filas = baseDeDatos()
     .prepare(
-      `SELECT m.id, m.empleado_id, m.usuario, m.tipo, m.hora_estimada_ms, m.banderas,
+      `SELECT m.id, m.empleado_id, m.usuario, m.tipo, m.hora_estimada_ms, m.banderas, m.foto_hash,
               e.nombre, e.apellido_paterno, e.apellido_materno, e.numero_empleado,
-              f.marca_id AS foto_marca, f.eliminada_en, f.conservar
+              f.marca_id AS foto_marca, f.eliminada_en, f.conservar, f.ruta_relativa
          FROM marcas m
          LEFT JOIN empleados_cache e ON e.id = m.empleado_id
          LEFT JOIN fotos f ON f.marca_id = m.id
@@ -204,13 +241,14 @@ export function buscarMarcasParaAuditoria(filtros: FiltrosAuditoria): MarcaParaA
         ORDER BY m.hora_estimada_ms DESC
         LIMIT ?`,
     )
-    .all(...valores, CONFIG.modoAdmin.maximoRegistrosPorConsulta) as {
+    .all(...valores, limite) as {
     id: string;
     empleado_id: string;
     usuario: string;
     tipo: TipoMarca;
     hora_estimada_ms: number;
     banderas: string;
+    foto_hash: string | null;
     nombre: string | null;
     apellido_paterno: string | null;
     apellido_materno: string | null;
@@ -218,6 +256,7 @@ export function buscarMarcasParaAuditoria(filtros: FiltrosAuditoria): MarcaParaA
     foto_marca: string | null;
     eliminada_en: string | null;
     conservar: number | null;
+    ruta_relativa: string | null;
   }[];
 
   return filas.map((f) => {
@@ -239,6 +278,8 @@ export function buscarMarcasParaAuditoria(filtros: FiltrosAuditoria): MarcaParaA
       horaEstimadaMs: f.hora_estimada_ms,
       banderas: f.banderas.split(',').filter((b) => b !== ''),
       fotoEstado,
+      fotoHash: f.foto_hash,
+      fotoRutaRelativa: f.ruta_relativa,
     };
   });
 }

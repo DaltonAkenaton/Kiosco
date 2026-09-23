@@ -268,6 +268,18 @@
       <span class="text-texto-suave pb-2">
         {{ buscando() ? 'Buscando...' : registros().length + ' registro(s)' }}
       </span>
+      <span class="ml-auto flex items-center gap-2">
+        <button
+          type="button"
+          class="boton-tactil rounded-xl px-5 py-2 text-lg font-bold"
+          style="background-color: var(--kiosko-institucion-primario)"
+          [disabled]="registros().length === 0"
+          (click)="abrirExportacion()"
+        >
+          💾 Guardar en memoria USB
+        </button>
+        <kiosco-ayuda titulo="Guardar en memoria USB" [texto]="AYUDA.exportar" alinear="derecha" />
+      </span>
     </div>
 
     @if (error(); as mensaje) {
@@ -496,6 +508,143 @@
         }
       </div>
     </ng-template>
+
+    <!-- ====================== GUARDAR EN MEMORIA USB ====================== -->
+    <!--
+      La pantalla solo elige una memoria de la lista (por su letra) o pide la
+      ventana de Windows. Nunca manda una ruta: eso lo decide el proceso
+      principal (CLAUDE.md 3.1).
+    -->
+    @if (exportacion(); as paso) {
+      @let f = filtros();
+      <div class="fixed inset-0 z-[60] flex items-center justify-center p-8" style="background-color: rgb(0 0 0 / 0.7)">
+        <div class="bg-superficie border-borde flex max-h-full w-full max-w-2xl flex-col gap-5 overflow-y-auto rounded-3xl border-2 p-8">
+          <h3 class="text-2xl font-bold">Guardar en memoria USB</h3>
+
+          @if (paso === 'lista') {
+            @if (resultadoExportacion(); as r) {
+              <p class="text-2xl font-bold" style="color: var(--kiosko-entrada)">✔ Listo</p>
+              <p class="text-lg">
+                Se guardaron <b>{{ r.registros }}</b> registro(s) y <b>{{ r.fotos }}</b> foto(s) en
+                <b>{{ r.ubicacion }}</b>, en el archivo:
+              </p>
+              <p class="bg-fondo rounded-xl px-4 py-3 font-mono text-base break-all">{{ r.archivo }}</p>
+              @if (r.fotosConProblema > 0) {
+                <p class="rounded-xl px-4 py-3 text-lg" style="background-color: rgb(234 179 8 / 0.14)">
+                  {{ r.fotosConProblema }} foto(s) no se pudieron incluir. En la tabla de Excel, la columna
+                  "foto" dice qué le pasó a cada una.
+                </p>
+              }
+              <p class="text-lg">
+                Ya puedes quitar la memoria. Recuerda: las fotos van <b>sin candado</b>.
+                <kiosco-ayuda titulo="Sin candado" [texto]="AYUDA.sinCandado" alinear="izquierda" />
+              </p>
+            }
+            <button
+              type="button"
+              class="boton-tactil self-start rounded-2xl px-8 py-3 text-xl font-bold"
+              style="background-color: var(--kiosko-institucion-primario)"
+              (click)="cerrarExportacion()"
+            >
+              Cerrar
+            </button>
+          } @else if (paso === 'guardando') {
+            <p class="text-2xl font-bold">Guardando…</p>
+            <p class="text-lg">No quites la memoria hasta que diga <b>"Listo"</b>. Puede tardar un minuto.</p>
+          } @else {
+            <!-- Que se va a guardar, en palabras: los mismos filtros de la pantalla. -->
+            <div class="text-lg">
+              <p>Se guardarán los registros que cumplen los filtros de la pantalla:</p>
+              <ul class="text-texto-suave mt-2 list-disc pl-6">
+                <li>
+                  @if (f.desde && f.hasta) {
+                    Del {{ fechaDeFiltro(f.desde) }} al {{ fechaDeFiltro(f.hasta) }}
+                  } @else if (f.desde) {
+                    Desde el {{ fechaDeFiltro(f.desde) }}
+                  } @else if (f.hasta) {
+                    Hasta el {{ fechaDeFiltro(f.hasta) }}
+                  } @else {
+                    Todas las fechas
+                  }
+                </li>
+                <li>{{ f.empleadoId ? nombreDeEmpleado(f.empleadoId) : 'Todos los empleados' }}</li>
+                @if (f.bandera) {
+                  <li>Solo: {{ NOMBRES_DE_BANDERAS[f.bandera] ?? f.bandera }}</li>
+                }
+                @if (f.soloConFoto) {
+                  <li>Solo los que tienen foto</li>
+                }
+              </ul>
+              <p class="text-texto-suave mt-2 text-base">
+                Con sus fotos, cada una con la fecha, la hora y el empleado escritos encima. Como máximo
+                {{ s.maximoRegistrosExportacion }} registros.
+              </p>
+            </div>
+
+            <p class="rounded-xl px-4 py-3 text-lg" style="background-color: rgb(234 179 8 / 0.14)">
+              ⚠ Las fotos salen <b>sin candado</b>: cualquiera que tenga la memoria puede verlas.
+              <kiosco-ayuda titulo="Sin candado" [texto]="AYUDA.sinCandado" alinear="izquierda" />
+            </p>
+
+            @if (errorExportacion(); as mensaje) {
+              <p class="text-lg font-bold" style="color: var(--kiosko-peligro)">{{ mensaje }}</p>
+            }
+
+            <div class="flex flex-col gap-3">
+              <p class="text-lg font-bold">1. Conecta la memoria USB. 2. Pulsa el botón con su nombre:</p>
+              @if (memorias(); as lista) {
+                @for (m of lista; track m.unidad) {
+                  <button
+                    type="button"
+                    class="boton-tactil rounded-2xl px-6 py-4 text-left text-xl font-bold"
+                    style="background-color: var(--kiosko-institucion-primario)"
+                    (click)="exportarAUsb(m.unidad)"
+                  >
+                    Guardar en {{ m.unidad }} {{ m.etiqueta || 'Memoria USB' }}
+                    <span class="block text-base font-normal opacity-80">{{ espacio(m.bytesLibres) }}</span>
+                  </button>
+                } @empty {
+                  <p class="text-lg">
+                    No encuentro ninguna memoria USB. Conéctala, espera unos segundos y pulsa
+                    <b>"Buscar otra vez"</b>.
+                  </p>
+                }
+              } @else {
+                <p class="text-texto-suave text-lg">Buscando memorias USB…</p>
+              }
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                class="border-borde boton-tactil rounded-xl border-2 px-5 py-2 text-lg"
+                [disabled]="memorias() === null"
+                (click)="buscarMemorias()"
+              >
+                Buscar otra vez
+              </button>
+              @if (s.permitirElegirCarpeta) {
+                <button
+                  type="button"
+                  class="border-borde boton-tactil rounded-xl border-2 px-5 py-2 text-lg"
+                  (click)="exportarACarpeta()"
+                >
+                  Elegir otra carpeta…
+                </button>
+                <kiosco-ayuda titulo="Elegir otra carpeta" [texto]="AYUDA.otraCarpeta" alinear="izquierda" />
+              }
+              <button
+                type="button"
+                class="border-borde boton-tactil ml-auto rounded-xl border-2 px-5 py-2 text-lg"
+                (click)="cerrarExportacion()"
+              >
+                Cancelar
+              </button>
+            </div>
+          }
+        </div>
+      </div>
+    }
 
     <!-- ====================== VISOR AMPLIADO CON ZOOM ====================== -->
     @if (ampliada() && seleccionada(); as r) {

@@ -750,6 +750,82 @@ export const MODO_ADMIN = {
 } as const;
 
 // ============================================================================
+//  8.d  EXPORTACION A MEMORIA USB  (CLAUDE.md 5.2)
+// ============================================================================
+//  Un ZIP con las fotos DESCIFRADAS y con marca de agua, mas un CSV de los
+//  registros. Es el unico camino por el que una foto sale del kiosco, y por
+//  eso cada foto exportada queda en la bitacora `accesos_foto`.
+export const EXPORTACION = {
+  /**
+   * Que se GRABA en los pixeles de cada foto exportada (D-025). Aqui si se
+   * graba, y no solo se muestra encima: en la memoria los archivos viajan
+   * sueltos, sin la pantalla de auditoria que diga de quien es cada uno.
+   *
+   * La lista es la del CLAUDE.md 5.1: fecha, hora, numero de empleado, tipo y
+   * nombre del kiosco. El nombre del empleado NO va por defecto (minimizacion
+   * de datos): el numero basta para cruzar con el CSV. Si el empleado no
+   * tiene numero, se graba su usuario ("dgomez") para que la foto no quede
+   * anonima.
+   */
+  datosGrabados: {
+    fechaHora: true,
+    tipo: true,
+    numeroEmpleado: true,
+    nombre: false,
+    kiosco: true,
+  },
+
+  /**
+   * Tamano de la letra grabada: cada punto de la letra se dibuja como un
+   * cuadrito de N x N pixeles. Con 3, en una foto de 640 px caben ~34 letras
+   * por renglon. Si un renglon no cabe, se baja solo hasta 1.
+   */
+  escalaDeLetra: 3,
+
+  /** Que tan oscura es la franja detras del texto (0 = transparente, 1 = negra). */
+  opacidadDeFranja: 0.7,
+
+  /**
+   * Calidad del JPEG al volver a guardar la foto ya marcada. Un poco mas alta
+   * que la de captura (CAMARA.calidadJpeg) para no perder detalle de mas al
+   * comprimir por segunda vez.
+   */
+  calidadJpeg: 85,
+
+  /**
+   * ¿Se incluye tambien la foto ORIGINAL, sin marca de agua?
+   *
+   * Solo la original tiene la misma huella (SHA-256) que el registro en la
+   * nube, asi que solo con ella se puede comprobar la integridad FUERA del
+   * kiosco. A cambio, son fotos sin ningun dato encima: si se separan del
+   * CSV, no dicen de quien son. Por defecto no (D-030).
+   */
+  incluirOriginales: false,
+
+  /**
+   * Tope de registros por exportacion. Un mes completo de 20 personas son
+   * ~900. El tope evita que un filtro vacio arme un ZIP de un ano entero sin
+   * que nadie lo haya pedido.
+   */
+  maximoRegistros: 5000,
+
+  /**
+   * ¿Se ofrece "Elegir otra carpeta"? Sirve para discos USB grandes, que
+   * Windows no siempre reconoce como memoria removible. Abre la ventana de
+   * Windows para elegir carpeta. Aun asi, NUNCA deja guardar en el disco de
+   * esta computadora (salvo en desarrollo): las fotos saldrian sin cifrar
+   * justo en el lugar de donde no deben salir en claro.
+   */
+  permitirElegirCarpeta: true,
+
+  /** Cuanto espera la busqueda de memorias USB antes de darse por vencida. */
+  segundosParaBuscarMemorias: 10,
+
+  /** El archivo queda como `<prefijo>_<desde>_a_<hasta>_<cuando>.zip`. */
+  prefijoDelArchivo: 'asistencia',
+} as const;
+
+// ============================================================================
 //  9. AGRUPADOR
 // ============================================================================
 /**
@@ -772,6 +848,7 @@ export const CONFIG = {
   almacenamiento: ALMACENAMIENTO,
   fotos: FOTOS,
   modoAdmin: MODO_ADMIN,
+  exportacion: EXPORTACION,
 } as const;
 
 /** El tipo de CONFIG, por si necesitas escribirlo en una firma de funcion. */

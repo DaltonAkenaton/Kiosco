@@ -224,25 +224,43 @@ export const EsquemaEntradaAdmin = z.strictObject({
 
 export const EsquemaSoloToken = z.strictObject({ token: EsquemaToken });
 
+const EsquemaFiltrosAuditoria = z.strictObject({
+  desde: EsquemaFecha,
+  hasta: EsquemaFecha,
+  empleadoId: z.uuid().nullable(),
+  // Solo banderas que existen: nada de texto libre dentro de un LIKE.
+  bandera: z
+    .enum([
+      'sin_camara',
+      'foto_obstruida',
+      'reloj_sospechoso',
+      'dispositivo_revocado',
+      'manual',
+      'cierre_automatico',
+    ])
+    .nullable(),
+  soloConFoto: z.boolean(),
+});
+
 export const EsquemaBusquedaAuditoria = z.strictObject({
   token: EsquemaToken,
-  filtros: z.strictObject({
-    desde: EsquemaFecha,
-    hasta: EsquemaFecha,
-    empleadoId: z.uuid().nullable(),
-    // Solo banderas que existen: nada de texto libre dentro de un LIKE.
-    bandera: z
-      .enum([
-        'sin_camara',
-        'foto_obstruida',
-        'reloj_sospechoso',
-        'dispositivo_revocado',
-        'manual',
-        'cierre_automatico',
-      ])
-      .nullable(),
-    soloConFoto: z.boolean(),
-  }),
+  filtros: EsquemaFiltrosAuditoria,
+});
+
+/** Exportar a la ventana de "Guardar como": los filtros y nada mas. */
+export const EsquemaExportarACarpeta = z.strictObject({
+  token: EsquemaToken,
+  filtros: EsquemaFiltrosAuditoria,
+});
+
+/**
+ * Exportar a una memoria: solo la LETRA ("E:"), nunca una ruta. El proceso
+ * principal comprueba ademas que esa letra sea de verdad una memoria USB.
+ */
+export const EsquemaExportarAUsb = z.strictObject({
+  token: EsquemaToken,
+  filtros: EsquemaFiltrosAuditoria,
+  unidad: z.string().regex(/^[A-Z]:$/, 'Unidad invalida'),
 });
 
 export const EsquemaVerFoto = z.strictObject({
