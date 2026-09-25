@@ -13,12 +13,13 @@
 
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { Ayuda } from '../componentes/ayuda';
+import { CampoContrasena } from '../componentes/campo-contrasena';
 import { mensajeDeError } from '../componentes/dialogo';
 import { Sesion } from '../servicios/sesion';
 
 @Component({
   selector: 'panel-mi-cuenta',
-  imports: [Ayuda],
+  imports: [Ayuda, CampoContrasena],
   template: `
     <h1 class="text-2xl font-bold">Mi cuenta</h1>
     @if (sesion.admin(); as a) {
@@ -49,10 +50,10 @@ import { Sesion } from '../servicios/sesion';
           <input class="campo font-mono" [value]="usuario()" (input)="usuario.set(valor($event).toLowerCase())" />
         </label>
         <label class="flex flex-col gap-1">Contraseña nueva (al menos 8 letras o números)
-          <input class="campo" type="password" autocomplete="new-password" [value]="contrasenaKiosco()" (input)="contrasenaKiosco.set(valor($event))" />
+          <panel-campo-contrasena [(valor)]="contrasenaKiosco" />
         </label>
         <label class="flex flex-col gap-1">Escríbela otra vez
-          <input class="campo" type="password" autocomplete="new-password" [value]="contrasenaKiosco2()" (input)="contrasenaKiosco2.set(valor($event))" />
+          <panel-campo-contrasena [(valor)]="contrasenaKiosco2" />
         </label>
         @if (mensajeKiosco(); as m) {
           <p class="font-bold" [style.color]="m.ok ? 'var(--kiosko-entrada)' : 'var(--kiosko-peligro)'">{{ m.texto }}</p>
@@ -65,10 +66,10 @@ import { Sesion } from '../servicios/sesion';
         <h2 class="text-xl font-bold">Contraseña de este panel</h2>
         <p class="text-texto-suave">La que usas para entrar aquí desde tu oficina.</p>
         <label class="flex flex-col gap-1">Contraseña nueva (al menos 8 letras o números)
-          <input class="campo" type="password" autocomplete="new-password" [value]="contrasenaPanel()" (input)="contrasenaPanel.set(valor($event))" />
+          <panel-campo-contrasena [(valor)]="contrasenaPanel" />
         </label>
         <label class="flex flex-col gap-1">Escríbela otra vez
-          <input class="campo" type="password" autocomplete="new-password" [value]="contrasenaPanel2()" (input)="contrasenaPanel2.set(valor($event))" />
+          <panel-campo-contrasena [(valor)]="contrasenaPanel2" />
         </label>
         @if (mensajePanel(); as m) {
           <p class="font-bold" [style.color]="m.ok ? 'var(--kiosko-entrada)' : 'var(--kiosko-peligro)'">{{ m.texto }}</p>

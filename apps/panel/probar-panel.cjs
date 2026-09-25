@@ -277,8 +277,13 @@ app.whenReady().then(async () => {
     await escribir('panel-dialogo input[type=email]', correoAcceso);
     await escribir('panel-dialogo input[placeholder^="Ej."]', 'Nueva supervisora (prueba del panel)');
     await picar('Dar acceso');
-    await esperar(1500);
-    const temporal = await js(`document.querySelector('.hoja-de-pines .font-mono')?.textContent?.trim() ?? ''`);
+    // La primera llamada a una Edge Function "fria" puede tardar varios
+    // segundos: se espera a que aparezca la contrasena, hasta 10 s.
+    let temporal = '';
+    for (let i = 0; i < 20 && !temporal; i++) {
+      await esperar(500);
+      temporal = await js(`document.querySelector('.hoja-de-pines .font-mono')?.textContent?.trim() ?? ''`);
+    }
     comprobar('da una contrasena temporal y la muestra una vez', /^[A-Za-z2-9]{12}$/.test(temporal), temporal);
     await capturar('6-accesos');
     await picar('Ya la anoté, cerrar');

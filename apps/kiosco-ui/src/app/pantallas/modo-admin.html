@@ -237,13 +237,23 @@
             <p class="mt-1">Escribe la contraseña de recuperación para volver a abrirlas:</p>
             <div class="mt-2 flex flex-wrap items-center gap-3">
               <input
-                type="password"
+                [type]="mostrarContrasena() ? 'text' : 'password'"
                 class="border-borde rounded-xl border-2 bg-transparent px-3 py-2"
                 autocomplete="off"
+                spellcheck="false"
                 [value]="contrasenaRecuperar()"
                 (input)="contrasenaRecuperar.set(valorDe($event))"
+                (keydown)="revisarMayusculas($event)"
+                (keyup)="revisarMayusculas($event)"
                 (keydown.enter)="recuperarFotos()"
               />
+              <button
+                type="button"
+                class="bg-superficie border-borde hover:bg-borde boton-tactil rounded-xl border-2 px-4 py-2"
+                (click)="mostrarContrasena.set(!mostrarContrasena())"
+              >
+                {{ mostrarContrasena() ? 'Ocultar' : 'Mostrar' }}
+              </button>
               <button
                 type="button"
                 class="bg-superficie border-borde hover:bg-borde boton-tactil rounded-xl border-2 px-4 py-2 font-bold"
@@ -253,6 +263,9 @@
                 {{ recuperando() ? 'Abriendo… (puede tardar)' : 'Recuperar las fotos' }}
               </button>
             </div>
+            @if (mayusculasActivadas()) {
+              <p class="mt-2 font-bold" style="color: var(--kiosko-atencion)">⚠ Las MAYÚSCULAS están activadas (tecla Bloq Mayús).</p>
+            }
           </div>
         }
         @if (ek.totalRechazados > 0) {
