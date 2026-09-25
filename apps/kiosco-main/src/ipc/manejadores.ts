@@ -55,6 +55,7 @@ import {
   cambiarModoIdentificacion,
   modoIdentificacionVigente,
   umbralesDeCamara,
+  zonaHorariaVigente,
 } from '../configuracion-vigente';
 import {
   accionSugeridaPara,
@@ -161,9 +162,7 @@ function configuracionParaInterfaz(): ConfiguracionParaInterfaz {
     umbralBrilloMinimo: umbralesDeCamara().brilloMinimo,
     umbralVarianzaMinima: umbralesDeCamara().varianzaMinima,
 
-    // Cuando exista la sincronizacion, esta zona vendra de la tabla
-    // `configuracion` de Supabase. Mientras, el valor por defecto.
-    zonaHoraria: CONFIG.reloj.zonaHorariaPorDefecto,
+    zonaHoraria: zonaHorariaVigente(),
 
     // Identidad institucional (solo el texto; los colores van por CSS).
     institucionNombreCorto: INSTITUCION.nombreCorto,
@@ -186,7 +185,7 @@ function horaLocalDe(milisegundos: number): string {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
-    timeZone: CONFIG.reloj.zonaHorariaPorDefecto,
+    timeZone: zonaHorariaVigente(),
   });
 }
 
@@ -438,9 +437,11 @@ export function registrarManejadoresIpc(): void {
         let foto: FotoGuardada | null = null;
         if (fotoJpegBase64 !== null) {
           foto = guardarFoto(marcaId, fotoJpegBase64, reloj.horaEstimadaMs);
-          if (foto === null && !banderas.includes('sin_camara')) {
-            // Habia foto pero no se pudo escribir (disco lleno, permisos).
-            banderas.push('sin_camara');
+          if (foto === null) {
+            // Habia foto pero no se pudo guardar cifrada (disco lleno,
+            // permisos, Windows sin cifrado). La camara SI funcionaba: por
+            // eso es otra bandera, y el jefe sabe que revisar la PC, no la camara.
+            banderas.push('foto_no_guardada');
           }
         }
 

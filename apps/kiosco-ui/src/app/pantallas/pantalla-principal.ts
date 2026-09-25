@@ -1244,6 +1244,8 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
         return 'la cámara no funcionaba y no hay foto';
       case 'foto_obstruida':
         return 'la cámara parecía tapada';
+      case 'foto_no_guardada':
+        return 'no se pudo guardar la foto';
       case 'reloj_sospechoso':
         return 'la hora de esta computadora parecía mal';
       default:

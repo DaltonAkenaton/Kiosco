@@ -233,6 +233,12 @@ export const EsquemaEntradaAdmin = z.strictObject({
 
 export const EsquemaSoloToken = z.strictObject({ token: EsquemaToken });
 
+/** La contrasena de recuperacion, para abrir fotos de una llave anterior. */
+export const EsquemaRecuperarFotos = z.strictObject({
+  token: EsquemaToken,
+  contrasena: z.string().min(1).max(200),
+});
+
 const EsquemaFiltrosAuditoria = z.strictObject({
   desde: EsquemaFecha,
   hasta: EsquemaFecha,
@@ -242,6 +248,7 @@ const EsquemaFiltrosAuditoria = z.strictObject({
     .enum([
       'sin_camara',
       'foto_obstruida',
+      'foto_no_guardada',
       'reloj_sospechoso',
       'dispositivo_revocado',
       'manual',

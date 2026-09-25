@@ -1112,6 +1112,140 @@ hasta que alguien lo usa).
 
 ---
 
+## D-034 · Retardos, faltas y jornadas: se calculan al preguntar, en el servidor
+
+**Decidido:**
+
+- **No hay tablas de resultados.** `marcas_validas()`, `jornadas()` y
+  `reporte_asistencia()` (migración 0016) calculan al momento, con la
+  configuración vigente. Cambiar la tolerancia recalcula también el pasado, y
+  ninguna marca se toca (CLAUDE.md 8).
+- **Una sola fuente de tolerancia:** la tolerancia y los minutos para falta del
+  turno quedan **vacíos** normalmente y entonces se usa Configuración. Sólo se
+  llenan si ESE turno necesita otra regla.
+- **Horario por persona y por día:** cada día de una asignación puede tener su
+  propia hora de entrada y de salida. Un cambio de horario es "a partir del
+  día X"; el anterior se cierra y los días previos se siguen calculando con él.
+- **Emparejamiento:**
+  - varias entradas seguidas cuentan como la primera, y varias salidas
+    seguidas como la última (toques repetidos);
+  - entrada y salida a menos de `horas_para_cierre_automatico` son una jornada;
+  - una entrada sin salida queda "en curso" y, pasadas esas horas, "salida no
+    registrada", sin inventar hora;
+  - una salida sola es "salida sin entrada".
+- **Estados de un día con turno:** a tiempo (hasta la tolerancia), retardo
+  (hasta los minutos para falta), falta (no llegó o llegó más tarde que eso),
+  pendiente, ausencia justificada o festivo. El trabajo fuera de turno aparece
+  como "fuera de horario", sin calificarlo.
+- Una entrada cuenta para un turno si cae entre `inicio − minutos_anticipacion_entrada`
+  (240, configurable) y el fin del turno. **La fecha de un turno nocturno es la
+  del día en que empieza.**
+- **Horario de verano:** el inicio y el fin programados se convierten a
+  instante **cada uno por separado**, desde su hora local. Las horas trabajadas
+  son la resta de dos instantes. Probado: 9 h la noche en que se repite una
+  hora, 7 h la noche en que se pierde.
+- **Correcciones:** anular o cambiar el tipo, con motivo, en `correcciones`. La
+  marca original no se toca. El motivo mínimo es de 10 letras, igual que en el
+  resto del panel (la 0008 pedía 20).
+- **Reportes para Excel:** CSV con BOM (Excel respeta los acentos), en dos
+  vistas: por día y resumen por persona.
+
+**Descartado:**
+
+- *Guardar el resultado de cada día.* Cambiar la tolerancia obligaría a
+  recalcular y reescribir, y un error en ese proceso dejaría datos viejos
+  mezclados con nuevos. Con 20 personas, calcular al momento tarda
+  milisegundos.
+- *Emparejar en el kiosco.* Una persona puede entrar por un kiosco y salir por
+  otro.
+- *Tomar la hora de salida "esperada" cuando no hay salida.* El sistema no
+  inventa horas (CLAUDE.md 8).
+
+**Por qué:** es lo que pide el CLAUDE.md 8 al pie de la letra, y deja todo lo
+ajustable en manos del jefe.
+
+**Reconsiderar si:** los reportes de meses completos se vuelven lentos (con 20
+personas no pasará), o si el cliente define turnos rotativos que no caben en
+"un turno + días de la semana" (sección 14, pendiente).
+
+---
+
+## D-035 · Administradores desde el panel, con una sola Edge Function
+
+**Decidido:** crear cuentas de Supabase Auth exige service_role, así que hay
+UNA Edge Function para el panel (`administradores`, con JWT obligatorio).
+Cambiar rol o dar de baja no la necesita: es una función de la base. La
+contraseña inicial la genera el sistema y es temporal; el panel no deja hacer
+nada más hasta cambiarla. El primer administrador de un proyecto nuevo se crea
+con `npm run supabase:primer-admin` desde la terminal, con la llave secreta
+tecleada y nunca guardada.
+
+**Descartado:** invitaciones por correo de Supabase (dependen de configurar
+SMTP y tienen límites bajos en el plan gratuito); que el jefe invente la
+contraseña (mismo motivo que el PIN, D-033).
+
+**Por qué:** es el mismo patrón que el PIN de los empleados, que el jefe ya
+conoce, y no agrega servicios.
+
+**Reconsiderar si:** la facultad quiere que cada quien recupere su contraseña
+solo (entonces sí hace falta SMTP).
+
+---
+
+## D-036 · ARCO: suprimir es anonimizar, también en la bitácora
+
+**Decidido:** "Suprimir sus datos" reemplaza nombre, apellidos, usuario y
+número; vuelve inservible el PIN; borra las notas de sus ausencias y **tacha
+su nombre en las copias viejas de la bitácora**. Las marcas se quedan (registro
+laboral, inmutable) sin nada que diga de quién son. Exige la baja previa,
+escribir el usuario para confirmar y un motivo. Exportar sus datos también
+queda en bitácora.
+
+**Descartado:** borrar la fila (dejaría marcas huérfanas y rompería la
+inmutabilidad); anonimizar sólo la tabla `empleados` (la bitácora seguiría
+diciendo quién era).
+
+**Reconsiderar si:** la Unidad de Transparencia indica otro tratamiento.
+
+---
+
+## D-037 · Operación con GitHub Actions en vez de más servicios
+
+**Decidido:** respaldos (SQL + CSV, 90 días), mantener despierto Supabase,
+resumen diario por correo (Gmail del sistema con contraseña de aplicación),
+publicación de migraciones/funciones y el instalador del kiosco se hacen con
+GitHub Actions. Las actualizaciones del kiosco salen de GitHub Releases
+(repositorio público) y **las instala un administrador** desde el kiosco.
+
+**Descartado:** Edge Functions programadas con pg_cron para el correo (hace
+falta otro proveedor de correo y más piezas en Supabase); instalar
+actualizaciones solas (podría caer a la hora de entrada).
+
+**Por qué:** GitHub ya es parte del sistema (CLAUDE.md 1.1), no cuesta, y cada
+tarea se puede correr a mano con un botón.
+
+**Actualización (25-09-2026):** el repositorio será **privado**. El flujo
+del instalador arma el `.exe` y lo deja en Releases sin configuración de
+actualizaciones; las versiones se instalan a mano. El botón "Instalar la
+versión nueva" del modo administrador queda listo por si el repositorio se
+vuelve público.
+
+**Reconsiderar si:** el repositorio se vuelve público, o GitHub apaga las
+tareas por inactividad.
+
+---
+
+## D-038 · Fotos con llave anterior: se vuelven a cifrar con la actual
+
+**Decidido:** con la contraseña de recuperación se abren las llaves apartadas
+y cada foto se descifra en memoria y se vuelve a cifrar con la llave actual.
+El hash no cambia. Las llaves apartadas no se borran.
+
+**Descartado:** pedir la contraseña cada vez que se quiera ver una foto vieja
+(el jefe tendría que tenerla a mano siempre).
+
+---
+
 ## Plantilla para decisiones nuevas
 
 ```markdown

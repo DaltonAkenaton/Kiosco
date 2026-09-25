@@ -173,6 +173,18 @@ const api: ApiKiosco = {
     exportarACarpeta(token: string, filtros: FiltrosAuditoria) {
       return ipcRenderer.invoke(CANALES.adminExportarACarpeta, { token, filtros });
     },
+    estadoDelKiosco(token: string) {
+      return ipcRenderer.invoke(CANALES.adminEstadoDelKiosco, { token });
+    },
+    reintentarRechazados(token: string) {
+      return ipcRenderer.invoke(CANALES.adminReintentarRechazados, { token });
+    },
+    recuperarFotos(token: string, contrasena: string) {
+      return ipcRenderer.invoke(CANALES.adminRecuperarFotos, { token, contrasena });
+    },
+    instalarActualizacion(token: string) {
+      return ipcRenderer.invoke(CANALES.adminInstalarActualizacion, { token });
+    },
     alCerrarSesion(callback: () => void): () => void {
       const escucha = (): void => callback();
       ipcRenderer.on(CANALES.adminSesionCerrada, escucha);

@@ -352,6 +352,19 @@ app.whenReady().then(async () => {
   comprobar('con la contrasena de recuperacion se rescatan',
     rescatada.estado === 'con_foto' && rescatada.jpeg.equals(jpegOriginal), rescatada.estado);
 
+  // --- Recuperar desde el modo administrador (vuelve a cifrar con la llave actual) ---
+  const conLlaveVieja = bd.contarFotosConLlaveAnterior();
+  comprobar('el modo administrador sabe cuantas fotos tienen candado anterior', conLlaveVieja >= 1, String(conLlaveVieja));
+  const fallida = await bd.recuperarFotosConContrasena('contrasena equivocada');
+  comprobar('con la contrasena equivocada no se abre ninguna llave ni se toca nada',
+    fallida.llavesAbiertas === 0 && bd.contarFotosConLlaveAnterior() === conLlaveVieja);
+  const recuperacion = await bd.recuperarFotosConContrasena(CONTRASENA);
+  comprobar('con la buena, las fotos se recuperan', recuperacion.recuperadas >= 1 && recuperacion.pendientes === 0,
+    JSON.stringify(recuperacion));
+  const ahoraSeVe = bd.leerFoto(foto.rutaRelativa, idMarca, foto.hash);
+  comprobar('y ya se ven SIN la contrasena (cifradas con la llave actual, mismo hash)',
+    ahoraSeVe.estado === 'con_foto' && ahoraSeVe.jpeg.equals(jpegOriginal), ahoraSeVe.estado);
+
   // --- Retencion ---
   console.log('\n--- retencion de fotos ---');
 
@@ -716,6 +729,10 @@ app.whenReady().then(async () => {
   const filaFallida = bdSql.prepare('SELECT intentos, ultimo_error FROM outbox WHERE id = ?').get(tercero.id);
   comprobar('un fallo pasajero suma un intento y anota el error', filaFallida.intentos >= 1 && filaFallida.ultimo_error === 'sin red');
   comprobar('lo rechazado ya no vuelve a subir', !bd.renglonesParaSubir(1000).some((r) => r.id === segundo.id));
+  comprobar('el modo administrador lista lo rechazado con su motivo',
+    bd.listarRechazados(50).some((r) => r.id === segundo.id && r.motivo === 'empleado_desconocido'));
+  comprobar('Volver a enviarlos lo regresa a la cola', bd.reintentarRechazados() >= 1 && bd.renglonesParaSubir(1000).some((r) => r.id === segundo.id));
+  bd.marcarRechazados([{ id: segundo.id, motivo: 'empleado_desconocido' }]);
 
   // --- El catalogo ---
   const idNube = crypto.randomUUID();

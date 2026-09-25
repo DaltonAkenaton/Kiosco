@@ -38,6 +38,10 @@ export class Sesion {
   readonly admin = this._admin.asReadonly();
   readonly esAdmin = computed(() => this._admin()?.rol === 'admin');
 
+  /** Entro con una contrasena temporal (la dio otro administrador): debe ponerse una propia. */
+  private readonly _debeCambiarContrasena = signal(false);
+  readonly debeCambiarContrasena = this._debeCambiarContrasena.asReadonly();
+
   /** `true` cuando ya se sabe si hay sesion o no (para no parpadear el login). */
   private readonly _lista = signal(false);
   readonly lista = this._lista.asReadonly();
@@ -81,6 +85,12 @@ export class Sesion {
     return null;
   }
 
+  /** Tras cambiar la contrasena del panel: ya no es temporal. */
+  async contrasenaCambiada(): Promise<void> {
+    await this.bd.rpc('contrasena_panel_cambiada');
+    this._debeCambiarContrasena.set(false);
+  }
+
   async salir(): Promise<void> {
     await this.bd.auth.signOut();
     this._admin.set(null);
@@ -90,7 +100,7 @@ export class Sesion {
   private async cargarAdministrador(userId: string, correo: string): Promise<string | null> {
     const { data, error } = await this.bd
       .from('administradores')
-      .select('user_id, nombre, rol, activo')
+      .select('user_id, nombre, rol, activo, debe_cambiar_contrasena')
       .eq('user_id', userId)
       .maybeSingle();
 
@@ -106,6 +116,7 @@ export class Sesion {
     }
 
     this._admin.set({ userId: data.user_id, nombre: data.nombre, rol: data.rol, correo });
+    this._debeCambiarContrasena.set(data.debe_cambiar_contrasena === true);
 
     const { data: zona } = await this.bd.from('configuracion').select('valor').eq('clave', 'zona_horaria').maybeSingle();
     if (typeof zona?.valor === 'string') this._zona.set(zona.valor);

@@ -154,3 +154,27 @@ export function cambiarModoIdentificacion(modo: ModoIdentificacion): boolean {
   console.info(`[config] modo de identificacion -> ${modo}`);
   return true;
 }
+
+/**
+ * La zona horaria que manda (CLAUDE.md 6): la de la tabla `configuracion`
+ * si llego y Windows/Node la conoce; si no, la de configuracion.ts.
+ *
+ * Se valida pidiendole a `Intl` que la use: una zona mal escrita en el panel
+ * ("America/Matamros") lanzaria error al mostrar CADA hora. Aqui se descarta
+ * una vez y se sigue con la de respaldo.
+ */
+export function zonaHorariaVigente(): string {
+  const respaldo = CONFIG.reloj.zonaHorariaPorDefecto;
+  try {
+    const fila = baseDeDatos().prepare('SELECT valor FROM configuracion_cache WHERE clave = ?').get('zona_horaria') as
+      | { valor: string }
+      | undefined;
+    if (!fila) return respaldo;
+    const zona = JSON.parse(fila.valor);
+    if (typeof zona !== 'string' || zona === '') return respaldo;
+    new Intl.DateTimeFormat('es-MX', { timeZone: zona });
+    return zona;
+  } catch {
+    return respaldo;
+  }
+}

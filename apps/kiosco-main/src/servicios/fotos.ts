@@ -57,7 +57,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:
 import fs from 'node:fs';
 import path from 'node:path';
 import { CONFIG } from '@kiosko/compartido';
-import { umbralesDeCamara } from '../configuracion-vigente';
+import { umbralesDeCamara, zonaHorariaVigente } from '../configuracion-vigente';
 import { carpetaDeDatos } from '../entorno';
 import { escribirAtomico, type Llave, prepararLlaveDeFotos } from './llave-fotos';
 
@@ -175,7 +175,7 @@ export function rutaAbsolutaDeFoto(rutaRelativa: string): string {
  */
 function carpetaDelMes(capturadaEnMs: number): string {
   const partes = new Intl.DateTimeFormat('en-CA', {
-    timeZone: CONFIG.reloj.zonaHorariaPorDefecto,
+    timeZone: zonaHorariaVigente(),
     year: 'numeric',
     month: '2-digit',
   }).formatToParts(new Date(capturadaEnMs));

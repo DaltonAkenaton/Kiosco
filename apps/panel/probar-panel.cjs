@@ -47,6 +47,9 @@ app.whenReady().then(async () => {
   }
 
   const w = new BrowserWindow({ show: false, width: 1440, height: 1000 });
+  // Las descargas (ARCO) se cancelan: si no, Electron abriria una ventana de
+  // "Guardar como" en la pantalla del usuario.
+  w.webContents.session.on('will-download', (evento) => evento.preventDefault());
   const erroresDeConsola = [];
   w.webContents.on('console-message', (_e, nivel, mensaje) => {
     // Nivel 3 = error. Los avisos de seguridad de Electron en desarrollo no cuentan.
@@ -88,6 +91,7 @@ app.whenReady().then(async () => {
   };
 
   const motivoAlta = `Prueba del panel ${Date.now()}`;
+  const correoAcceso = `supervisora-${Date.now()}@prueba.local`;
   let idCreado = null;
 
   try {
@@ -189,6 +193,60 @@ app.whenReady().then(async () => {
       await js(`[...document.querySelectorAll('tbody td')].some((td) => td.textContent.trim() === 'Captura manual')`));
 
     // ====================================================================
+    console.log('\n--- horario y reporte (bloque 9) ---');
+    await ir('/horarios');
+    await js(`(() => { const tr = [...document.querySelectorAll('tr')].find((t) => t.textContent.includes('Rogelio Gomez Paz'));
+      [...tr.querySelectorAll('button')].find((b) => b.textContent.includes('horario')).click(); })()`);
+    await esperar(600);
+    await js(`(() => { const s = document.querySelector('panel-dialogo select');
+      const op = [...s.options].find((o) => o.textContent.startsWith('Matutino'));
+      s.value = op.value; s.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+    // Todos los dias, para que "hoy" tenga turno sea el dia que sea.
+    await js(`[...document.querySelectorAll('panel-dialogo input[type=checkbox]')]
+      .filter((c) => c.closest('label')?.classList.contains('w-36') && !c.checked).forEach((c) => c.click())`);
+    await esperar(300);
+    await escribir('panel-dialogo input[placeholder^="Ej."]', 'Horario de la prueba del panel');
+    await picar('Guardar horario');
+    await esperar(1000);
+    comprobar('queda con horario Matutino', (await texto()).includes('Rogelio Gomez Paz') &&
+      (await js(`[...document.querySelectorAll('tr')].find((t) => t.textContent.includes('Rogelio Gomez Paz'))?.textContent.includes('Matutino')`)));
+
+    await ir('/reportes');
+    await js(`(() => { const s = document.querySelector('select');
+      s.value = ${JSON.stringify(idCreado)}; s.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+    await esperar(1500);
+    await picar('Día por día');
+    const resultadoHoy = await js(`[...document.querySelectorAll('tbody tr')].at(-1)?.textContent.replace(/\\s+/g, ' ') ?? ''`);
+    comprobar('su entrada de las 06:05 sale "A tiempo" en el reporte', resultadoHoy.includes('A tiempo'), resultadoHoy.trim().slice(0, 90));
+    await capturar('6-reporte');
+
+    await ir('/ausencias');
+    await picar('+ Registrar ausencia');
+    await js(`(() => { const s = document.querySelector('panel-dialogo select');
+      s.value = ${JSON.stringify(idCreado)}; s.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+    await escribir('panel-dialogo input[placeholder^="Ej."]', 'Vacaciones de la prueba del panel');
+    await picar('Registrar');
+    await esperar(800);
+    comprobar('la ausencia aparece en la lista', (await texto()).includes('Vacaciones de la prueba del panel'));
+    const { rows: [conAusencia] } = await bd.query(
+      `select estado from reporte_asistencia((now() at time zone 'America/Matamoros')::date, (now() at time zone 'America/Matamoros')::date, $1)`,
+      [idCreado]);
+    comprobar('y el reporte de hoy ya dice "ausencia justificada"', conAusencia?.estado === 'incidencia', conAusencia?.estado);
+
+    await ir('/asistencia');
+    await js(`(() => { const tr = [...document.querySelectorAll('tbody tr')].find((t) => t.textContent.includes('Rogelio'));
+      [...tr.querySelectorAll('button')].find((b) => b.textContent.includes('Corregir')).click(); })()`);
+    await esperar(600);
+    await js(`[...document.querySelectorAll('panel-dialogo input[type=radio]')][1].click()`); // "No debe contar"
+    await escribir('panel-dialogo input[placeholder^="Ej."]', 'Registro de la prueba del panel');
+    await picar('Guardar corrección');
+    await esperar(1200);
+    comprobar('el registro corregido se ve como "Anulado"',
+      await js(`[...document.querySelectorAll('tbody tr')].find((t) => t.textContent.includes('Rogelio'))?.textContent.includes('Anulado') ?? false`));
+    const { rows: [sigue] } = await bd.query(`select count(*)::int as n from marcas where empleado_id = $1`, [idCreado]);
+    comprobar('y la marca original sigue en la base', sigue.n === 1);
+
+    // ====================================================================
     console.log('\n--- bitacora y mi cuenta ---');
     await ir('/bitacora');
     const bitacora = await texto();
@@ -198,6 +256,52 @@ app.whenReady().then(async () => {
     await capturar('5-bitacora');
     await ir('/mi-cuenta');
     comprobar('Mi cuenta muestra el usuario del kiosco', (await texto()).includes('jefe'));
+
+    // ====================================================================
+    console.log('\n--- derechos ARCO ---');
+    await ir('/empleados');
+    await escribir('input[placeholder^="Buscar"]', 'rgomez');
+    await picar('Sus datos (ARCO)');
+    await escribir('panel-dialogo input.campo', 'Solicitud ARCO de acceso (prueba del panel)');
+    await picar('Descargar sus datos');
+    const { rows: [arco] } = await bd.query(
+      `select count(*)::int n from bitacora_auditoria where registro_id = $1 and datos_despues ->> 'arco' = 'exportacion_de_datos'`, [idCreado]);
+    comprobar('descargar sus datos deja constancia en la bitacora', arco.n === 1);
+
+    // ====================================================================
+    console.log('\n--- accesos al panel ---');
+    await ir('/accesos');
+    comprobar('la lista de accesos muestra al jefe', (await texto()).includes('Jefe de prueba'));
+    await picar('+ Dar acceso a alguien');
+    await escribir('panel-dialogo input:not([type=radio]):not([type=email])', 'Supervisora de la Prueba');
+    await escribir('panel-dialogo input[type=email]', correoAcceso);
+    await escribir('panel-dialogo input[placeholder^="Ej."]', 'Nueva supervisora (prueba del panel)');
+    await picar('Dar acceso');
+    await esperar(1500);
+    const temporal = await js(`document.querySelector('.hoja-de-pines .font-mono')?.textContent?.trim() ?? ''`);
+    comprobar('da una contrasena temporal y la muestra una vez', /^[A-Za-z2-9]{12}$/.test(temporal), temporal);
+    await capturar('6-accesos');
+    await picar('Ya la anoté, cerrar');
+    comprobar('la persona nueva aparece como supervisora con contrasena temporal',
+      (await texto()).includes('Supervisora de la Prueba') && (await texto()).includes('Todavía con contraseña temporal'));
+
+    // Entra la persona nueva: el panel la manda a ponerse contrasena propia.
+    await picar('Salir');
+    await ir('/entrar');
+    await escribir('input[type=email]', correoAcceso);
+    await escribir('input[autocomplete=current-password]', temporal);
+    await picar('Entrar');
+    await esperar(1500);
+    await ir('/asistencia');
+    comprobar('con contrasena temporal, solo puede estar en Mi cuenta', (await js('location.pathname')) === '/mi-cuenta');
+    comprobar('y se le explica por que', (await texto()).includes('contraseña temporal'));
+    await js(`(() => { const c = [...document.querySelectorAll('section')].pop().querySelectorAll('input[type=password]');
+      for (const el of c) { el.value = 'mi-contrasena-propia'; el.dispatchEvent(new Event('input', { bubbles: true })); } })()`);
+    await esperar(200);
+    await picar('Cambiar contraseña');
+    await esperar(1500);
+    await ir('/asistencia');
+    comprobar('con su contrasena propia ya puede usar el panel', (await js('location.pathname')) === '/asistencia');
 
     comprobar('ninguna pantalla dejo errores en la consola', erroresDeConsola.length === 0, erroresDeConsola.slice(0, 2).join(' | '));
   } catch (fallo) {
@@ -209,10 +313,15 @@ app.whenReady().then(async () => {
     try {
       await bd.query('set session_replication_role = replica');
       if (idCreado) {
+        await bd.query('delete from correcciones where empleado_id = $1', [idCreado]);
+        await bd.query('delete from incidencias where empleado_id = $1', [idCreado]);
+        await bd.query('delete from asignaciones_turno where empleado_id = $1', [idCreado]);
         await bd.query('delete from marcas where empleado_id = $1', [idCreado]);
         await bd.query('delete from empleados where id = $1', [idCreado]);
       }
       await bd.query(`delete from codigos_enrolamiento where nombre_dispositivo = 'Kiosco de la prueba del panel'`);
+      await bd.query('delete from administradores where correo = $1', [correoAcceso]);
+      await bd.query('delete from auth.users where email = $1', [correoAcceso]);
       await bd.query(`update configuracion set valor = '10' where clave = 'tolerancia_retardo_minutos'`);
       await bd.query('set session_replication_role = origin');
       await bd.end();

@@ -19,6 +19,7 @@ import {
   type MarcaParaAuditoria,
   type TipoMarca,
 } from '@kiosko/compartido';
+import { zonaHorariaVigente } from '../configuracion-vigente';
 import { baseDeDatos, enTransaccion } from './base-de-datos';
 
 // ----------------------------------------------------------------------------
@@ -168,7 +169,7 @@ export function buscarMarcasParaExportar(filtros: FiltrosAuditoria): MarcaParaEx
 }
 
 function consultarMarcas(filtros: FiltrosAuditoria, limite: number): MarcaParaExportar[] {
-  const zona = CONFIG.reloj.zonaHorariaPorDefecto;
+  const zona = zonaHorariaVigente();
   const condiciones: string[] = [];
   const valores: (string | number)[] = [];
 

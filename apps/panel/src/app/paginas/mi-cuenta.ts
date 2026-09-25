@@ -25,6 +25,12 @@ import { Sesion } from '../servicios/sesion';
       <p class="text-texto-suave mt-1">{{ a.nombre }} · {{ a.correo }} · {{ a.rol === 'admin' ? 'Administrador' : 'Supervisor' }}</p>
     }
 
+    @if (sesion.debeCambiarContrasena()) {
+      <p class="mt-4 rounded-xl px-4 py-3 text-lg font-bold" style="background-color: rgb(245 158 11 / 0.18)">
+        Entraste con una contraseña temporal. Ponte una propia aquí abajo, en "Contraseña de este panel", para poder usar el resto del panel.
+      </p>
+    }
+
     <div class="mt-6 grid gap-6 lg:grid-cols-2">
       <!-- ================= Contrasena del KIOSCO ================= -->
       <section class="bg-superficie border-borde flex flex-col gap-4 rounded-3xl border-2 p-6">
@@ -147,6 +153,7 @@ export class MiCuenta implements OnInit {
     this.guardando.set(false);
     this.contrasenaPanel.set('');
     this.contrasenaPanel2.set('');
+    if (!error) await this.sesion.contrasenaCambiada();
     this.mensajePanel.set(
       error
         ? { ok: false, texto: 'No se pudo cambiar. Intenta con otra contraseña, más larga.' }

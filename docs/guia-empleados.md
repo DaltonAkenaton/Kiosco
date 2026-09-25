@@ -1,0 +1,61 @@
+# Cómo registrar tu entrada y tu salida
+
+*(Imprimir en una hoja y pegar junto al kiosco.)*
+
+---
+
+## 1. Busca tu número en la pantalla
+
+La pantalla muestra la lista del personal con un número de dos cifras:
+**01, 02, 03…**
+
+Teclea **tu número**. Ejemplos:
+
+- Si eres el **07**: teclea `0` `7` (o sólo `7` y **Enter**).
+- Si eres el **15**: teclea `1` `5`.
+
+## 2. Teclea tu PIN
+
+Tus **4 números secretos**. Nadie más debe saberlos.
+
+## 3. Mira la pantalla
+
+Te saluda por tu nombre y dice qué va a registrar:
+
+> **Hola, Dalton — Registrando ENTRADA 06:02**
+
+- Si está bien, **no hagas nada**: se guarda solo en 5 segundos
+  (o teclea **1** — *Sí, registrar*).
+- Si dice ENTRADA y estás saliendo (o al revés), teclea **2** — *Cambiar a SALIDA*.
+- Si te equivocaste de persona, teclea **0** — *Cancelar*.
+
+Escucharás un sonido distinto para **entrada**, **salida** y **error**.
+
+---
+
+## Preguntas frecuentes
+
+**¿Me toma foto?** Sí, en el momento de registrar, como prueba de que fuiste
+tú. **El video de la pantalla no se graba.** La foto se guarda con candado en
+esta computadora, sólo la puede ver el jefe aquí mismo y **se borra sola a los
+30 días**. No se usa para nada más que la asistencia.
+
+**¿Y si la cámara no funciona?** Registra igual. Tu registro cuenta.
+
+**¿Y si no hay internet?** Registra igual. Se envía después, solo.
+
+**Olvidé mi PIN.** Avísale a tu jefe: te da uno nuevo. Mientras, él registra
+tu asistencia a mano.
+
+**Me equivoqué (registré dos veces, o entrada en vez de salida).** Avísale a
+tu jefe ese mismo día: él lo corrige.
+
+**No hay luz / el kiosco no prende.** Avísale a tu jefe por WhatsApp a la hora
+en que llegaste. Él lo registra.
+
+**Tapar la cámara, registrar por otra persona o mover la hora de la
+computadora queda marcado** y el jefe lo revisa.
+
+---
+
+Aviso de privacidad: ver la hoja pegada junto al kiosco.

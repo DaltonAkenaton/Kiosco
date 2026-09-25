@@ -43,6 +43,7 @@ import {
   type FiltrosAuditoria,
   type FotoParaAuditoria,
   type MarcaParaAuditoria,
+  type EstadoDelKioscoParaAdmin,
   type MemoriaUsb,
   type ResultadoAdmin,
   type ResultadoExportacion,
@@ -72,6 +73,9 @@ const AYUDA_BANDERAS: Record<string, string | undefined> = {
   foto_obstruida:
     'La foto salió muy oscura o sin forma, como si alguien tapara la cámara con la mano o con cinta. ' +
     'Abre la foto y revisa si se ve a la persona.',
+  foto_no_guardada:
+    'La cámara sí funcionaba, pero esta computadora no pudo guardar la foto (disco lleno o una falla ' +
+    'de Windows). El registro sí cuenta. Si pasa seguido, avisa a soporte: hay que revisar la computadora.',
   reloj_sospechoso:
     'La hora de esta computadora parecía movida (adelantada o atrasada) en ese momento. La hora del ' +
     'registro podría no ser la real. Compárala con los otros registros de ese día.',
@@ -87,6 +91,18 @@ const AYUDA_BANDERAS: Record<string, string | undefined> = {
 };
 
 const AYUDA = {
+  llaveAnterior:
+    'Las fotos están guardadas con candado. Si Windows se reinstaló, o los datos vienen de otra ' +
+    'computadora, el candado viejo ya no abre solo. Con la contraseña de recuperación (la de la hoja de ' +
+    'credenciales) se abre y las fotos vuelven a verse. No se borra nada si la contraseña es incorrecta.',
+  rechazados:
+    'Cada registro que se hace aquí se manda a la oficina. Si la oficina dice que NO lo acepta (por ' +
+    'ejemplo, porque no conoce a esa persona), el registro no se pierde: se queda guardado en esta ' +
+    'computadora. Cuando el problema ya esté resuelto en el panel, pulsa "Volver a enviarlos".',
+  actualizacion:
+    'Este kiosco descarga solo las versiones nuevas del programa, pero no las instala hasta que un ' +
+    'administrador lo pide, para que nunca se reinicie a la hora de entrada. Instálala cuando nadie ' +
+    'esté checando: el kiosco se cierra y vuelve a abrir solo en uno o dos minutos.',
   conservada:
     'Esta foto NO se borrará sola. Normalmente las fotos se borran a los 30 días, para cuidar la ' +
     'privacidad del personal. Si hay una queja o una duda sobre un registro, se marca "Conservar" ' +
@@ -217,6 +233,13 @@ export class ModoAdmin implements OnInit, OnDestroy {
   protected readonly resultadoExportacion = signal<ResultadoExportacion | null>(null);
   protected readonly errorExportacion = signal<string | null>(null);
 
+  /** Version, actualizacion lista y registros que la oficina no acepto. */
+  protected readonly estadoKiosco = signal<EstadoDelKioscoParaAdmin | null>(null);
+  protected readonly verRechazados = signal(false);
+  protected readonly avisoEstado = signal<string | null>(null);
+  protected readonly contrasenaRecuperar = signal('');
+  protected readonly recuperando = signal(false);
+
   protected readonly NOMBRES_DE_BANDERAS = NOMBRES_DE_BANDERAS;
   protected readonly AYUDA_BANDERAS = AYUDA_BANDERAS;
   protected readonly AYUDA = AYUDA;
@@ -300,7 +323,71 @@ export class ModoAdmin implements OnInit, OnDestroy {
 
     this.sesion.set(resultado.datos);
     this.ultimoAvisoDeActividadMs = Date.now();
-    await Promise.all([this.cargarEmpleados(), this.buscar()]);
+    await Promise.all([this.cargarEmpleados(), this.buscar(), this.cargarEstadoKiosco()]);
+  }
+
+  // --------------------------------------------------------------------------
+  //  Estado de este kiosco
+  // --------------------------------------------------------------------------
+
+  private async cargarEstadoKiosco(): Promise<void> {
+    const sesion = this.sesion();
+    if (!sesion) return;
+    const datos = this.atender(await this.puente.admin?.estadoDelKiosco(sesion.token));
+    if (datos) this.estadoKiosco.set(datos);
+  }
+
+  protected async reintentarRechazados(): Promise<void> {
+    const sesion = this.sesion();
+    if (!sesion) return;
+    const datos = this.atender(await this.puente.admin?.reintentarRechazados(sesion.token));
+    if (!datos) return;
+    this.avisoEstado.set(
+      `Listo: ${datos.reintentados} registro(s) se enviarán otra vez en unos segundos. Si la oficina los vuelve a rechazar, aparecerán aquí de nuevo.`,
+    );
+    this.verRechazados.set(false);
+    await this.cargarEstadoKiosco();
+  }
+
+  protected async instalarActualizacion(): Promise<void> {
+    const sesion = this.sesion();
+    if (!sesion) return;
+    const ok = this.atender(await this.puente.admin?.instalarActualizacion(sesion.token));
+    if (ok !== null) {
+      this.avisoEstado.set('Instalando. El kiosco se cierra y vuelve a abrir solo en uno o dos minutos. No apagues la computadora.');
+    }
+  }
+
+  /** Abre las fotos de una llave anterior con la contrasena de recuperacion. */
+  protected async recuperarFotos(): Promise<void> {
+    const sesion = this.sesion();
+    if (!sesion || !this.contrasenaRecuperar() || this.recuperando()) return;
+    this.recuperando.set(true);
+    const resultado = await this.puente.admin?.recuperarFotos(sesion.token, this.contrasenaRecuperar());
+    this.recuperando.set(false);
+    this.contrasenaRecuperar.set('');
+    const datos = this.atender(resultado);
+    if (!datos) return;
+    this.avisoEstado.set(
+      datos.pendientes === 0
+        ? `Listo: ${datos.recuperadas} foto(s) recuperadas. Ya se pueden ver.`
+        : `Se recuperaron ${datos.recuperadas} foto(s). ${datos.pendientes} siguen sin abrirse: quizá son de otra contraseña anterior.`,
+    );
+    await Promise.all([this.cargarEstadoKiosco(), this.buscar()]);
+  }
+
+  /** El motivo de un rechazo, en palabras. */
+  protected motivoDeRechazo(motivo: string): string {
+    const textos: Record<string, string> = {
+      empleado_desconocido: 'La oficina no conoce a esa persona (se dio de alta sólo aquí, o la borraron).',
+      dispositivo_revocado: 'Este kiosco ya estaba dado de baja en el panel cuando se hizo.',
+      payload_ilegible: 'El registro se dañó en esta computadora y no se puede leer.',
+    };
+    return textos[motivo] ?? motivo;
+  }
+
+  protected fechaCorta(iso: string): string {
+    return new Intl.DateTimeFormat('es-MX', { dateStyle: 'short', timeStyle: 'short', timeZone: this.zona() }).format(new Date(iso));
   }
 
   protected async salir(): Promise<void> {

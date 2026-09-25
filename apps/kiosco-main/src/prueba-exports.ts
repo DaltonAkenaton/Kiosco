@@ -103,6 +103,9 @@ export {
   contarRechazados,
   aplicarCatalogo,
   registrarEstadoDeFoto,
+  guardarEstadoLocal,
+  listarRechazados,
+  reintentarRechazados,
   leerEstadoLocal,
 } from './datos/repositorio-sincronizacion';
 export { reglasDelPin, umbralesDeCamara, numeroConfigurado } from './configuracion-vigente';
@@ -117,3 +120,4 @@ export {
 export { leerCredencial, rutaDeLaCredencial, olvidarCredencialEnMemoria } from './servicios/credencial-kiosco';
 export { EsquemaEnrolamiento } from './ipc/esquemas';
 export { instanteLocal } from '@kiosko/compartido';
+export { contarFotosConLlaveAnterior, recuperarFotosConContrasena } from './servicios/recuperacion-fotos';

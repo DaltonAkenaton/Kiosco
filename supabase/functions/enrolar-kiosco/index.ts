@@ -49,8 +49,21 @@ Deno.serve(
     const codigo = normalizarCodigo(validacion.data.codigo);
     if (codigo.length !== 8) return DATOS_INVALIDOS('El codigo debe tener 8 caracteres.');
 
-    const token = tokenNuevo();
     const bd = clienteServidor();
+
+    // Freno a quien prueba codigos al azar (migracion 0017). Se cuenta por
+    // origen: la IP que ve el servidor, o "desconocido" si no llega.
+    const origen = (peticion.headers.get('x-forwarded-for') ?? '').split(',')[0]?.trim() || 'desconocido';
+    const permitido = await bd.rpc('enrolamiento_permitido', { p_origen: origen });
+    if (permitido.error) throw permitido.error;
+    if (permitido.data !== true) {
+      return responder(429, {
+        error: 'demasiados_intentos',
+        mensaje: 'Demasiados codigos equivocados. Espera una hora o pide ayuda a quien administra el sistema.',
+      });
+    }
+
+    const token = tokenNuevo();
     const { data, error } = await bd.rpc('canjear_codigo_enrolamiento', {
       p_codigo_hash: await sha256Hex(codigo),
       p_token_hash: await sha256Hex(token),
@@ -59,6 +72,8 @@ Deno.serve(
     if (error) throw error;
 
     const dispositivo = Array.isArray(data) ? data[0] : null;
+    const anotado = await bd.rpc('anotar_intento_enrolamiento', { p_origen: origen, p_exitoso: !!dispositivo });
+    if (anotado.error) throw anotado.error;
     if (!dispositivo) {
       return responder(400, {
         error: 'codigo_invalido',

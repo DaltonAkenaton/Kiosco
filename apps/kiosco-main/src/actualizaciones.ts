@@ -58,6 +58,14 @@ import { permitirSalir } from './arranque-automatico';
  */
 const INTERVALO_REVISION_MS = 6 * 60 * 60 * 1000;
 
+/** La version nueva ya descargada, esperando que alguien la instale. */
+let versionDescargada: string | null = null;
+
+/** Para el modo administrador: ¿hay algo listo para instalar? */
+export function actualizacionLista(): string | null {
+  return versionDescargada;
+}
+
 /**
  * Arranca la revision de actualizaciones, si tiene sentido hacerlo.
  *
@@ -105,6 +113,7 @@ export function iniciarActualizaciones(): boolean {
   });
 
   autoUpdater.on('update-downloaded', (info) => {
+    versionDescargada = info.version;
     console.info(
       `[actualizaciones] version ${info.version} descargada y lista. ` +
         'Se instalara cuando se pida expresamente.',
@@ -142,9 +151,8 @@ async function revisarAhora(): Promise<void> {
 /**
  * Instala la actualizacion ya descargada y reinicia la aplicacion.
  *
- * Todavia no la llama nadie. La llamara el panel (bloque 8) o el manual
- * tecnico, cuando exista el servidor de publicacion. Se escribe ahora porque
- * es donde se ve el cabo suelto: hay que AUTORIZAR la salida antes de
+ * La llama el boton "Instalar version nueva" del modo administrador del
+ * kiosco (solo rol admin). El cabo suelto que resuelve: hay que AUTORIZAR la salida antes de
  * reiniciar, o el blindaje contra el cierre bloquearia la propia
  * actualizacion, y el sintoma seria "el kiosco se queda pensando y no se
  * actualiza nunca".

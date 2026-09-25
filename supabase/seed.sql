@@ -158,3 +158,28 @@ select
     case when n % 17 = 0 then 'reloj_sospechoso' end
   ], null)
 from marcas_demo;
+
+-- Los horarios de los 20 (bloque 9), segun los supuestos (docs/curso/supuestos.md):
+-- los primeros 15 en el matutino de lunes a sabado; los ultimos 5, en el
+-- vespertino de lunes a viernes. Desde hace un mes, para que el reporte
+-- tenga historia.
+with asignadas as (
+  insert into asignaciones_turno (empleado_id, turno_id, vigente_desde)
+  select e.id,
+         (select t.id from turnos t where t.nombre = case when e.numero_empleado::int > 1015 then 'Vespertino' else 'Matutino' end),
+         (now() at time zone 'America/Matamoros')::date - 30
+    from empleados e
+   where e.numero_empleado like '10%'
+  returning id, empleado_id
+)
+insert into dias_laborales (asignacion_id, dia_semana)
+select a.id, d
+  from asignadas a
+  join empleados e on e.id = a.empleado_id
+  cross join generate_series(1, 6) as d
+ where d <= case when e.numero_empleado::int > 1015 then 5 else 6 end;
+
+insert into dias_festivos (fecha, descripcion) values
+  ('2026-09-16', 'Día de la Independencia'),
+  ('2026-11-16', 'Revolución Mexicana (se recorre al lunes)'),
+  ('2026-12-25', 'Navidad');

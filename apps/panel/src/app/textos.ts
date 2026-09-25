@@ -18,6 +18,9 @@ export const AYUDA_BANDERAS: Record<string, string> = {
   foto_obstruida:
     'La foto salió muy oscura o sin forma, como si alguien tapara la cámara. Para verla hay que ir al ' +
     'kiosco y entrar al modo administrador.',
+  foto_no_guardada:
+    'La cámara sí funcionaba, pero la computadora del kiosco no pudo guardar la foto (disco lleno o una ' +
+    'falla de Windows). El registro sí cuenta. Si se repite, avisa a quien le da soporte al sistema.',
   reloj_sospechoso:
     'La hora de la computadora del kiosco parecía movida en ese momento. La hora de este registro ' +
     'podría no ser la real: compárala con los demás de ese día.',

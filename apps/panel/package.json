@@ -7,7 +7,7 @@
     "ng": "ng",
     "prestart": "node ../kiosco-ui/generar-tema.mjs src/tema.css",
     "start": "ng serve --port 4300",
-    "prebuild": "node ../kiosco-ui/generar-tema.mjs src/tema.css",
+    "prebuild": "node ../kiosco-ui/generar-tema.mjs src/tema.css && node escribir-entorno.mjs",
     "build": "ng build",
     "probar": "electron probar-panel.cjs"
   },

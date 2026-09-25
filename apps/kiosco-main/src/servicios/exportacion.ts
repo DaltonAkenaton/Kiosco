@@ -55,6 +55,7 @@ import {
   type MarcaParaExportar,
   registrarAccesosFoto,
 } from '../datos/repositorio-admin';
+import { zonaHorariaVigente } from '../configuracion-vigente';
 import { registrarEvento } from '../datos/repositorio-eventos';
 import { leerCredencial } from './credencial-kiosco';
 import { leerFoto } from './fotos';
@@ -91,7 +92,7 @@ interface PartesDeFecha {
 
 function partesLocales(ms: number): PartesDeFecha {
   const partes = new Intl.DateTimeFormat('en-CA', {
-    timeZone: CONFIG.reloj.zonaHorariaPorDefecto,
+    timeZone: zonaHorariaVigente(),
     hourCycle: 'h23',
     year: 'numeric',
     month: '2-digit',
@@ -211,7 +212,7 @@ function textoLeeme(kiosco: string, cuando: PartesDeFecha, adminNombre: string):
     'CONTROL DE ASISTENCIA - REGISTROS Y FOTOS EXPORTADOS',
     '',
     `Kiosco: ${kiosco}`,
-    `Exportado: ${fechaIso(cuando)} ${horaCompleta(cuando)} (hora de ${CONFIG.reloj.zonaHorariaPorDefecto})`,
+    `Exportado: ${fechaIso(cuando)} ${horaCompleta(cuando)} (hora de ${zonaHorariaVigente()})`,
     `Por: ${adminNombre}`,
     '',
     'QUÉ HAY AQUÍ',

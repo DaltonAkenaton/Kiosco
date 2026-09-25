@@ -43,6 +43,7 @@ interface Marca {
   en_cuarentena: boolean;
   empleado: { nombre: string; apellido_paterno: string; apellido_materno: string; numero_empleado: string | null } | null;
   dispositivo: { nombre: string } | null;
+  correcciones: { accion: 'anular' | 'cambiar_tipo' | 'agregar'; datos: { tipo?: string }; motivo: string; creado_en: string }[];
 }
 
 type Revision = '' | 'cualquiera' | 'foto_en_kiosco' | 'cuarentena' | string;
@@ -126,7 +127,7 @@ export class Asistencia implements OnInit {
       .select(
         'id, tipo, origen, hora_estimada, recibido_en, banderas, foto_estado, en_cuarentena, ' +
           'empleado:empleados(nombre, apellido_paterno, apellido_materno, numero_empleado), ' +
-          'dispositivo:dispositivos(nombre)',
+          'dispositivo:dispositivos(nombre), correcciones(accion, datos, motivo, creado_en)',
       )
       .order('hora_estimada', { ascending: false })
       .limit(MAXIMO);
@@ -177,6 +178,46 @@ export class Asistencia implements OnInit {
   }
 
   protected readonly MAXIMO = MAXIMO;
+
+  // --------------------------------------------------------------------------
+  //  Correcciones: la marca original NO se toca (CLAUDE.md 8)
+  // --------------------------------------------------------------------------
+  protected readonly corrigiendo = signal<Marca | null>(null);
+  protected readonly accionCorreccion = signal<'anular' | 'cambiar_tipo'>('cambiar_tipo');
+
+  /** Anulada: ya no cuenta para los reportes. */
+  protected anulada(m: Marca): boolean {
+    return (m.correcciones ?? []).some((c) => c.accion === 'anular');
+  }
+
+  /** El tipo que cuenta: el de la ultima correccion, o el original. */
+  protected tipoVigente(m: Marca): 'entrada' | 'salida' {
+    const cambios = (m.correcciones ?? []).filter((c) => c.accion === 'cambiar_tipo').sort((a, b) => a.creado_en.localeCompare(b.creado_en));
+    return (cambios.at(-1)?.datos.tipo as 'entrada' | 'salida' | undefined) ?? m.tipo;
+  }
+
+  protected abrirCorreccion(m: Marca): void {
+    this.errorAccion.set(null);
+    this.accionCorreccion.set('cambiar_tipo');
+    this.corrigiendo.set(m);
+  }
+
+  protected async guardarCorreccion(m: Marca, motivo: string): Promise<void> {
+    this.guardando.set(true);
+    this.errorAccion.set(null);
+    const { error } = await this.sesion.bd.rpc('corregir_marca', {
+      p_marca_id: m.id,
+      p_accion: this.accionCorreccion(),
+      p_motivo: motivo,
+    });
+    this.guardando.set(false);
+    if (error) {
+      this.errorAccion.set(mensajeDeError(error));
+      return;
+    }
+    this.corrigiendo.set(null);
+    await this.buscar();
+  }
 
   // --------------------------------------------------------------------------
   //  Registro manual

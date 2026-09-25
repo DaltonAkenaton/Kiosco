@@ -1,0 +1,130 @@
+<h1 class="text-2xl font-bold">Reportes</h1>
+<p class="text-texto-suave mt-1 max-w-3xl">
+  Quién llegó a tiempo, quién tuvo retardo o falta, y cuántas horas trabajó.
+  <panel-ayuda titulo="¿Cómo se calcula?" [texto]="AYUDA_RECALCULO" alinear="izquierda" />
+  El sistema informa; no descuenta nada.
+</p>
+
+<div class="mt-4 flex flex-wrap items-end gap-4">
+  <label class="flex flex-col gap-1">Desde
+    <input type="date" class="campo" [value]="desde()" (change)="cambiar('desde', valor($event))" />
+  </label>
+  <label class="flex flex-col gap-1">Hasta
+    <input type="date" class="campo" [value]="hasta()" (change)="cambiar('hasta', valor($event))" />
+  </label>
+  <label class="flex flex-col gap-1">Empleado
+    <select class="campo" (change)="cambiar('empleadoId', valor($event))">
+      <option value="">Todos</option>
+      @for (e of listaEmpleados(); track e.id) {
+        <option [value]="e.id">{{ e.nombre }}</option>
+      }
+    </select>
+  </label>
+  <div class="flex gap-2 pb-0.5">
+    <button type="button" class="rounded-xl border-2 px-4 py-2" [class.font-bold]="vista() === 'resumen'"
+            [style.border-color]="vista() === 'resumen' ? 'var(--kiosko-institucion-secundario)' : 'var(--kiosko-borde)'"
+            (click)="vista.set('resumen')">Resumen por persona</button>
+    <button type="button" class="rounded-xl border-2 px-4 py-2" [class.font-bold]="vista() === 'dias'"
+            [style.border-color]="vista() === 'dias' ? 'var(--kiosko-institucion-secundario)' : 'var(--kiosko-borde)'"
+            (click)="vista.set('dias')">Día por día</button>
+  </div>
+  <button type="button" class="boton-secundario ml-auto" [disabled]="filas().length === 0"
+          (click)="vista() === 'resumen' ? descargarResumen() : descargarDias()">
+    ⬇ Descargar para Excel
+  </button>
+</div>
+
+@if (error(); as mensaje) {
+  <p class="mt-4 font-bold" style="color: var(--kiosko-peligro)">{{ mensaje }}</p>
+}
+@if (cargando()) {
+  <p class="text-texto-suave mt-6">Calculando…</p>
+} @else if (filas().length === 0) {
+  <p class="text-texto-suave mt-12 text-center text-xl">
+    No hay nadie con turno en esas fechas. Revisa las fechas, o asigna horarios en la sección Horarios.
+  </p>
+} @else if (vista() === 'resumen') {
+  <table class="mt-4 w-full border-collapse text-left">
+    <thead>
+      <tr class="text-texto-suave border-borde border-b text-sm uppercase tracking-wide">
+        <th class="py-2 pr-4">Quién</th>
+        <th class="py-2 pr-4 text-right">Días con turno</th>
+        <th class="py-2 pr-4 text-right" style="color: var(--kiosko-entrada)">A tiempo</th>
+        <th class="py-2 pr-4 text-right" style="color: var(--kiosko-atencion)">Retardos</th>
+        <th class="py-2 pr-4 text-right" style="color: var(--kiosko-peligro)">Faltas</th>
+        <th class="py-2 pr-4 text-right">Ausencias justificadas</th>
+        <th class="py-2 pr-4 text-right">No registró salida</th>
+        <th class="py-2 text-right">Horas trabajadas</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (r of resumen(); track r.empleadoId) {
+        <tr class="border-borde border-b">
+          <td class="py-2 pr-4 font-semibold">{{ r.nombre }}
+            @if (numero(r.empleadoId)) { <span class="text-texto-suave font-normal"> · #{{ numero(r.empleadoId) }}</span> }
+          </td>
+          <td class="py-2 pr-4 text-right tabular-nums">{{ r.programados }}</td>
+          <td class="py-2 pr-4 text-right tabular-nums">{{ r.aTiempo }}</td>
+          <td class="py-2 pr-4 text-right tabular-nums" [class.font-bold]="r.retardos > 0">{{ r.retardos }}</td>
+          <td class="py-2 pr-4 text-right tabular-nums" [class.font-bold]="r.faltas > 0"
+              [style.color]="r.faltas > 0 ? 'var(--kiosko-peligro)' : null">{{ r.faltas }}</td>
+          <td class="py-2 pr-4 text-right tabular-nums">{{ r.justificadas }}</td>
+          <td class="py-2 pr-4 text-right tabular-nums">{{ r.sinSalida }}</td>
+          <td class="py-2 text-right tabular-nums">{{ horas(r.horas) }}</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+  <p class="text-texto-suave mt-2 text-sm">
+    Las horas sólo cuentan jornadas con entrada y salida. Si alguien no registró su salida, esas horas no se suman (el sistema no las inventa).
+  </p>
+} @else {
+  <table class="mt-4 w-full border-collapse text-left">
+    <thead>
+      <tr class="text-texto-suave border-borde border-b text-sm uppercase tracking-wide">
+        <th class="py-2 pr-4">Día</th>
+        <th class="py-2 pr-4">Quién</th>
+        <th class="py-2 pr-4">Turno</th>
+        <th class="py-2 pr-4">Entró</th>
+        <th class="py-2 pr-4">Salió</th>
+        <th class="py-2 pr-4">Horas</th>
+        <th class="py-2">Resultado</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (f of filas(); track f.fecha + f.empleado_id + (f.entrada ?? f.salida ?? '')) {
+        @let e = ESTADOS[f.estado];
+        <tr class="border-borde border-b">
+          <td class="py-2 pr-4 whitespace-nowrap">{{ fechaCorta(f.fecha) }}</td>
+          <td class="py-2 pr-4 font-semibold">{{ nombre(f.empleado_id) }}</td>
+          <td class="py-2 pr-4">
+            @if (f.programado_inicio && f.programado_fin) {
+              {{ f.turno }} <span class="text-texto-suave tabular-nums">{{ hora(f.programado_inicio, zona()) }}–{{ hora(f.programado_fin, zona()) }}</span>
+            } @else { — }
+          </td>
+          <td class="py-2 pr-4 tabular-nums">
+            {{ f.entrada ? hora(f.entrada, zona()) : '—' }}
+            @if (f.minutos_tarde) { <span class="text-texto-suave">(+{{ f.minutos_tarde }} min)</span> }
+          </td>
+          <td class="py-2 pr-4 tabular-nums">
+            {{ f.salida ? hora(f.salida, zona()) : '—' }}
+            @if (f.minutos_salida_anticipada) { <span class="text-texto-suave">({{ f.minutos_salida_anticipada }} min antes)</span> }
+          </td>
+          <td class="py-2 pr-4 tabular-nums">{{ f.horas !== null ? horas(f.horas) : '—' }}</td>
+          <td class="py-2">
+            <span class="font-bold" [style.color]="e?.color">{{ e?.texto ?? f.estado }}</span>
+            @if (e?.ayuda) { <panel-ayuda [titulo]="e?.texto ?? ''" [texto]="e?.ayuda ?? ''" alinear="derecha" /> }
+            @if (f.incidencia) { <span class="text-texto-suave"> · {{ INCIDENCIAS[f.incidencia] ?? f.incidencia }}</span> }
+            @if (f.estado_salida && ESTADOS_DE_SALIDA[f.estado_salida]?.texto) {
+              <span class="whitespace-nowrap" style="color: var(--kiosko-atencion)"> · {{ ESTADOS_DE_SALIDA[f.estado_salida]?.texto }}
+                <panel-ayuda [titulo]="ESTADOS_DE_SALIDA[f.estado_salida]?.texto ?? ''" [texto]="ESTADOS_DE_SALIDA[f.estado_salida]?.ayuda ?? ''" alinear="derecha" />
+              </span>
+            }
+            @if (f.corregida) { <span class="text-texto-suave"> · corregido</span> }
+            @if (f.en_cuarentena) { <span style="color: var(--kiosko-atencion)"> · en cuarentena</span> }
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+}

@@ -1,0 +1,80 @@
+# ============================================================================
+#  RESUMEN DIARIO POR CORREO AL JEFE  (CLAUDE.md 13.4)
+# ============================================================================
+#
+#  Cada manana (lunes a sabado, 7:30 hora de Nuevo Laredo aprox.) manda al
+#  jefe un correo con lo de AYER: retardos, faltas, quien no registro salida,
+#  registros para revisar en el kiosco (sin foto, foto tapada, hora dudosa) y
+#  el estado de cada kiosco (sin conexion, camara caida).
+#
+#  El texto lo arma supabase/resumen-diario.sql. Se envia desde la cuenta de
+#  Gmail DEDICADA al sistema (CLAUDE.md 1.1), con una "contrasena de
+#  aplicacion" (no la contrasena normal de Gmail):
+#    Cuenta de Google -> Seguridad -> Verificacion en dos pasos (activarla) ->
+#    Contrasenas de aplicaciones -> crear una llamada "Resumen asistencia".
+#
+#  SECRETOS (Settings -> Secrets and variables -> Actions):
+#    SUPABASE_DB_URL        el mismo del respaldo semanal
+#    CORREO_USUARIO         el Gmail del sistema (ej. correo-del-sistema@example.com)
+#    CORREO_CONTRASENA_APP  la contrasena de aplicacion de 16 letras
+#    CORREO_JEFE            a quien se manda (varios: separados por coma)
+#
+#  Si falta alguno, la tarea NO falla: avisa y termina. Asi, quien no quiera
+#  el resumen simplemente no pone los secretos.
+
+name: Resumen diario por correo
+
+on:
+  schedule:
+    # 13:30 UTC = 7:30 (horario de verano) u 8:30 (invierno) en Nuevo Laredo.
+    - cron: '30 13 * * 1-6'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  resumen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ¿Estan los secretos?
+        id: listo
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          CORREO_USUARIO: ${{ secrets.CORREO_USUARIO }}
+          CORREO_CONTRASENA_APP: ${{ secrets.CORREO_CONTRASENA_APP }}
+          CORREO_JEFE: ${{ secrets.CORREO_JEFE }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ] || [ -z "$CORREO_USUARIO" ] || [ -z "$CORREO_CONTRASENA_APP" ] || [ -z "$CORREO_JEFE" ]; then
+            echo "::notice::Resumen diario apagado: faltan secretos (ver el encabezado de este archivo)."
+            echo "si=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "si=si" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Armar el resumen
+        if: steps.listo.outputs.si == 'si'
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          psql "$SUPABASE_DB_URL" -At -v ON_ERROR_STOP=1 -f supabase/resumen-diario.sql > resumen.txt
+          echo "fecha=$(TZ=America/Matamoros date -d yesterday +%d/%m/%Y)" >> "$GITHUB_ENV"
+          cat resumen.txt
+
+      - name: Enviar
+        if: steps.listo.outputs.si == 'si'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.CORREO_USUARIO }}
+          password: ${{ secrets.CORREO_CONTRASENA_APP }}
+          from: Control de Asistencia <${{ secrets.CORREO_USUARIO }}>
+          to: ${{ secrets.CORREO_JEFE }}
+          subject: Asistencia del ${{ env.fecha }}
+          body: file://resumen.txt
+          convert_markdown: false

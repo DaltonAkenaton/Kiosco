@@ -566,6 +566,10 @@ export const SINCRONIZACION = {
    * (`npx supabase start`). En el kiosco instalado, el proyecto de
    * PRODUCCION: se llena al crear la cuenta (CLAUDE.md 13.3). Mientras este
    * vacio, el kiosco instalado se comporta como si `activa` fuera `false`.
+   *
+   * AQUI VA LA "Project URL" DEL PROYECTO DE PRODUCCION, tal como se copia
+   * de Supabase -> Project Settings -> API: 'https://xxxx.supabase.co'.
+   * Es publica (no es una llave). Despues: `npm run empaquetar`.
    */
   urlFuncionesDesarrollo: 'http://127.0.0.1:54321/functions/v1',
   urlFuncionesProduccion: '',
@@ -729,6 +733,9 @@ export const FOTOS = {
 export const MODO_ADMIN = {
   /** Se cierra solo tras estos minutos sin actividad (CLAUDE.md 5.2: 2 minutos). */
   minutosDeInactividad: 2,
+
+  /** Cuantos registros rechazados por la oficina se listan (los mas recientes). */
+  rechazadosAMostrar: 50,
 
   /**
    * UN INTENTO FALLIDO REGRESA A LA PANTALLA PRINCIPAL, con el aviso

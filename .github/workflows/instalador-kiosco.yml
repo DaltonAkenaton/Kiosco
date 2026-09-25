@@ -1,0 +1,87 @@
+# ============================================================================
+#  ARMAR EL INSTALADOR DEL KIOSCO
+# ============================================================================
+#
+#  Al subir una etiqueta de version (por ejemplo `v0.2.0`), GitHub arma el
+#  instalador en una maquina Windows y lo deja en "Releases" del repositorio.
+#
+#  EL REPOSITORIO ES PRIVADO (decision del 25-09-2026). Por eso los kioscos NO
+#  se actualizan solos: no pueden descargar de un repositorio privado sin una
+#  contrasena, y una contrasena dentro del .exe dejaria de ser secreta
+#  (CLAUDE.md 3.2). La actualizacion se hace a mano:
+#
+#    1. GitHub -> Releases -> la version -> descargar el .exe (con tu sesion).
+#    2. Copiarlo a cada kiosco (USB) e instalarlo encima. No se pierde nada.
+#
+#  Si algun dia el repositorio se vuelve publico, se pueden encender las
+#  actualizaciones automaticas: ver docs/manual-tecnico.md, "Publicar una
+#  version nueva del kiosco".
+#
+#  Como sacar una version nueva:
+#    1. Cambiar "version" en apps/kiosco-main/package.json (ej. 0.2.0).
+#    2. git commit -am "Version 0.2.0"  &&  git tag v0.2.0  &&  git push --tags
+#    3. Esperar ~10 minutos: Actions -> "Instalador del kiosco".
+#
+#  No necesita secretos: usa el GITHUB_TOKEN que GitHub da a cada corrida.
+
+name: Instalador del kiosco
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  instalador:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: La etiqueta coincide con la version
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          version=$(node -p "require('./apps/kiosco-main/package.json').version")
+          if [ "v$version" != "${GITHUB_REF_NAME}" ]; then
+            echo "::error::La etiqueta es ${GITHUB_REF_NAME} pero apps/kiosco-main/package.json dice $version. Deben ser iguales."
+            exit 1
+          fi
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Revisar tipos
+        run: npm run revisar-tipos
+
+      - name: Armar el instalador
+        # Sin publicar: electron-builder no escribe la configuracion de
+        # actualizaciones, asi que el kiosco no intenta buscar versiones
+        # (ver actualizaciones.ts: "sin servidor configurado").
+        run: npm run empaquetar --workspace=@kiosko/kiosco-main -- --publish never
+
+      - name: Dejarlo en Releases
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: apps/kiosco-main/dist-instalador/*.exe
+          body: |
+            Instalador del kiosco. Descargar el .exe, copiarlo a cada kiosco e
+            instalarlo encima de la version anterior: no se pierde ningun dato.
+
+      - name: Guardarlo como artifact (si se corrio a mano, sin etiqueta)
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: instalador-kiosco
+          path: apps/kiosco-main/dist-instalador/*.exe
+          retention-days: 30

@@ -10,6 +10,10 @@
  *  admin y un motivo, y queda en la bitacora. Un supervisor ve la lista pero
  *  no los botones.
  *
+ *  DERECHOS ARCO (CLAUDE.md 12, migracion 0017): "Sus datos" descarga todo
+ *  lo que el sistema guarda de la persona, y "Suprimir sus datos" la vuelve
+ *  anonima sin borrar sus marcas (son registro laboral e inmutables).
+ *
  *  EL PIN LO DA EL SISTEMA. Al dar de alta (o pedir uno nuevo) la base genera
  *  un PIN al azar y lo devuelve UNA vez. Se muestra grande, con boton para
  *  imprimir, para que el jefe se lo de al empleado. No se vuelve a ver: en la
@@ -32,6 +36,7 @@ interface Empleado {
   apellido_materno: string;
   pin_temporal: boolean;
   activo: boolean;
+  anonimizado_en: string | null;
 }
 
 interface Datos {
@@ -54,6 +59,8 @@ type Accion =
   | { tipo: 'editar'; empleado: Empleado }
   | { tipo: 'pin'; empleado: Empleado }
   | { tipo: 'estado'; empleado: Empleado }
+  | { tipo: 'datos'; empleado: Empleado }
+  | { tipo: 'suprimir'; empleado: Empleado }
   | { tipo: 'importar' };
 
 @Component({
@@ -75,6 +82,9 @@ export class Empleados implements OnInit {
   protected readonly errorAccion = signal<string | null>(null);
   protected readonly pines = signal<PinParaEntregar[]>([]);
 
+  /** Suprimir: lo que el jefe teclea para confirmar (el usuario de la persona). */
+  protected readonly confirmacion = signal('');
+
   /** Importacion: lo leido del archivo, antes de confirmar. */
   protected readonly porImportar = signal<(Datos & { problema: string | null })[]>([]);
 
@@ -90,6 +100,11 @@ export class Empleados implements OnInit {
       'apellido_paterno, apellido_materno y numero (el número de empleado, si lo tienen). Guárdala con ' +
       '"Guardar como" > "CSV UTF-8". Aquí se revisa antes de guardar, y al final se muestran los PIN de ' +
       'todos para imprimirlos.',
+    arco:
+      'La ley de protección de datos personales le da a cada persona derecho a saber qué datos suyos ' +
+      'tiene el sistema (Acceso), a corregirlos (Rectificación), a pedir que se borren (Cancelación) ' +
+      'y a oponerse a su uso (Oposición). Se les llama derechos ARCO. Antes de suprimir, consulta con ' +
+      'la Unidad de Transparencia de la UAT: la asistencia es un registro laboral y puede que deba conservarse.',
   };
 
   protected readonly visibles = computed(() => {
@@ -113,7 +128,7 @@ export class Empleados implements OnInit {
   private async cargar(): Promise<void> {
     const { data, error } = await this.sesion.bd
       .from('empleados')
-      .select('id, usuario, numero_empleado, nombre, apellido_paterno, apellido_materno, pin_temporal, activo')
+      .select('id, usuario, numero_empleado, nombre, apellido_paterno, apellido_materno, pin_temporal, activo, anonimizado_en')
       .order('nombre')
       .order('apellido_paterno');
     if (error) {
@@ -146,6 +161,8 @@ export class Empleados implements OnInit {
       });
     } else if (accion.tipo === 'importar') {
       this.porImportar.set([]);
+    } else if (accion.tipo === 'suprimir') {
+      this.confirmacion.set('');
     }
     this.accion.set(accion);
   }
@@ -241,6 +258,42 @@ export class Empleados implements OnInit {
     await this.ejecutar(() =>
       Promise.resolve(
         this.sesion.bd.rpc('cambiar_estado_empleado', { p_id: empleado.id, p_activo: !empleado.activo, p_motivo: motivo }),
+      ),
+    );
+  }
+
+  // --------------------------------------------------------------------------
+  //  Derechos ARCO
+  // --------------------------------------------------------------------------
+
+  /** Acceso: descarga un archivo con todo lo que el sistema tiene de la persona. */
+  protected async descargarDatos(empleado: Empleado, motivo: string): Promise<void> {
+    let datos: unknown = null;
+    const ok = await this.ejecutar(async () => {
+      const r = await this.sesion.bd.rpc('datos_de_empleado', { p_id: empleado.id, p_motivo: motivo });
+      datos = r.data;
+      return r;
+    });
+    if (!ok || !datos) return;
+    const archivo = new Blob([JSON.stringify(datos, null, 2)], { type: 'application/json' });
+    const enlace = document.createElement('a');
+    enlace.href = URL.createObjectURL(archivo);
+    enlace.download = `datos-${empleado.usuario}-${new Date().toISOString().slice(0, 10)}.json`;
+    enlace.click();
+    URL.revokeObjectURL(enlace.href);
+  }
+
+  /** Supresion: la persona deja de ser identificable. No se puede deshacer. */
+  protected async suprimir(empleado: Empleado, motivo: string): Promise<void> {
+    if (this.confirmacion().trim().toLowerCase() !== empleado.usuario) {
+      this.errorAccion.set(`Para confirmar, escribe exactamente su usuario: ${empleado.usuario}`);
+      return;
+    }
+    await this.ejecutar(() =>
+      Promise.resolve(
+        this.sesion.bd.rpc('anonimizar_empleado', {
+          p_id: empleado.id, p_confirmar_usuario: this.confirmacion(), p_motivo: motivo,
+        }),
       ),
     );
   }

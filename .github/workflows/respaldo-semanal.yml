@@ -1,0 +1,122 @@
+# ============================================================================
+#  RESPALDO DE LA BASE DE DATOS (CLAUDE.md 13.3)  +  SUPABASE DESPIERTO (13)
+# ============================================================================
+#
+#  Dos veces por semana, GitHub se conecta a la base de PRODUCCION y guarda:
+#
+#    - un volcado SQL completo (roles, estructura y datos), para restaurar;
+#    - un CSV por tabla, que se abre con Excel, para consultar sin saber SQL.
+#
+#  Queda como "artifact" de esta corrida durante 90 dias: Actions -> la corrida
+#  -> "Artifacts" -> respaldo-N. Se descarga como ZIP. Para guardarlo "fuera
+#  de Supabase" como pide el CLAUDE.md, descarga el del lunes y subelo al
+#  Drive de la facultad (manual tecnico, "Respaldos").
+#
+#  De paso, conectarse a la base cuenta como actividad: Supabase no pausa el
+#  proyecto gratuito por inactividad (lo pausa a los 7 dias sin uso).
+#
+#  NECESITA un secreto en GitHub (Settings -> Secrets and variables ->
+#  Actions -> New repository secret):
+#
+#    SUPABASE_DB_URL   la cadena de conexion de la base de produccion.
+#                      Supabase -> Connect -> "Session pooler" -> URI, con la
+#                      contrasena de la base en lugar de [YOUR-PASSWORD].
+#
+#  Se puede correr a mano: Actions -> "Respaldo de la base de datos" ->
+#  Run workflow.
+#
+#  OJO: GitHub apaga las tareas programadas de un repositorio que pasa 60
+#  dias sin cambios, y avisa por correo antes. Si llega ese correo, basta con
+#  entrar y pulsar "Enable workflow".
+
+name: Respaldo de la base de datos
+
+on:
+  schedule:
+    # Lunes y jueves a las 12:00 UTC (6 o 7 de la manana en Nuevo Laredo).
+    - cron: '0 12 * * 1,4'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  respaldo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Revisar que exista la conexion
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::error::Falta el secreto SUPABASE_DB_URL. Ver el encabezado de este archivo."
+            exit 1
+          fi
+
+      - name: Volcado SQL (para restaurar)
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          mkdir -p respaldo/sql
+          supabase db dump --db-url "$SUPABASE_DB_URL" --role-only -f respaldo/sql/1-roles.sql
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f respaldo/sql/2-estructura.sql
+          supabase db dump --db-url "$SUPABASE_DB_URL" --data-only --use-copy -f respaldo/sql/3-datos.sql
+
+      - name: Una hoja CSV por tabla (para abrir en Excel)
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          mkdir -p respaldo/excel
+          # Sin hashes de PIN, de tokens ni de contrasenas: el CSV se abre en
+          # cualquier computadora y no tiene por que llevarlos.
+          declare -A consultas=(
+            [empleados]="select id, usuario, numero_empleado, nombre, apellido_paterno, apellido_materno, pin_temporal, activo, anonimizado_en, creado_en, actualizado_en from empleados order by nombre"
+            [marcas]="select m.id, m.empleado_id, e.usuario, m.tipo, m.origen, (m.hora_estimada at time zone 'America/Matamoros') as hora_local, m.hora_estimada, m.dispositivo_id, m.foto_estado, array_to_string(m.banderas, ' ') as banderas, m.en_cuarentena, m.recibido_en from marcas m left join empleados e on e.id = m.empleado_id order by m.hora_estimada"
+            [correcciones]="select * from correcciones order by creado_en"
+            [incidencias]="select * from incidencias order by fecha_inicio"
+            [dias_festivos]="select * from dias_festivos order by fecha"
+            [turnos]="select * from turnos order by nombre"
+            [asignaciones_turno]="select * from asignaciones_turno order by vigente_desde"
+            [dias_laborales]="select * from dias_laborales"
+            [dispositivos]="select id, nombre, ubicacion, activo, enrolado_en, revocado_en, ultima_conexion, version_app from dispositivos order by nombre"
+            [eventos_dispositivo]="select * from eventos_dispositivo order by ocurrido_en"
+            [accesos_foto]="select * from accesos_foto order by consultado_en"
+            [administradores]="select user_id, nombre, correo, rol, activo, usuario_kiosco, creado_en from administradores order by nombre"
+            [configuracion]="select clave, valor, descripcion from configuracion order by clave"
+            [bitacora_auditoria]="select * from bitacora_auditoria order by creado_en"
+          )
+          for tabla in "${!consultas[@]}"; do
+            # El BOM al principio hace que Excel respete los acentos.
+            printf '\xEF\xBB\xBF' > "respaldo/excel/$tabla.csv"
+            psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -q \
+              -c "\copy (${consultas[$tabla]}) to stdout with csv header" >> "respaldo/excel/$tabla.csv"
+          done
+          ls -la respaldo/excel
+
+      - name: Instrucciones dentro del respaldo
+        run: |
+          cat > respaldo/LEEME.txt <<'FIN'
+          RESPALDO DEL SISTEMA DE CONTROL DE ASISTENCIA
+          ==============================================
+          excel/   Una hoja por tabla. Se abren con doble clic en Excel.
+                   "marcas.csv" son las entradas y salidas (hora_local = Nuevo Laredo).
+          sql/     Para RESTAURAR la base completa en un proyecto de Supabase nuevo.
+                   Paso a paso: docs/manual-tecnico.md, seccion "Restaurar un respaldo".
+
+          Las FOTOS no estan aqui: nunca salen del kiosco (CLAUDE.md 5.1).
+          Contiene datos personales: guardalo en un lugar con acceso restringido.
+          FIN
+          date -u +"Generado: %Y-%m-%d %H:%M UTC" >> respaldo/LEEME.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: respaldo-${{ github.run_number }}
+          path: respaldo/
+          retention-days: 90

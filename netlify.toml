@@ -1,0 +1,74 @@
+# ============================================================================
+#  COMO PUBLICA NETLIFY EL PANEL DEL JEFE
+# ============================================================================
+#
+#  Netlify lee este archivo solo: no hay que configurar nada a mano en su
+#  pagina salvo DOS variables de entorno (Site configuration -> Environment
+#  variables):
+#
+#      SUPABASE_URL            la "Project URL" del proyecto de PRODUCCION
+#      SUPABASE_LLAVE_PUBLICA  la llave "anon public" (o "publishable")
+#
+#  Con ellas, `apps/panel/escribir-entorno.mjs` arma el archivo de entorno
+#  antes de compilar. Si alguien pega por error la llave `service_role`, la
+#  compilacion FALLA a proposito (CLAUDE.md 3.2).
+#
+#  Paso a paso completo: docs/manual-tecnico.md, seccion "Publicar el panel".
+
+[build]
+  # El proyecto es un monorepo con npm workspaces: se instala desde la raiz.
+  base    = "."
+  command = "npm run panel:compilar"
+  publish = "apps/panel/dist"
+
+[build.environment]
+  NODE_VERSION = "24"
+  # El panel no necesita Electron. Sin esto, `npm install` bajaria ~100 MB
+  # del programa del kiosco en cada publicacion.
+  ELECTRON_SKIP_BINARY_DOWNLOAD = "1"
+
+# Angular maneja sus propias direcciones (/asistencia, /reportes...). Si
+# alguien recarga la pagina en /reportes, Netlify debe entregar index.html y
+# dejar que Angular decida. Sin esto, recargar daria "Page not found".
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
+
+# ----------------------------------------------------------------------------
+#  Encabezados de seguridad
+# ----------------------------------------------------------------------------
+#  - CSP: el panel solo carga lo suyo y solo habla con Supabase.
+#    `style-src 'unsafe-inline'` hace falta porque Angular inserta los estilos
+#    de cada pantalla en etiquetas <style>. Los scripts NO tienen esa excepcion.
+#  - frame-ancestors 'none' / X-Frame-Options: nadie puede meter el panel
+#    dentro de otra pagina para engañar al jefe con clics (clickjacking).
+#  - Referrer-Policy / Permissions-Policy: no contar a otros sitios de donde
+#    viene la gente, y no pedir camara, microfono ni ubicacion.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=()"
+    Strict-Transport-Security = "max-age=31536000"
+
+# index.html nunca se guarda en cache: asi una version nueva del panel llega
+# en cuanto se publica. Los .js y .css llevan una huella en el nombre
+# (outputHashing) y esos si pueden guardarse un año.
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

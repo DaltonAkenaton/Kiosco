@@ -21,7 +21,9 @@ import {
   type MarcaParaAuditoria,
   type MemoriaUsb,
   type ResultadoAdmin,
+  type EstadoDelKioscoParaAdmin,
   type ResultadoExportacion,
+  type ResultadoRecuperacionFotos,
   type SesionAdminParaInterfaz,
 } from '@kiosko/compartido';
 import { ES_DESARROLLO } from '../entorno';
@@ -33,7 +35,15 @@ import {
   registrarAccesoFoto,
 } from '../datos/repositorio-admin';
 import { cambiarConservar, obtenerFoto } from '../datos/repositorio-fotos';
-import { registrarEstadoDeFoto } from '../datos/repositorio-sincronizacion';
+import {
+  contarRechazados,
+  listarRechazados,
+  registrarEstadoDeFoto,
+  reintentarRechazados,
+} from '../datos/repositorio-sincronizacion';
+import { actualizacionLista, instalarActualizacionYReiniciar, versionActual } from '../actualizaciones';
+import { sincronizarPronto } from '../servicios/sincronizacion';
+import { contarFotosConLlaveAnterior, recuperarFotosConContrasena } from '../servicios/recuperacion-fotos';
 import { leerFoto } from '../servicios/fotos';
 import {
   definirContrasenaDeRecuperacion,
@@ -53,6 +63,7 @@ import {
   EsquemaEntradaAdmin,
   EsquemaExportarACarpeta,
   EsquemaExportarAUsb,
+  EsquemaRecuperarFotos,
   EsquemaSoloToken,
   EsquemaVerFoto,
 } from './esquemas';
@@ -237,6 +248,56 @@ export function registrarManejadoresAdmin(): void {
       }
       const resultado = await definirContrasenaDeRecuperacion(datos.contrasena);
       if (!resultado.ok) throw new ErrorParaMostrar(resultado.mensaje);
+      return null;
+    }),
+  );
+
+  // ---------------------------------------------------------------------
+  //  Estado del propio kiosco: version, actualizacion y rechazados
+  // ---------------------------------------------------------------------
+  ipcMain.handle(
+    CANALES.adminEstadoDelKiosco,
+    conSesion(EsquemaSoloToken, (): EstadoDelKioscoParaAdmin => ({
+      version: versionActual(),
+      actualizacionLista: actualizacionLista(),
+      rechazados: listarRechazados(CONFIG.modoAdmin.rechazadosAMostrar),
+      totalRechazados: contarRechazados(),
+      fotosConLlaveAnterior: contarFotosConLlaveAnterior(),
+    })),
+  );
+
+  ipcMain.handle(
+    CANALES.adminRecuperarFotos,
+    conSesion(EsquemaRecuperarFotos, async (datos, sesion): Promise<ResultadoRecuperacionFotos> => {
+      if (sesion.rol !== 'admin') throw new ErrorParaMostrar('Sólo un administrador puede recuperar fotos.');
+      const resultado = await recuperarFotosConContrasena(datos.contrasena);
+      if (!resultado) throw new ErrorParaMostrar('Windows no ofrece cifrado en esta computadora. Avisa a soporte.');
+      if (resultado.llavesAbiertas === 0) {
+        throw new ErrorParaMostrar(
+          'Esa contraseña no abre ninguna llave anterior. Revisa la hoja de credenciales (mayúsculas incluidas).',
+        );
+      }
+      return resultado;
+    }),
+  );
+
+  ipcMain.handle(
+    CANALES.adminReintentarRechazados,
+    conSesion(EsquemaSoloToken, (): { reintentados: number } => {
+      const reintentados = reintentarRechazados();
+      if (reintentados > 0) sincronizarPronto();
+      return { reintentados };
+    }),
+  );
+
+  ipcMain.handle(
+    CANALES.adminInstalarActualizacion,
+    conSesion(EsquemaSoloToken, (_datos, sesion): null => {
+      if (sesion.rol !== 'admin') throw new ErrorParaMostrar('Sólo un administrador puede instalar versiones nuevas.');
+      if (!actualizacionLista()) throw new ErrorParaMostrar('No hay ninguna versión nueva descargada.');
+      console.info(`[admin] ${sesion.nombre} instala la version ${actualizacionLista()}`);
+      // Un momento para que la respuesta llegue a la pantalla antes de cerrar.
+      setTimeout(() => instalarActualizacionYReiniciar(), 1500);
       return null;
     }),
   );

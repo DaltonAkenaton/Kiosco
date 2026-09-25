@@ -99,6 +99,14 @@ export const CANALES = {
   adminExportarAUsb: 'admin:exportar-a-usb',
   /** Guarda el ZIP donde el administrador elija con la ventana de Windows. */
   adminExportarACarpeta: 'admin:exportar-a-carpeta',
+  /** Version, actualizacion descargada y registros que la oficina no acepto. */
+  adminEstadoDelKiosco: 'admin:estado-del-kiosco',
+  /** Vuelve a poner en la cola los registros que la oficina rechazo. */
+  adminReintentarRechazados: 'admin:reintentar-rechazados',
+  /** Abre fotos de una llave anterior con la contrasena de recuperacion. */
+  adminRecuperarFotos: 'admin:recuperar-fotos',
+  /** Instala la version nueva ya descargada y reinicia el kiosco. */
+  adminInstalarActualizacion: 'admin:instalar-actualizacion',
   /** Un solo sentido: la sesion se cerro sola por inactividad. */
   adminSesionCerrada: 'admin:sesion-cerrada',
 } as const;
@@ -382,6 +390,33 @@ export type FotoParaAuditoria =
   | { estado: 'con_foto'; jpegDataUrl: string; hashCorto: string }
   | { estado: 'sin_foto' | 'eliminada_por_antiguedad' | 'faltante' | 'alterada' | 'llave_no_disponible' };
 
+/** Un registro que la oficina (la nube) no acepto. Se queda guardado en el kiosco. */
+export interface RenglonRechazado {
+  id: string;
+  /** 'marca', 'evento', 'acceso_foto'... */
+  tipo: string;
+  creadoEn: string;
+  /** El motivo que dio la nube ('empleado_desconocido', 'dispositivo_revocado'...). */
+  motivo: string;
+}
+
+/** Lo que el modo administrador muestra del propio kiosco. */
+export interface EstadoDelKioscoParaAdmin {
+  version: string;
+  /** Version nueva ya descargada, lista para instalar; `null` si no hay. */
+  actualizacionLista: string | null;
+  rechazados: RenglonRechazado[];
+  totalRechazados: number;
+  /** Fotos cifradas con una llave anterior (Windows ya no la abre): se recuperan con la contrasena. */
+  fotosConLlaveAnterior: number;
+}
+
+export interface ResultadoRecuperacionFotos {
+  llavesAbiertas: number;
+  recuperadas: number;
+  pendientes: number;
+}
+
 export interface ApiAdmin {
   entrar(usuario: string, contrasena: string): Promise<ResultadoAdmin<SesionAdminParaInterfaz>>;
   salir(token: string): Promise<void>;
@@ -408,6 +443,10 @@ export interface ApiAdmin {
     token: string,
     filtros: FiltrosAuditoria,
   ): Promise<ResultadoAdmin<ResultadoExportacion | null>>;
+  estadoDelKiosco(token: string): Promise<ResultadoAdmin<EstadoDelKioscoParaAdmin>>;
+  reintentarRechazados(token: string): Promise<ResultadoAdmin<{ reintentados: number }>>;
+  instalarActualizacion(token: string): Promise<ResultadoAdmin<null>>;
+  recuperarFotos(token: string, contrasena: string): Promise<ResultadoAdmin<ResultadoRecuperacionFotos>>;
   /** La sesion se cerro sola (inactividad). */
   alCerrarSesion(callback: () => void): () => void;
 }

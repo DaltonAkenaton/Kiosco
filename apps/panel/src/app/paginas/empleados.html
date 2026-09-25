@@ -43,7 +43,9 @@
         <td class="py-2 pr-4 font-semibold">{{ nombreCompleto(e) }}</td>
         <td class="py-2 pr-4 font-mono">{{ e.usuario }}</td>
         <td class="py-2 pr-4">
-          @if (!e.activo) {
+          @if (e.anonimizado_en) {
+            <span class="text-texto-suave">Datos suprimidos (ARCO)</span>
+          } @else if (!e.activo) {
             <span style="color: var(--kiosko-peligro)">Dado de baja</span>
           } @else {
             Activo
@@ -54,6 +56,7 @@
         </td>
         @if (sesion.esAdmin()) {
           <td class="py-2">
+            @if (!e.anonimizado_en) {
             <div class="flex flex-wrap gap-2">
               <button type="button" class="boton-secundario !px-3 !py-1" (click)="abrir({ tipo: 'editar', empleado: e })">Corregir datos</button>
               @if (e.activo) {
@@ -62,7 +65,12 @@
               <button type="button" class="boton-secundario !px-3 !py-1" (click)="abrir({ tipo: 'estado', empleado: e })">
                 {{ e.activo ? 'Dar de baja' : 'Reactivar' }}
               </button>
+              <button type="button" class="boton-secundario !px-3 !py-1" (click)="abrir({ tipo: 'datos', empleado: e })">Sus datos (ARCO)</button>
+              @if (!e.activo) {
+                <button type="button" class="boton-secundario !px-3 !py-1" (click)="abrir({ tipo: 'suprimir', empleado: e })">Suprimir sus datos</button>
+              }
             </div>
+            }
           </td>
         }
       </tr>
@@ -126,6 +134,34 @@
         } @else {
           <p>Volverá a aparecer en los kioscos y podrá registrar su asistencia con el PIN que tenía.</p>
         }
+      </panel-dialogo>
+    }
+    @case ('datos') {
+      <panel-dialogo [titulo]="'Datos de ' + nombreCompleto(a.empleado)" textoBoton="Descargar sus datos"
+                     ejemploMotivo="Ej.: la persona lo pidió por escrito el 23 de septiembre (solicitud ARCO)"
+                     [ocupado]="guardando()" [error]="errorAccion()" (confirmar)="descargarDatos(a.empleado, $event)" (cancelar)="cerrar()">
+        <p>
+          Se descarga un archivo con <b>todo</b> lo que el sistema guarda de esta persona: sus datos, sus registros,
+          correcciones, ausencias, horarios y quién consultó sus fotos.
+          <panel-ayuda titulo="¿Qué son los derechos ARCO?" [texto]="AYUDA.arco" alinear="izquierda" />
+        </p>
+        <p class="text-texto-suave">Las fotos no vienen aquí: sólo existen en el kiosco. Si también las pide, se exportan desde el modo administrador del kiosco.</p>
+      </panel-dialogo>
+    }
+    @case ('suprimir') {
+      <panel-dialogo [titulo]="'Suprimir los datos de ' + nombreCompleto(a.empleado)" textoBoton="Suprimir para siempre" [peligro]="true"
+                     ejemploMotivo="Ej.: solicitud ARCO aprobada por Transparencia, oficio 123/2026"
+                     [ocupado]="guardando()" [error]="errorAccion()" (confirmar)="suprimir(a.empleado, $event)" (cancelar)="cerrar()">
+        <p><b>Esto no se puede deshacer.</b> Su nombre, apellidos, usuario y número de empleado se borran de todo el sistema, también de la bitácora.</p>
+        <p>Sus registros de entrada y salida <b>se conservan</b> (son registro laboral), pero ya no dirán de quién son.</p>
+        <p class="text-texto-suave">
+          Hazlo sólo con la autorización de la Unidad de Transparencia.
+          <panel-ayuda titulo="¿Qué son los derechos ARCO?" [texto]="AYUDA.arco" alinear="izquierda" />
+        </p>
+        <label class="flex flex-col gap-1">
+          <span>Para confirmar, escribe su usuario: <b class="font-mono">{{ a.empleado.usuario }}</b></span>
+          <input class="campo font-mono" [value]="confirmacion()" (input)="confirmacion.set(valor($event))" />
+        </label>
       </panel-dialogo>
     }
     @case ('importar') {

@@ -290,3 +290,71 @@ export function aplicarCatalogo(catalogo: CatalogoRecibido): void {
     if (catalogo.cursor) guardarEstadoLocal(CLAVE_CURSOR_CATALOGO, catalogo.cursor);
   });
 }
+
+/**
+ * CLAUDE.md 6: "Un cambio grande de desfase marca las marcas offline de ese
+ * periodo."
+ *
+ * Si al volver la conexion el reloj de Windows resulta muy distinto de como
+ * estaba la ultima vez que se hablo con la nube, alguien (o la pila del BIOS)
+ * lo movio mientras no habia internet. Las marcas que se hicieron en ese rato
+ * —las que siguen en la bandeja sin enviar— se marcan `reloj_sospechoso`
+ * ANTES de salir del kiosco. En la nube son inmutables; aqui todavia no.
+ *
+ * Devuelve cuantas marco. Nunca quita banderas, solo agrega.
+ */
+export function marcarPendientesConRelojSospechoso(): number {
+  const bd = baseDeDatos();
+  const filas = bd
+    .prepare(
+      `SELECT id, payload FROM outbox
+        WHERE tipo_registro = 'marca' AND sincronizado_en IS NULL AND rechazado_en IS NULL`,
+    )
+    .all() as { id: string; payload: string }[];
+
+  let marcadas = 0;
+  enTransaccion(() => {
+    for (const fila of filas) {
+      let paquete: { banderas?: string[] };
+      try {
+        paquete = JSON.parse(fila.payload);
+      } catch {
+        continue;
+      }
+      const banderas = Array.isArray(paquete.banderas) ? paquete.banderas : [];
+      if (banderas.includes('reloj_sospechoso')) continue;
+      paquete.banderas = [...banderas, 'reloj_sospechoso'];
+      bd.prepare('UPDATE outbox SET payload = ? WHERE id = ?').run(JSON.stringify(paquete), fila.id);
+      bd.prepare(
+        `UPDATE marcas SET banderas = CASE WHEN banderas = '' THEN 'reloj_sospechoso'
+                                           ELSE banderas || ',reloj_sospechoso' END
+          WHERE id = ?`,
+      ).run(fila.id);
+      marcadas++;
+    }
+  });
+  return marcadas;
+}
+
+/** Los rechazados mas recientes, para mostrarlos en el modo administrador. */
+export function listarRechazados(limite: number): { id: string; tipo: string; creadoEn: string; motivo: string }[] {
+  return baseDeDatos()
+    .prepare(
+      `SELECT id, tipo_registro AS tipo, creado_en AS creadoEn, COALESCE(ultimo_error, '') AS motivo
+         FROM outbox WHERE rechazado_en IS NOT NULL
+        ORDER BY creado_en DESC LIMIT ?`,
+    )
+    .all(limite) as { id: string; tipo: string; creadoEn: string; motivo: string }[];
+}
+
+/**
+ * Vuelve a poner en la cola todo lo rechazado. Sirve cuando el problema ya se
+ * arreglo en la oficina (por ejemplo, la persona que "no existia" ya se dio
+ * de alta en el panel). Lo que la nube vuelva a rechazar, regresa aqui solo.
+ */
+export function reintentarRechazados(): number {
+  return Number(
+    baseDeDatos().prepare('UPDATE outbox SET rechazado_en = NULL, ultimo_error = NULL WHERE rechazado_en IS NOT NULL').run()
+      .changes,
+  );
+}

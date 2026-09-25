@@ -695,6 +695,269 @@ await bd.query('reset role');
 }
 
 // ============================================================================
+//  0016 · Jornadas, retardos, faltas y reportes
+// ============================================================================
+//  Las horas de las marcas estan escritas A MANO en UTC, no calculadas: si el
+//  calculo del sistema tuviera un error, una prueba que usa el mismo calculo
+//  para armar sus datos lo repetiria y pasaria igual.
+//
+//  Nuevo Laredo: UTC-5 en horario de verano (hasta el 1-nov-2026, desde el
+//  8-mar-2026) y UTC-6 en invierno.
+console.log('\n--- jornadas y reportes (0016) ---');
+
+await bd.query('reset role');
+await bd.query(`select set_config('request.jwt.claims', '', true)`);
+
+const crearEmpleado = async (usuario) => (await bd.query(
+  `insert into empleados (usuario, nombre, apellido_paterno, pin_hash)
+   values ($1, 'Prueba', 'Jornadas', extensions.crypt('1234', extensions.gen_salt('bf', 4))) returning id`,
+  [usuario])).rows[0].id;
+const velador = await crearEmpleado('jvelador');
+const empMatutino = await crearEmpleado('jmatutino');
+const sabatino = await crearEmpleado('jsabatino');
+
+const { rows: [kioscoB] } = await bd.query(
+  `insert into dispositivos (nombre, token_hash) values ('Kiosco B de prueba', 'hash-b') returning id`);
+const marcar = async (empleadoId, tipo, horaUtc, kiosco = dispositivo.id) => (await bd.query(
+  `insert into marcas (id, empleado_id, dispositivo_id, tipo, hora_dispositivo, hora_estimada, monotonico_ms, arranque_id)
+   values (gen_random_uuid(), $1, $2, $3, $4, $4, 0, gen_random_uuid()) returning id`,
+  [empleadoId, kiosco, tipo, horaUtc])).rows[0].id;
+
+const idTurno = async (nombre) => (await bd.query('select id from turnos where nombre = $1', [nombre])).rows[0].id;
+await entrarComo(ID_ADMIN);
+await bd.query(`select asignar_horario($1, $2, '2026-01-01', '[{"dia":0},{"dia":1},{"dia":2},{"dia":3},{"dia":4},{"dia":5},{"dia":6}]', 'Velador de prueba')`,
+  [velador, await idTurno('Nocturno')]);
+await bd.query(`select asignar_horario($1, $2, '2026-09-01', '[{"dia":1},{"dia":2},{"dia":3},{"dia":4},{"dia":5}]', 'Matutino de prueba')`,
+  [empMatutino, await idTurno('Matutino')]);
+await bd.query(`select asignar_horario($1, $2, '2026-09-01',
+  '[{"dia":1},{"dia":2},{"dia":3},{"dia":4},{"dia":5},{"dia":6,"inicio":"07:00","fin":"13:00"}]', 'Sabados entra a las 7')`,
+  [sabatino, await idTurno('Matutino')]);
+await bd.query(`select guardar_dia_festivo('2026-09-16', 'Independencia')`);
+await bd.query(`select registrar_incidencia($1, 'vacaciones', '2026-09-10', '2026-09-10', 'Vacaciones de prueba')`, [empMatutino]);
+
+await bd.query('reset role');
+await bd.query(`select set_config('request.jwt.claims', '', true)`);
+
+// --- Velador: las dos noches de cambio de horario ---
+await marcar(velador, 'entrada', '2026-11-01T03:00:00Z'); // 22:00 CDT del 31-oct
+await marcar(velador, 'salida', '2026-11-01T12:00:00Z');  // 06:00 CST del 1-nov (se repitio la 1:00)
+await marcar(velador, 'entrada', '2026-03-08T04:00:00Z'); // 22:00 CST del 7-mar
+await marcar(velador, 'salida', '2026-03-08T11:00:00Z');  // 06:00 CDT del 8-mar (se salto la 2:00)
+
+// --- Matutino (06:00-14:00, L-V) ---
+await marcar(empMatutino, 'entrada', '2026-09-14T11:05:00Z');             // lun 06:05, kiosco A
+await marcar(empMatutino, 'salida', '2026-09-14T19:00:00Z', kioscoB.id);  // 14:00, kiosco B
+const entradaMartes = await marcar(empMatutino, 'entrada', '2026-09-15T11:20:00Z'); // mar 06:20: retardo
+await marcar(empMatutino, 'salida', '2026-09-15T19:00:00Z');
+// mie 16: festivo. jue 17: no vino.
+const entradaViernes = await marcar(empMatutino, 'entrada', '2026-09-18T11:45:00Z'); // vie 06:45: tarde de mas
+await marcar(empMatutino, 'salida', '2026-09-18T19:00:00Z');
+await marcar(empMatutino, 'entrada', '2026-09-20T15:00:00Z'); // dom 10:00: no tenia turno
+await marcar(empMatutino, 'salida', '2026-09-20T17:00:00Z');
+await marcar(empMatutino, 'entrada', '2026-09-21T11:00:00Z'); // lun 06:00
+await marcar(empMatutino, 'entrada', '2026-09-21T11:01:00Z'); // ...y otra vez "por si no quedo"
+await marcar(empMatutino, 'salida', '2026-09-21T19:00:00Z');
+await marcar(empMatutino, 'entrada', '2026-09-22T11:00:00Z'); // mar 22: nunca marco salida
+await marcar(empMatutino, 'entrada', '2026-09-11T11:00:00Z'); // vie 11: 06:00...
+const salidaComoEntrada = await marcar(empMatutino, 'entrada', '2026-09-11T19:00:00Z'); // ...y la salida quedo como ENTRADA
+
+// --- Sabatino: el sabado entra a las 7 ---
+await marcar(sabatino, 'entrada', '2026-09-19T12:05:00Z'); // sab 07:05
+await marcar(sabatino, 'salida', '2026-09-19T18:00:00Z');  // 13:00
+await marcar(sabatino, 'salida', '2026-09-14T19:00:00Z');  // lun: salida sin entrada
+
+await entrarComo(ID_ADMIN);
+const reporte = async (empleadoId, desde, hasta) =>
+  (await bd.query(`select * from reporte_asistencia($1, $2, $3) order by fecha, programado_inicio nulls last`,
+    [desde, hasta, empleadoId])).rows;
+const dia = (filas, fecha, cond = () => true) =>
+  filas.find((f) => f.fecha.toISOString().slice(0, 10) === fecha && cond(f));
+
+{
+  const noche = await reporte(velador, '2026-10-31', '2026-10-31');
+  comprobar('turno nocturno la noche en que se REPITE una hora: 9 horas reales',
+    Number(noche[0]?.horas) === 9 && noche[0]?.estado === 'a_tiempo', JSON.stringify(noche[0]?.horas));
+  comprobar('y su fin programado son las 06:00 del dia siguiente (12:00 UTC)',
+    noche[0]?.programado_fin?.toISOString() === '2026-11-01T12:00:00.000Z', noche[0]?.programado_fin?.toISOString());
+
+  const marzo = await reporte(velador, '2026-03-07', '2026-03-07');
+  comprobar('turno nocturno la noche en que se PIERDE una hora: 7 horas reales',
+    Number(marzo[0]?.horas) === 7 && marzo[0]?.estado === 'a_tiempo', JSON.stringify(marzo[0]?.horas));
+}
+
+{
+  const semana = await reporte(empMatutino, '2026-09-10', '2026-09-22');
+  const lunes = dia(semana, '2026-09-14');
+  comprobar('entrar por un kiosco y salir por otro: UNA jornada completa',
+    lunes?.estado === 'a_tiempo' && lunes?.estado_salida === 'completa' && Number(lunes?.horas) === 7.92,
+    `${lunes?.estado} ${lunes?.estado_salida} ${lunes?.horas}`);
+  comprobar('06:20 con 10 de tolerancia: retardo de 20 minutos',
+    dia(semana, '2026-09-15')?.estado === 'retardo' && dia(semana, '2026-09-15')?.minutos_tarde === 20);
+  comprobar('dia festivo: no cuenta como falta', dia(semana, '2026-09-16')?.estado === 'festivo');
+  comprobar('dia con turno y sin ningun registro: falta',
+    dia(semana, '2026-09-17')?.estado === 'falta' && dia(semana, '2026-09-17')?.entrada === null);
+  comprobar('llego 45 min tarde (mas que los 30 para falta): cuenta como falta, pero se ve a que hora llego',
+    dia(semana, '2026-09-18')?.estado === 'falta' && dia(semana, '2026-09-18')?.minutos_tarde === 45);
+  comprobar('vacaciones: incidencia, no falta', dia(semana, '2026-09-10')?.estado === 'incidencia'
+    && dia(semana, '2026-09-10')?.incidencia === 'vacaciones');
+  const domingo = dia(semana, '2026-09-20');
+  comprobar('trabajo un domingo sin turno: aparece como "sin turno" con sus horas',
+    domingo?.estado === 'sin_turno' && Number(domingo?.horas) === 2);
+  const repetido = dia(semana, '2026-09-21');
+  comprobar('dos toques de entrada seguidos: UNA jornada desde el primero',
+    repetido?.estado === 'a_tiempo' && repetido?.estado_salida === 'completa' && Number(repetido?.horas) === 8,
+    `${repetido?.estado_salida} ${repetido?.horas}`);
+  comprobar('entro y nunca marco salida: "salida no registrada", sin horas inventadas',
+    dia(semana, '2026-09-22')?.estado_salida === 'salida_no_registrada' && dia(semana, '2026-09-22')?.horas === null);
+  comprobar('la salida que quedo como entrada: se ve como salida no registrada',
+    dia(semana, '2026-09-11')?.estado_salida === 'salida_no_registrada');
+}
+
+// --- Correcciones: la marca original no se toca ---
+await bd.query(`select corregir_marca($1, 'cambiar_tipo', 'Se equivoco de boton al salir')`, [salidaComoEntrada]);
+await bd.query(`select corregir_marca($1, 'anular', 'Registro duplicado por error del kiosco')`, [entradaViernes]);
+{
+  const semana = await reporte(empMatutino, '2026-09-10', '2026-09-22');
+  const viernes11 = dia(semana, '2026-09-11');
+  comprobar('corregida a salida: jornada completa de 8 horas, marcada como corregida',
+    viernes11?.estado_salida === 'completa' && Number(viernes11?.horas) === 8 && viernes11?.corregida === true);
+  comprobar('anulada la entrada del 18: ese dia queda como falta SIN entrada',
+    dia(semana, '2026-09-18')?.estado === 'falta' && dia(semana, '2026-09-18')?.entrada === null);
+  const { rows: [original] } = await bd.query('select tipo from marcas where id = $1', [salidaComoEntrada]);
+  comprobar('la marca original sigue intacta (tipo entrada)', original.tipo === 'entrada');
+}
+await debeFallar('una marca no se anula dos veces',
+  `select corregir_marca('${entradaViernes}', 'anular', 'Segundo intento de anular')`, 'anulado');
+
+// --- Cambiar la tolerancia recalcula el historico ---
+await bd.query(`select actualizar_configuracion('tolerancia_retardo_minutos', '25', 'Prueba de recalculo')`);
+comprobar('con 25 de tolerancia, el retardo del martes 15 ya es "a tiempo" (sin tocar la marca)',
+  dia(await reporte(empMatutino, '2026-09-15', '2026-09-15'), '2026-09-15')?.estado === 'a_tiempo');
+await bd.query(`select actualizar_configuracion('tolerancia_retardo_minutos', '10', 'Regresar la tolerancia')`);
+
+// --- Horario propio por dia ---
+{
+  const semana = await reporte(sabatino, '2026-09-14', '2026-09-19');
+  comprobar('el sabado entra a las 7 (horario propio del dia): 07:05 es a tiempo',
+    dia(semana, '2026-09-19')?.estado === 'a_tiempo' && dia(semana, '2026-09-19')?.minutos_tarde === 5);
+  comprobar('una salida sin entrada aparece aparte, con su estado',
+    semana.some((f) => f.estado_salida === 'salida_sin_entrada'));
+}
+
+// --- Quien puede ver el reporte ---
+await entrarComo(ID_SUPERVISOR);
+comprobar('un supervisor puede ver el reporte', (await reporte(empMatutino, '2026-09-14', '2026-09-14')).length > 0);
+await debeFallar('un supervisor NO puede cambiar horarios',
+  `select asignar_horario('${empMatutino}', (select id from turnos limit 1), '2026-10-01', '[{"dia":1}]', 'Intento del supervisor')`,
+  'administrador');
+await bd.query('reset role');
+
+// ============================================================================
+//  0017 · ADMINISTRADORES, DERECHOS ARCO Y LIMITE DE ALTAS
+// ============================================================================
+console.log('\n--- administradores desde el panel (0017) ---');
+
+await entrarComo(ID_ADMIN);
+await debeFallar('el panel NO puede llamar registrar_administrador (solo la Edge Function)',
+  `select registrar_administrador('${ID_ADMIN}', '${ID_SUPERVISOR}', 'Alguien', 'a@b.c', 'admin', 'Intento directo desde el panel')`,
+  'permission denied');
+await debeFallar('nadie cambia su propio acceso',
+  `select cambiar_administrador('${ID_ADMIN}', 'supervisor', true, 'Quitarme el rol a mi mismo')`, 'propio');
+await debeFallar('cambiar permisos exige motivo',
+  `select cambiar_administrador('${ID_SUPERVISOR}', 'admin', true, 'corto')`, 'motivo');
+await bd.query(`select cambiar_administrador('${ID_SUPERVISOR}', 'admin', true, 'Ahora también administra el sistema')`);
+{
+  const { rows: [s] } = await bd.query(`select rol from administradores where user_id = '${ID_SUPERVISOR}'`);
+  comprobar('un admin puede subir a otro de supervisor a administrador', s.rol === 'admin');
+}
+await bd.query(`select cambiar_administrador('${ID_SUPERVISOR}', 'supervisor', true, 'Regresa a solo consultar')`);
+await entrarComo(ID_SUPERVISOR);
+await debeFallar('un supervisor NO puede cambiar permisos',
+  `select cambiar_administrador('${ID_ADMIN}', 'supervisor', true, 'Intento del supervisor')`, 'administrador');
+await bd.query('reset role');
+
+// La Edge Function llama como service_role; aqui, como postgres, que tambien pasa.
+await bd.query(`update administradores set debe_cambiar_contrasena = false where user_id = '${ID_ADMIN}'`);
+await debeFallar('registrar_administrador exige que quien actua sea admin activo',
+  `select registrar_administrador('${ID_SUPERVISOR}', '${ID_SUPERVISOR}', 'Alguien Nuevo', 'n@p.l', 'admin', 'Me doy permisos a mi mismo')`,
+  'administrador');
+await bd.query(`select set_config('request.jwt.claims', '', true)`); // como la Edge Function: sin sesion, actua p_actor
+await bd.query(`select marcar_contrasena_temporal('${ID_ADMIN}', '${ID_SUPERVISOR}', 'Olvidó su contraseña del panel')`);
+{
+  const { rows: [s] } = await bd.query(`select debe_cambiar_contrasena from administradores where user_id = '${ID_SUPERVISOR}'`);
+  comprobar('restablecer deja la contraseña como temporal', s.debe_cambiar_contrasena === true);
+  const { rows: [b] } = await bd.query(
+    `select motivo, actor from bitacora_auditoria where tabla = 'administradores' and registro_id = '${ID_SUPERVISOR}' and motivo = 'Olvidó su contraseña del panel'`);
+  comprobar('y queda en bitácora con motivo y con quién lo hizo',
+    b?.motivo === 'Olvidó su contraseña del panel' && b?.actor === ID_ADMIN);
+}
+await entrarComo(ID_SUPERVISOR);
+await bd.query('select contrasena_panel_cambiada()');
+await bd.query('reset role');
+{
+  const { rows: [s] } = await bd.query(`select debe_cambiar_contrasena from administradores where user_id = '${ID_SUPERVISOR}'`);
+  comprobar('al poner una propia, deja de ser temporal', s.debe_cambiar_contrasena === false);
+}
+
+console.log('\n--- derechos ARCO (0017) ---');
+const { rows: [arco] } = await bd.query(`
+  insert into empleados (usuario, nombre, apellido_paterno, apellido_materno, numero_empleado, pin_hash)
+  values ('rarco', 'Rosa', 'Arcos', 'Prueba', 'A-777', extensions.crypt('4821', extensions.gen_salt('bf', 4)))
+  returning id`);
+await bd.query(`
+  insert into marcas (id, empleado_id, dispositivo_id, tipo, hora_dispositivo, hora_estimada,
+                      monotonico_ms, arranque_id, foto_estado)
+  values (gen_random_uuid(), $1, $2, 'entrada', now(), now(), 1, gen_random_uuid(), 'sin_camara')`,
+  [arco.id, dispositivo.id]);
+
+await entrarComo(ID_SUPERVISOR);
+await debeFallar('un supervisor NO puede exportar los datos de una persona',
+  `select datos_de_empleado('${arco.id}', 'Solicitud de acceso ARCO')`, 'administrador');
+await entrarComo(ID_ADMIN);
+{
+  const { rows: [r] } = await bd.query(`select datos_de_empleado($1, 'Solicitud de acceso ARCO') as d`, [arco.id]);
+  comprobar('exportar ARCO trae sus datos y sus marcas',
+    r.d.empleado?.nombre === 'Rosa' && r.d.marcas.length === 1);
+  comprobar('y NO trae el hash del PIN', !JSON.stringify(r.d).includes('pin_hash'));
+}
+await debeFallar('suprimir exige escribir su usuario para confirmar',
+  `select anonimizar_empleado('${arco.id}', 'otro', 'Solicitud de supresión ARCO')`, 'usuario');
+await bd.query(`select anonimizar_empleado($1, 'RArco ', 'Solicitud de supresión ARCO')`, [arco.id]);
+await bd.query('reset role');
+{
+  const { rows: [e] } = await bd.query('select * from empleados where id = $1', [arco.id]);
+  comprobar('suprimido: ya no dice quién era',
+    e.nombre === 'Persona' && e.usuario.startsWith('anon') && e.numero_empleado === null && !e.activo && !!e.anonimizado_en);
+  const { rows: [m] } = await bd.query('select count(*)::int n from marcas where empleado_id = $1', [arco.id]);
+  comprobar('sus marcas se conservan (registro laboral)', m.n === 1);
+  const { rows: [b] } = await bd.query(
+    `select count(*)::int n from bitacora_auditoria
+      where registro_id = $1 and (coalesce(datos_antes::text, '') || coalesce(datos_despues::text, '')) ~ '(Rosa|Arcos|rarco|A-777)'`,
+    [arco.id]);
+  comprobar('y en la bitácora ya no queda su nombre', b.n === 0);
+  const { rows: [s] } = await bd.query(
+    `select count(*)::int n from bitacora_auditoria where registro_id = $1 and datos_despues ->> 'arco' = 'supresion_de_datos'`,
+    [arco.id]);
+  comprobar('la supresión misma queda anotada', s.n === 1);
+}
+await entrarComo(ID_ADMIN);
+await debeFallar('a una persona suprimida ya no se le puede reactivar',
+  `select cambiar_estado_empleado('${arco.id}', true, 'Reactivar a quien fue suprimido')`, 'suprimidos');
+await bd.query('reset role');
+
+console.log('\n--- limite de altas de kiosco (0017) ---');
+for (let i = 0; i < 10; i++) await bd.query(`select anotar_intento_enrolamiento('1.2.3.4', false)`);
+{
+  const { rows: [a] } = await bd.query(`select enrolamiento_permitido('1.2.3.4') p, enrolamiento_permitido('5.6.7.8') q`);
+  comprobar('tras 10 códigos equivocados, ese origen ya no puede intentar', a.p === false);
+  comprobar('otro origen sí puede', a.q === true);
+}
+await entrarComo(ID_ADMIN);
+await debeFallar('el panel no puede leer los intentos ni anotarlos',
+  `select anotar_intento_enrolamiento('x', true)`, 'permission denied');
+await bd.query('reset role');
+
+// ============================================================================
 //  Resultado
 // ============================================================================
 // Todo corrio dentro de una transaccion que ahora se deshace: la base local

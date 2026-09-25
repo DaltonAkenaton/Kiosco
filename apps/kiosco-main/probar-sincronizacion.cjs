@@ -136,6 +136,25 @@ app.whenReady().then(async () => {
     comprobar('una baja en el panel desactiva al empleado en el kiosco', bd.buscarPorUsuario('fortiz')?.activo === false);
 
     // ======================================================================
+    console.log('\n--- el reloj se movio sin internet (CLAUDE.md 6) ---');
+    // Se simula: la ultima vez que hablo con la nube, Windows iba 10 minutos
+    // adelantado. Ahora va bien. Lo registrado mientras tanto es dudoso.
+    bd.reiniciarSincronizacionParaPrueba();
+    bd.guardarEstadoLocal('desfase_servidor_ms', String(10 * 60 * 1000));
+    const idSinRed = bd.nuevoIdDeMarca();
+    bd.guardarMarca({ id: idSinRed, empleadoId: DGOMEZ_NUBE, usuario: 'dgomez', tipo: 'salida', reloj: bd.leerReloj(), banderas: [], foto: null });
+    bd.iniciarSincronizacion({ avisar: () => {}, obtenerEstado: () => ({ camaraDisponible: true }) });
+    for (let i = 0; i < 50 && bd.contarPendientes() > 0; i++) {
+      await bd.ciclo();
+      await esperar(200);
+    }
+    const { rows: [dudosa] } = await nube.query('select banderas from marcas where id = $1', [idSinRed]);
+    comprobar('lo registrado sin internet llega marcado como hora dudosa',
+      dudosa?.banderas?.includes('reloj_sospechoso'), JSON.stringify(dudosa));
+    const local = bd.baseDeDatos().prepare('SELECT banderas FROM marcas WHERE id = ?').get(idSinRed);
+    comprobar('y tambien en el kiosco', local.banderas.includes('reloj_sospechoso'), local.banderas);
+
+    // ======================================================================
     console.log('\n--- la oficina no reconoce el kiosco ---');
     const { rows: [{ token_hash: hashOriginal }] } = await nube.query('select token_hash from dispositivos where id = $1', [credencial.dispositivoId]);
     await nube.query(`update dispositivos set token_hash = $2 where id = $1`, [credencial.dispositivoId, 'f'.repeat(64)]);

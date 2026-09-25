@@ -1,0 +1,150 @@
+<h1 class="text-2xl font-bold">Horarios</h1>
+<p class="text-texto-suave mt-1 max-w-3xl">
+  Los turnos y el horario de cada persona. Con esto el sistema sabe a qué hora debía llegar cada quien.
+</p>
+
+@if (error(); as mensaje) {
+  <p class="mt-4 font-bold" style="color: var(--kiosko-peligro)">{{ mensaje }}</p>
+}
+
+<!-- ====================== TURNOS ====================== -->
+<section class="mt-6">
+  <div class="flex items-center gap-3">
+    <h2 class="text-xl font-bold">Turnos <panel-ayuda titulo="Turnos" [texto]="AYUDA.turnos" alinear="izquierda" /></h2>
+    @if (sesion.esAdmin()) {
+      <button type="button" class="boton-secundario !px-3 !py-1" (click)="abrirTurno(null)">+ Nuevo turno</button>
+    }
+  </div>
+  <div class="mt-3 grid gap-3 md:grid-cols-3">
+    @for (t of turnos(); track t.id) {
+      <article class="bg-superficie border-borde rounded-2xl border-2 p-4">
+        <div class="flex items-start justify-between gap-2">
+          <div>
+            <p class="text-lg font-bold">{{ t.nombre }}</p>
+            <p class="text-2xl tabular-nums">{{ hhmm(t.hora_inicio) }}–{{ hhmm(t.hora_fin) }}</p>
+            @if (t.hora_fin < t.hora_inicio) {
+              <p class="text-texto-suave text-sm">Cruza la medianoche: cuenta para el día en que empieza.</p>
+            }
+            <p class="text-texto-suave text-sm">
+              Tolerancia: {{ t.tolerancia_minutos ?? 'la de Configuración' }}{{ t.tolerancia_minutos !== null ? ' min' : '' }} ·
+              Falta: {{ t.minutos_para_falta ?? 'la de Configuración' }}{{ t.minutos_para_falta !== null ? ' min' : '' }}
+            </p>
+          </div>
+          @if (sesion.esAdmin()) {
+            <button type="button" class="boton-secundario !px-3 !py-1" (click)="abrirTurno(t)">Cambiar</button>
+          }
+        </div>
+      </article>
+    }
+  </div>
+</section>
+
+<!-- ====================== HORARIO DE CADA PERSONA ====================== -->
+<section class="mt-8">
+  <h2 class="text-xl font-bold">Horario de cada persona</h2>
+  <table class="mt-3 w-full border-collapse text-left">
+    <thead>
+      <tr class="text-texto-suave border-borde border-b text-sm uppercase tracking-wide">
+        <th class="py-2 pr-4">Quién</th>
+        <th class="py-2 pr-4">Turno</th>
+        <th class="py-2 pr-4">Días y horas</th>
+        <th class="py-2 pr-4">Desde</th>
+        @if (sesion.esAdmin()) { <th class="py-2"></th> }
+      </tr>
+    </thead>
+    <tbody>
+      @for (e of empleados(); track e.id) {
+        @let h = horarioActual().get(e.id);
+        <tr class="border-borde border-b">
+          <td class="py-2 pr-4 font-semibold">{{ e.nombre }}
+            @if (e.numero) { <span class="text-texto-suave font-normal"> · #{{ e.numero }}</span> }
+          </td>
+          @if (h) {
+            <td class="py-2 pr-4">{{ h.turno?.nombre }}</td>
+            <td class="py-2 pr-4 tabular-nums">{{ resumenDeDias(h) }}</td>
+            <td class="py-2 pr-4 tabular-nums">{{ h.vigente_desde }}</td>
+          } @else {
+            <td class="py-2 pr-4" colspan="3" style="color: var(--kiosko-atencion)">Sin horario: no se le calculan retardos ni faltas.</td>
+          }
+          @if (sesion.esAdmin()) {
+            <td class="py-2"><button type="button" class="boton-secundario !px-3 !py-1" (click)="abrirHorario(e)">{{ h ? 'Cambiar horario' : 'Poner horario' }}</button></td>
+          }
+        </tr>
+      }
+    </tbody>
+  </table>
+</section>
+
+<!-- ====================== DIALOGOS ====================== -->
+@if (turnoEditado(); as t) {
+  <panel-dialogo [titulo]="t.id ? 'Cambiar el turno ' + t.nombre : 'Nuevo turno'" textoBoton="Guardar"
+                 ejemploMotivo="Ej.: la dirección cambió el horario del turno"
+                 [ocupado]="guardando()" [error]="errorAccion()" (confirmar)="guardarTurno($event)" (cancelar)="turnoEditado.set(null)">
+    <label class="flex flex-col gap-1">Nombre
+      <input class="campo" [value]="t.nombre" (input)="cambiarTurno('nombre', valor($event))" />
+    </label>
+    <div class="flex flex-wrap gap-3">
+      <label class="flex flex-col gap-1">Entrada <input type="time" class="campo" [value]="t.inicio" (change)="cambiarTurno('inicio', valor($event))" /></label>
+      <label class="flex flex-col gap-1">Salida <input type="time" class="campo" [value]="t.fin" (change)="cambiarTurno('fin', valor($event))" /></label>
+    </div>
+    <p class="text-texto-suave text-base">Si la salida es antes que la entrada (22:00–06:00), el turno cruza la medianoche.</p>
+    <div class="flex flex-wrap gap-3">
+      <label class="flex flex-col gap-1">Tolerancia (minutos)
+        <input class="campo w-40" inputmode="numeric" placeholder="la general" [value]="t.tolerancia" (input)="cambiarTurno('tolerancia', valor($event))" />
+      </label>
+      <label class="flex flex-col gap-1">Minutos para falta
+        <input class="campo w-40" inputmode="numeric" placeholder="la general" [value]="t.falta" (input)="cambiarTurno('falta', valor($event))" />
+      </label>
+    </div>
+    <p class="text-texto-suave text-base">Déjalos vacíos para usar los de Configuración (lo normal).</p>
+    @if (t.id) {
+      <p class="rounded-xl px-4 py-2 text-base" style="background-color: rgb(234 179 8 / 0.14)">
+        Cambiar las horas de un turno cambia cómo se calculan también los días pasados de todos los que lo tienen.
+      </p>
+    }
+  </panel-dialogo>
+}
+
+@if (horarioDe(); as e) {
+  <panel-dialogo [titulo]="'Horario de ' + e.nombre" textoBoton="Guardar horario" ejemploMotivo="Ej.: cambió al turno vespertino"
+                 [ocupado]="guardando()" [error]="errorAccion()" (confirmar)="guardarHorario($event)" (cancelar)="horarioDe.set(null)">
+    <div class="flex flex-wrap gap-3">
+      <label class="flex flex-col gap-1">Turno
+        <select class="campo" (change)="turnoElegido.set(valor($event))">
+          @for (t of turnos(); track t.id) {
+            <option [value]="t.id" [selected]="t.id === turnoElegido()">{{ t.nombre }} ({{ hhmm(t.hora_inicio) }}–{{ hhmm(t.hora_fin) }})</option>
+          }
+        </select>
+      </label>
+      <label class="flex flex-col gap-1">
+        <span>A partir del <panel-ayuda titulo="¿Desde cuándo?" [texto]="AYUDA.desde" alinear="izquierda" /></span>
+        <input type="date" class="campo" [value]="desde()" (change)="desde.set(valor($event))" />
+      </label>
+    </div>
+    <div>
+      <p class="mb-1">Qué días trabaja <panel-ayuda titulo="Hora propia" [texto]="AYUDA.propio" alinear="izquierda" /></p>
+      <div class="flex flex-col gap-1">
+        @for (d of DIAS; track d.n) {
+          @let el = diasElegidos()[d.n]!;
+          <div class="flex flex-wrap items-center gap-3">
+            <label class="flex w-36 items-center gap-2">
+              <input type="checkbox" class="h-5 w-5" [checked]="el.activo" (change)="cambiarDia(d.n, { activo: marcado($event) })" />
+              {{ d.largo }}
+            </label>
+            @if (el.activo) {
+              <label class="text-texto-suave flex items-center gap-2 text-base">
+                <input type="checkbox" class="h-4 w-4" [checked]="el.propio" (change)="cambiarDia(d.n, { propio: marcado($event) })" />
+                otra hora
+              </label>
+              @if (el.propio) {
+                <input type="time" class="campo !py-1" [value]="el.inicio" (change)="cambiarDia(d.n, { inicio: valor($event) })" />
+                <span>a</span>
+                <input type="time" class="campo !py-1" [value]="el.fin" (change)="cambiarDia(d.n, { fin: valor($event) })" />
+              }
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </panel-dialogo>
+}

@@ -1,0 +1,71 @@
+# ============================================================================
+#  PRUEBAS AUTOMATICAS EN CADA CAMBIO
+# ============================================================================
+#
+#  Cada vez que se sube codigo, GitHub levanta un Supabase de juguete (el
+#  mismo que se usa en desarrollo), aplica las migraciones desde cero y corre:
+#
+#    - la revision de sintaxis de las migraciones;
+#    - las pruebas del esquema (RLS, triggers, reportes, ARCO...);
+#    - las pruebas de las Edge Functions;
+#    - y compila el panel como lo compilara Netlify.
+#
+#  Si algo sale en rojo, NO se publica en Supabase hasta arreglarlo.
+#
+#  Las pruebas del KIOSCO (`npm run probar`) no corren aqui: necesitan Windows
+#  con escritorio (DPAPI para cifrar) y se corren en la PC de desarrollo.
+#
+#  No necesita secretos: todo es local a la maquina de GitHub.
+
+name: Pruebas
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  nube-y-panel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Revisar las migraciones
+        run: npm run supabase:revisar
+
+      - name: Levantar Supabase local y aplicar todo desde cero
+        run: |
+          supabase start
+          supabase db reset
+
+      - name: Pruebas del esquema
+        run: npm run supabase:probar
+
+      - name: Pruebas de las Edge Functions
+        run: npm run supabase:funciones:probar
+
+      - name: Compilar el panel
+        run: npm run panel:compilar
+
+      - name: Apagar Supabase
+        if: always()
+        run: supabase stop --no-backup

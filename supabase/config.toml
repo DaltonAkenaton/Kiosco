@@ -432,3 +432,8 @@ verify_jwt = false
 
 [functions.latido]
 verify_jwt = false
+
+# La unica que llama el PANEL (dar acceso a otros administradores). Esta SI
+# exige la sesion de Supabase: sin JWT valido ni siquiera se ejecuta.
+[functions.administradores]
+verify_jwt = true

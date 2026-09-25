@@ -56,7 +56,7 @@ const Marca = z.object({
   empleadoId: z.uuid(),
   tipo: z.enum(['entrada', 'salida']),
   reloj: Reloj,
-  banderas: z.array(z.enum(['sin_camara', 'foto_obstruida', 'reloj_sospechoso'])).max(10),
+  banderas: z.array(z.enum(['sin_camara', 'foto_obstruida', 'foto_no_guardada', 'reloj_sospechoso'])).max(10),
   fotoHash: z.string().regex(/^[0-9a-f]{64}$/).nullable(),
   // El kiosco manda tambien `usuario` y `origen`. No se usan: el origen de
   // lo que llega por aqui es SIEMPRE 'kiosco', y el usuario se sabe por el id.

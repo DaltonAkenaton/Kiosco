@@ -60,10 +60,18 @@ export class Marco {
   /** Bitacora solo para el rol admin: la RLS no se la deja leer a un supervisor. */
   protected readonly secciones = computed(() => [
     { ruta: '/asistencia', nombre: 'Asistencia' },
+    { ruta: '/reportes', nombre: 'Reportes' },
     { ruta: '/empleados', nombre: 'Empleados' },
+    { ruta: '/horarios', nombre: 'Horarios' },
+    { ruta: '/ausencias', nombre: 'Ausencias' },
     { ruta: '/kioscos', nombre: 'Kioscos' },
     { ruta: '/configuracion', nombre: 'Configuración' },
-    ...(this.sesion.esAdmin() ? [{ ruta: '/bitacora', nombre: 'Bitácora' }] : []),
+    ...(this.sesion.esAdmin()
+      ? [
+          { ruta: '/accesos', nombre: 'Accesos' },
+          { ruta: '/bitacora', nombre: 'Bitácora' },
+        ]
+      : []),
     { ruta: '/mi-cuenta', nombre: 'Mi cuenta' },
   ]);
 

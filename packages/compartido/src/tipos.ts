@@ -39,6 +39,12 @@ export type BanderaMarca =
   | 'sin_camara'
   /** La foto salio negra o sin textura: lente tapado o cuarto a oscuras. */
   | 'foto_obstruida'
+  /**
+   * Habia camara y foto, pero no se pudo guardar cifrada (disco lleno, o
+   * Windows no ofrecio cifrado). Distinta de `sin_camara`: la camara SI
+   * funcionaba, el problema es de la computadora.
+   */
+  | 'foto_no_guardada'
   /** El reloj de Windows no cuadra con el cronometro interno: posible manipulacion. */
   | 'reloj_sospechoso'
   /** La marca vino de un kiosco que ya habia sido dado de baja. */
@@ -56,6 +62,7 @@ export type BanderaMarca =
 export const NOMBRES_DE_BANDERAS: Record<BanderaMarca, string> = {
   sin_camara: 'Sin cámara',
   foto_obstruida: 'Foto tapada',
+  foto_no_guardada: 'Foto no guardada',
   reloj_sospechoso: 'Hora dudosa',
   dispositivo_revocado: 'Kiosco dado de baja',
   manual: 'Captura manual',

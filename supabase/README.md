@@ -45,6 +45,8 @@ migración fallará y nadie sabrá por qué.
 | 0013 | `exportacion_usb` | El evento de cada exportación a USB |
 | 0014 | `enrolamiento_y_sincronizacion` | Generar códigos, revocar kioscos, contraseña del kiosco; recibir y bajar datos (lo usan las Edge Functions) |
 | 0015 | `panel_administracion` | Las acciones del panel con rol y motivo; motivo en la bitácora; rangos de la configuración |
+| 0016 | `jornadas_y_reportes` | Marcas válidas, jornadas y el reporte de asistencia (calculados al momento); horarios, ausencias, festivos y correcciones |
+| 0017 | `administradores_arco_y_limites` | Administradores desde el panel, derechos ARCO (exportar y anonimizar), límite de altas de kiosco, bandera `foto_no_guardada` |
 
 ---
 
@@ -106,9 +108,9 @@ gigabytes; después arranca en menos de un minuto.
 ```bash
 npx supabase start          # levanta Postgres y Auth locales (necesita Docker)
 npm run supabase:aplicar    # borra todo y aplica las migraciones desde cero
-npm run supabase:probar     # 84 pruebas de RLS, triggers, restricciones y acciones del panel
-npm run supabase:funciones:probar  # 53 pruebas de las Edge Functions, por HTTP
-npm run probar:sincronizacion      # un kiosco de verdad contra esta base (28)
+npm run supabase:probar     # 127 pruebas: RLS, triggers, acciones del panel, jornadas, horario de verano, ARCO
+npm run supabase:funciones:probar  # 67 pruebas de las Edge Functions, por HTTP
+npm run probar:sincronizacion      # un kiosco de verdad contra esta base
 npm run supabase:codigo            # un codigo de alta para el kiosco de desarrollo
 npx supabase stop           # cuando termines
 ```
@@ -141,18 +143,18 @@ No es exageración: una prueba de sincronización manda marcas inventadas, y una
 marca inventada en producción es un registro de asistencia falso de una persona
 real. No hay forma limpia de deshacerlo, porque las marcas no se borran.
 
-Todavía no existe ninguno de los dos proyectos: hace falta la cuenta de correo
-dedicada al sistema (CLAUDE.md 1.1). Mientras tanto, todo se prueba en local
-con Docker, que es gratis y no le puede pasar nada a nadie.
+Cómo se crean y se conectan: [docs/PASOS-FINALES.md](../docs/PASOS-FINALES.md),
+paso 3. Las migraciones y las funciones se publican con GitHub → Actions →
+**"Publicar en Supabase"** (primero pruebas, luego producción). `db push` nunca
+aplica `seed.sql`.
 
-### Cuando se creen
+El primer administrador de un proyecto nuevo:
 
 ```bash
-npx supabase link --project-ref <ref-del-proyecto>
-npx supabase db push     # aplica las migraciones pendientes
+npm run supabase:primer-admin   # pide la URL, la llave secreta (no la guarda), correo y nombre
 ```
 
-Y las llaves van en variables de entorno, **nunca en el repositorio**.
+Las llaves van en variables de entorno o secretos de GitHub, **nunca en el repositorio**.
 
 ---
 
@@ -169,6 +171,12 @@ encabezado `x-kiosco-token`. Por eso `config.toml` les pone `verify_jwt = false`
 | `catalogo` | empleados (con hash de PIN), administradores con contraseña de kiosco, configuración y última marca de cada quien. Incremental |
 | `latido` | versión, cámara, pendientes y desfase de reloj del kiosco |
 
+Y una más, la única que llama el **panel**:
+
+| Función | Para qué |
+|---|---|
+| `administradores` | dar acceso al panel (crea la cuenta de Supabase Auth con contraseña temporal) y restablecer contraseñas. Necesita service_role; exige la sesión del panel (`verify_jwt = true`) y que quien llama sea administrador |
+
 Generar un código y revocar un kiosco **no** son Edge Functions: son funciones
 de la base (`generar_codigo_enrolamiento`, `revocar_dispositivo`) que el panel
 llama con su sesión. Ver D-031.
@@ -184,6 +192,14 @@ en desarrollo (PIN 1234); un jefe que entra al panel con `jefe@prueba.local` /
 `jefe-de-prueba`; y datos de demostración (dos kioscos y cinco días de
 registros, calculados desde hoy). Nunca llegan a la nube real.
 
+## Otros archivos
+
+| Archivo | Qué es |
+|---|---|
+| `primer-administrador.mjs` | Crea el primer administrador de un proyecto nuevo |
+| `resumen-diario.sql` | El texto del correo diario al jefe (lo usa GitHub Actions) |
+| `codigo-de-prueba.mjs` | Un código de alta para el kiosco de desarrollo |
+
 ## Qué falta
 
-- **Bloque 9:** turnos, jornadas, retardos y faltas, calculados aquí (CLAUDE.md 8).
+- Turnos rotativos complejos, si el cliente los define (CLAUDE.md 14).

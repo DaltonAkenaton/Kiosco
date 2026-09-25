@@ -89,6 +89,13 @@ await bd.query(
   [EMPLEADO, `pf${corrida.replace(/[0-9]/g, 'x')}`, `F-${corrida}`],
 );
 
+// Los intentos de alta fallidos de corridas anteriores contarian contra el
+// limite de la 0017: se empieza de cero.
+await bd.query('delete from intentos_enrolamiento');
+
+// Cuentas creadas por la Edge Function `administradores`, para borrarlas al final.
+const cuentasCreadas = [];
+
 try {
   // ==========================================================================
   //  Panel: credenciales de kiosco y codigo de enrolamiento
@@ -305,6 +312,98 @@ try {
   const { rows: [enCuarentena] } = await bd.query('select en_cuarentena, banderas from marcas where id = $1', [anterior.id]);
   comprobar('lo aceptado queda en cuarentena, con su bandera',
     enCuarentena?.en_cuarentena === true && enCuarentena.banderas.includes('dispositivo_revocado'));
+
+  // ==========================================================================
+  //  administradores (la funcion del PANEL, migracion 0017)
+  // ==========================================================================
+  console.log('\n--- administradores (panel) ---');
+
+  const AUTH = 'http://127.0.0.1:54321/auth/v1';
+  const LLAVE_ANON =
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
+  const LLAVE_SERVICIO =
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU';
+
+  /** Crea una cuenta con contrasena (como la crearia Supabase Auth) y la anota como admin/supervisor. */
+  async function cuentaConContrasena(prefijo, rol) {
+    const correo = `${prefijo}-${corrida}@prueba.local`;
+    const r = await fetch(`${AUTH}/admin/users`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', apikey: LLAVE_SERVICIO, authorization: `Bearer ${LLAVE_SERVICIO}` },
+      body: JSON.stringify({ email: correo, password: 'contrasena-de-prueba', email_confirm: true }),
+    });
+    const u = await r.json();
+    cuentasCreadas.push(u.id);
+    await bd.query('insert into administradores (user_id, nombre, rol, correo) values ($1, $2, $3, $4)', [u.id, prefijo, rol, correo]);
+    return { id: u.id, correo };
+  }
+
+  /** Entra como lo hace el panel. Devuelve el JWT o null. */
+  async function entrar(correo, contrasena) {
+    const r = await fetch(`${AUTH}/token?grant_type=password`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', apikey: LLAVE_ANON },
+      body: JSON.stringify({ email: correo, password: contrasena }),
+    });
+    return r.ok ? (await r.json()).access_token : null;
+  }
+
+  async function llamarComoPanel(jwt, cuerpo) {
+    const r = await fetch(`${FUNCIONES}/administradores`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', apikey: LLAVE_ANON, ...(jwt ? { authorization: `Bearer ${jwt}` } : {}) },
+      body: JSON.stringify(cuerpo),
+    });
+    let json = null;
+    try { json = await r.json(); } catch { /* sin cuerpo */ }
+    return { estado: r.status, cuerpo: json };
+  }
+
+  const jefeFn = await cuentaConContrasena('jefefn', 'admin');
+  const superFn = await cuentaConContrasena('superfn', 'supervisor');
+  const jwtJefe = await entrar(jefeFn.correo, 'contrasena-de-prueba');
+  const jwtSuper = await entrar(superFn.correo, 'contrasena-de-prueba');
+  comprobar('el jefe de prueba puede entrar', !!jwtJefe);
+
+  const nuevoCorreo = `nuevo-${corrida}@prueba.local`;
+  const pedido = { accion: 'crear', correo: nuevoCorreo, nombre: 'Persona Nueva', rol: 'supervisor', motivo: 'Nueva jefa de turno nocturno' };
+
+  comprobar('sin sesion: rechazado', (await llamarComoPanel(null, pedido)).estado === 401);
+  comprobar('un supervisor NO puede dar acceso', (await llamarComoPanel(jwtSuper, pedido)).estado === 403);
+  comprobar('sin motivo suficiente: rechazado',
+    (await llamarComoPanel(jwtJefe, { ...pedido, motivo: 'corto' })).estado === 400);
+
+  const creado = await llamarComoPanel(jwtJefe, pedido);
+  if (creado.cuerpo?.userId) cuentasCreadas.push(creado.cuerpo.userId);
+  comprobar('un admin SI puede dar acceso: devuelve contrasena temporal de 12',
+    creado.estado === 200 && /^[A-Za-z2-9]{12}$/.test(creado.cuerpo?.contrasenaTemporal ?? ''), JSON.stringify(creado.cuerpo));
+  comprobar('la persona nueva entra con la contrasena temporal',
+    !!(await entrar(nuevoCorreo, creado.cuerpo?.contrasenaTemporal ?? 'x')));
+  const { rows: [fila] } = await bd.query(
+    'select rol, correo, debe_cambiar_contrasena from administradores where user_id = $1', [creado.cuerpo?.userId]);
+  comprobar('queda como supervisor y obligada a cambiar la contrasena',
+    fila?.rol === 'supervisor' && fila?.correo === nuevoCorreo && fila?.debe_cambiar_contrasena === true);
+  comprobar('dar acceso dos veces al mismo correo: aviso claro',
+    (await llamarComoPanel(jwtJefe, pedido)).estado === 409);
+
+  const restablecida = await llamarComoPanel(jwtJefe, { accion: 'restablecer', userId: creado.cuerpo?.userId, motivo: 'Olvido su contrasena del panel' });
+  comprobar('restablecer da otra contrasena temporal', restablecida.estado === 200 && !!restablecida.cuerpo?.contrasenaTemporal);
+  comprobar('la nueva sirve', !!(await entrar(nuevoCorreo, restablecida.cuerpo?.contrasenaTemporal ?? 'x')));
+  comprobar('la vieja ya no', !(await entrar(nuevoCorreo, creado.cuerpo?.contrasenaTemporal ?? 'x')));
+  comprobar('nadie restablece la suya por aqui (va en Mi cuenta)',
+    (await llamarComoPanel(jwtJefe, { accion: 'restablecer', userId: jefeFn.id, motivo: 'Mi propia contrasena' })).estado === 400);
+
+  // ==========================================================================
+  //  Limite de intentos de alta (0017)
+  // ==========================================================================
+  console.log('\n--- limite de altas de kiosco ---');
+  let bloqueado = null;
+  for (let i = 0; i < 15 && !bloqueado; i++) {
+    const r = await llamar('enrolar-kiosco', { codigo: 'ZZZZZZZZ', versionApp: '0.1.0' });
+    if (r.estado === 429) bloqueado = r;
+  }
+  comprobar('tras muchos codigos equivocados, el alta se frena (429)', bloqueado !== null);
+  comprobar('y lo dice en palabras', /Espera una hora/.test(bloqueado?.cuerpo?.mensaje ?? ''));
 } finally {
   // ==========================================================================
   //  Limpieza
@@ -322,7 +421,9 @@ try {
   await bd.query('delete from codigos_enrolamiento where creado_por = $1', [ADMIN]);
   await bd.query('delete from dispositivos where enrolado_por = $1', [ADMIN]);
   await bd.query('delete from empleados where id = $1', [EMPLEADO]);
-  await bd.query('delete from administradores where user_id = any($1)', [[ADMIN, SUPERVISOR]]);
+  await bd.query('delete from intentos_enrolamiento');
+  await bd.query('delete from administradores where user_id = any($1)', [[ADMIN, SUPERVISOR, ...cuentasCreadas]]);
+  await bd.query('delete from auth.users where id = any($1)', [cuentasCreadas]);
   await bd.query('delete from auth.users where id = any($1)', [[ADMIN, SUPERVISOR]]);
   await bd.query('set session_replication_role = origin');
   await bd.end();

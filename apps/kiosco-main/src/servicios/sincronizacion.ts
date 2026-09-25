@@ -51,6 +51,7 @@ import {
   guardarEstadoLocal,
   leerEstadoLocal,
   marcarEnviados,
+  marcarPendientesConRelojSospechoso,
   marcarRechazados,
   type RenglonParaSubir,
   renglonesParaSubir,
@@ -71,7 +72,11 @@ const NECESITAN_ALTA: readonly EstadoNube[] = ['sin_alta', 'revocado', 'no_recon
 
 /** La direccion de las Edge Functions segun el entorno. Vacia = no hay nube configurada. */
 export function urlDeFunciones(): string {
-  return ES_DESARROLLO ? S.urlFuncionesDesarrollo : S.urlFuncionesProduccion;
+  const url = (ES_DESARROLLO ? S.urlFuncionesDesarrollo : S.urlFuncionesProduccion).trim().replace(/\/+$/, '');
+  // Se acepta la "Project URL" tal como se copia de Supabase
+  // (https://xxxx.supabase.co): la ruta de las funciones se agrega sola.
+  if (url === '' || url.endsWith('/functions/v1')) return url;
+  return `${url}/functions/v1`;
 }
 
 export function sincronizacionDisponible(): boolean {
@@ -98,8 +103,20 @@ export function calcularDesfase(salidaMs: number, llegadaMs: number, servidorMs:
 }
 
 let desfaseConocidoMs: number | null = null;
+let ultimaMedicionMs = 0;
 
 function registrarDesfase(desfase: number): void {
+  // ¿Se movio el reloj desde la ultima vez que se hablo con la nube? Si el
+  // salto es grande, lo registrado sin internet en ese rato tiene una hora
+  // en la que no se puede confiar (CLAUDE.md 6).
+  if (desfaseConocidoMs !== null && Math.abs(desfase - desfaseConocidoMs) > CONFIG.reloj.cambioDesfaseSignificativoMs) {
+    const marcadas = marcarPendientesConRelojSospechoso();
+    console.warn(
+      `[sync] el reloj de Windows cambio ${Math.round((desfase - desfaseConocidoMs) / 1000)} s respecto a la nube; ` +
+        `${marcadas} registro(s) sin enviar quedan marcados como hora dudosa`,
+    );
+  }
+  ultimaMedicionMs = Date.now();
   desfaseConocidoMs = desfase;
   establecerDesfaseServidor(desfase);
   guardarEstadoLocal(CLAVE_DESFASE, String(desfase));
@@ -368,6 +385,14 @@ export async function ciclo(): Promise<void> {
   enCurso = true;
   let espera: number = S.intervaloPushMs;
   try {
+    // Antes de subir registros hechos sin conexion, medir el reloj con el
+    // latido (una llamada chica): si Windows se movio mientras no habia
+    // internet, esos registros deben salir ya marcados. Medirlo con la propia
+    // subida seria tarde: la respuesta llega cuando ya se fueron.
+    if (contarPendientes() > 0 && Date.now() - ultimaMedicionMs > S.intervaloPushMs && !sinPermisoDeLaNube()) {
+      await latir(credencial);
+      ultimoLatidoMs = Date.now();
+    }
     await subir(credencial);
 
     const ahora = Date.now();
@@ -432,6 +457,12 @@ export async function enrolar(codigo: string): Promise<ResultadoEnrolamiento> {
     return { ok: false, mensaje: 'No hay conexión con la oficina. Revisa el internet y vuelve a intentar.' };
   }
 
+  if (r.estado === 429) {
+    return {
+      ok: false,
+      mensaje: 'Se escribieron demasiados códigos equivocados. Espera una hora y vuelve a intentar con un código nuevo.',
+    };
+  }
   if (r.estado === 400) {
     return {
       ok: false,
@@ -509,4 +540,6 @@ export function reiniciarSincronizacionParaPrueba(): void {
   fallosSeguidos = 0;
   ultimoPullMs = 0;
   ultimoLatidoMs = 0;
+  ultimaMedicionMs = 0;
+  desfaseConocidoMs = null;
 }

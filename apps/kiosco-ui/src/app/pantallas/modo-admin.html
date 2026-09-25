@@ -211,6 +211,88 @@
       </div>
     }
 
+    <!-- ====================== ESTADO DE ESTE KIOSCO ====================== -->
+    @if (estadoKiosco(); as ek) {
+      <div class="mx-8 mt-3 flex flex-col gap-2 text-base">
+        <p class="text-texto-suave flex flex-wrap items-center gap-x-4 gap-y-2">
+          <span>Versión del programa: <b class="text-texto">{{ ek.version }}</b></span>
+          @if (ek.actualizacionLista && s.rol === 'admin') {
+            <span class="font-bold" style="color: var(--kiosko-atencion)">Hay una versión nueva lista: {{ ek.actualizacionLista }}</span>
+            <button
+              type="button"
+              class="bg-superficie border-borde hover:bg-borde boton-tactil rounded-xl border-2 px-4 py-2 font-bold"
+              (click)="instalarActualizacion()"
+            >
+              Instalar la versión nueva
+            </button>
+            <kiosco-ayuda titulo="Versión nueva" [texto]="AYUDA.actualizacion" alinear="izquierda" />
+          }
+        </p>
+        @if (ek.fotosConLlaveAnterior > 0 && s.rol === 'admin') {
+          <div class="rounded-2xl px-5 py-3" style="background-color: rgb(234 179 8 / 0.14); border: 2px solid var(--kiosko-atencion)">
+            <p class="font-bold" style="color: var(--kiosko-atencion)">
+              {{ ek.fotosConLlaveAnterior }} foto(s) guardadas con un candado anterior
+              <kiosco-ayuda titulo="Fotos con candado anterior" [texto]="AYUDA.llaveAnterior" alinear="izquierda" />
+            </p>
+            <p class="mt-1">Escribe la contraseña de recuperación para volver a abrirlas:</p>
+            <div class="mt-2 flex flex-wrap items-center gap-3">
+              <input
+                type="password"
+                class="border-borde rounded-xl border-2 bg-transparent px-3 py-2"
+                autocomplete="off"
+                [value]="contrasenaRecuperar()"
+                (input)="contrasenaRecuperar.set(valorDe($event))"
+                (keydown.enter)="recuperarFotos()"
+              />
+              <button
+                type="button"
+                class="bg-superficie border-borde hover:bg-borde boton-tactil rounded-xl border-2 px-4 py-2 font-bold"
+                [disabled]="recuperando() || !contrasenaRecuperar()"
+                (click)="recuperarFotos()"
+              >
+                {{ recuperando() ? 'Abriendo… (puede tardar)' : 'Recuperar las fotos' }}
+              </button>
+            </div>
+          </div>
+        }
+        @if (ek.totalRechazados > 0) {
+          <div class="rounded-2xl px-5 py-3" style="background-color: rgb(234 179 8 / 0.14); border: 2px solid var(--kiosko-atencion)">
+            <p class="flex flex-wrap items-center gap-3">
+              <b style="color: var(--kiosko-atencion)">{{ ek.totalRechazados }} registro(s) que la oficina no aceptó</b>
+              <kiosco-ayuda titulo="Registros no aceptados" [texto]="AYUDA.rechazados" alinear="izquierda" />
+              <button type="button" class="boton-tactil underline underline-offset-4" (click)="verRechazados.set(!verRechazados())">
+                {{ verRechazados() ? 'Ocultar' : 'Ver cuáles' }}
+              </button>
+              <button
+                type="button"
+                class="bg-superficie border-borde hover:bg-borde boton-tactil rounded-xl border-2 px-4 py-2 font-bold"
+                (click)="reintentarRechazados()"
+              >
+                Volver a enviarlos
+              </button>
+            </p>
+            @if (verRechazados()) {
+              <table class="mt-2 w-full text-left">
+                <thead><tr class="text-texto-suave"><th class="pr-4">Cuándo</th><th class="pr-4">Qué</th><th>Por qué no</th></tr></thead>
+                <tbody>
+                  @for (r of ek.rechazados; track r.id) {
+                    <tr class="border-borde border-t">
+                      <td class="py-1 pr-4 tabular-nums">{{ fechaCorta(r.creadoEn) }}</td>
+                      <td class="py-1 pr-4">{{ r.tipo === 'marca' ? 'Entrada o salida' : 'Aviso del kiosco' }}</td>
+                      <td class="py-1">{{ motivoDeRechazo(r.motivo) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </div>
+        }
+        @if (avisoEstado(); as aviso) {
+          <p class="font-bold" style="color: var(--kiosko-entrada)">{{ aviso }}</p>
+        }
+      </div>
+    }
+
     <!-- ====================== FILTROS ====================== -->
     <div class="flex shrink-0 flex-wrap items-end gap-4 px-8 py-4 text-lg">
       <label class="flex flex-col gap-1">

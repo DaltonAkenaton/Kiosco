@@ -88,13 +88,16 @@
           <th class="py-2 pr-4">Qué</th>
           <th class="py-2 pr-4">Kiosco</th>
           <th class="py-2 pr-4">Foto</th>
-          <th class="py-2">Revisión</th>
+          <th class="py-2 pr-4">Revisión</th>
+          <th class="py-2"></th>
         </tr>
       </thead>
       <tbody>
         @for (m of marcas(); track m.id) {
           @let foto = estadoDeFoto(m.foto_estado);
-          <tr class="border-borde border-b">
+          @let anulada = this.anulada(m);
+          @let tipo = tipoVigente(m);
+          <tr class="border-borde border-b" [class.opacity-50]="anulada">
             <td class="py-2 pr-4 tabular-nums">{{ fecha(m.hora_estimada, zona()) }}</td>
             <td class="py-2 pr-4 font-bold tabular-nums">{{ hora(m.hora_estimada, zona()) }}</td>
             <td class="py-2 pr-4">
@@ -103,8 +106,14 @@
                 <span class="text-texto-suave"> · #{{ m.empleado?.numero_empleado }}</span>
               }
             </td>
-            <td class="py-2 pr-4 font-bold" [style.color]="m.tipo === 'entrada' ? 'var(--kiosko-entrada)' : 'var(--kiosko-salida)'">
-              {{ m.tipo === 'entrada' ? '→ ENTRADA' : '← SALIDA' }}
+            <td class="py-2 pr-4 font-bold" [class.line-through]="anulada"
+                [style.color]="tipo === 'entrada' ? 'var(--kiosko-entrada)' : 'var(--kiosko-salida)'">
+              {{ tipo === 'entrada' ? '→ ENTRADA' : '← SALIDA' }}
+              @if (anulada) {
+                <span class="text-texto-suave block text-sm font-normal no-underline">Anulado</span>
+              } @else if (tipo !== m.tipo) {
+                <span class="text-texto-suave block text-sm font-normal">Corregido (decía {{ m.tipo === 'entrada' ? 'entrada' : 'salida' }})</span>
+              }
             </td>
             <td class="py-2 pr-4">{{ m.origen === 'manual' ? 'Captura manual' : (m.dispositivo?.nombre ?? '—') }}</td>
             <td class="py-2 pr-4" [style.color]="foto.color">
@@ -132,6 +141,11 @@
                     }
                   </span>
                 }
+              }
+            </td>
+            <td class="py-2">
+              @if (!anulada) {
+                <button type="button" class="boton-secundario !px-3 !py-1 text-sm" (click)="abrirCorreccion(m)">Corregir</button>
               }
             </td>
           </tr>
@@ -173,5 +187,24 @@
         <input type="time" class="campo" [value]="m.hora" (change)="cambiarManual('hora', valor($event))" />
       </label>
     </div>
+  </panel-dialogo>
+}
+
+<!-- ====================== CORREGIR UN REGISTRO ====================== -->
+@if (corrigiendo(); as m) {
+  @let tipo = tipoVigente(m);
+  <panel-dialogo [titulo]="'Corregir el registro de ' + nombreCompleto(m)" textoBoton="Guardar corrección"
+                 [peligro]="accionCorreccion() === 'anular'" ejemploMotivo="Ej.: se equivocó de botón al salir"
+                 [ocupado]="guardando()" [error]="errorAccion()" (confirmar)="guardarCorreccion(m, $event)" (cancelar)="corrigiendo.set(null)">
+    <p>{{ fecha(m.hora_estimada, zona()) }} a las <b>{{ hora(m.hora_estimada, zona()) }}</b>, registrado como <b>{{ tipo === 'entrada' ? 'ENTRADA' : 'SALIDA' }}</b>.</p>
+    <label class="flex items-start gap-3">
+      <input type="radio" name="accion" class="mt-1 h-5 w-5" [checked]="accionCorreccion() === 'cambiar_tipo'" (change)="accionCorreccion.set('cambiar_tipo')" />
+      <span><b>Era {{ tipo === 'entrada' ? 'SALIDA' : 'ENTRADA' }}</b>: la persona picó el botón equivocado.</span>
+    </label>
+    <label class="flex items-start gap-3">
+      <input type="radio" name="accion" class="mt-1 h-5 w-5" [checked]="accionCorreccion() === 'anular'" (change)="accionCorreccion.set('anular')" />
+      <span><b>No debe contar</b>: está repetido o se hizo por error. Se anula.</span>
+    </label>
+    <p class="text-texto-suave text-base">El registro original no se borra ni se cambia: la corrección se guarda aparte, con tu nombre y el motivo, y los reportes la toman en cuenta.</p>
   </panel-dialogo>
 }

@@ -77,7 +77,9 @@ export type TipoDeEvento =
    * queda ademas en `accesos_foto`; este evento cubre la exportacion entera,
    * incluso cuando no llevaba ninguna foto (el CSV tambien son datos personales).
    */
-  | 'exportacion_usb';
+  | 'exportacion_usb'
+  /** Con la contrasena de recuperacion se volvieron a abrir fotos de una llave anterior. */
+  | 'fotos_recuperadas';
 
 /**
  * Deja constancia de un evento.
