@@ -247,6 +247,11 @@ sólo cuando hay una versión descargada). Ver D-037.
   (CLAUDE.md 16). Se escribe una migración nueva en `supabase/migrations/`,
   se prueba en local, y se publica con Actions → "Publicar en Supabase":
   primero **pruebas**, luego **produccion**.
+- **El access token de Supabase vence** (el primero, el **25-09-2027**). Al
+  vencer sólo falla Actions → "Publicar en Supabase" (el kiosco, el panel, los
+  respaldos y el correo no lo usan). Renovarlo: Supabase → tu icono → Account
+  preferences → Access Tokens → generar uno nuevo → pegarlo en GitHub en el
+  secreto `SUPABASE_ACCESS_TOKEN`.
 - **La llave `service_role`** no se guarda en ningún lado. Si se filtró:
   Project Settings → API → regenerarla (las Edge Functions toman la nueva solas).
 
