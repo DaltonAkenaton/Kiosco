@@ -572,7 +572,7 @@ export const SINCRONIZACION = {
    * Es publica (no es una llave). Despues: `npm run empaquetar`.
    */
   urlFuncionesDesarrollo: 'http://127.0.0.1:54321/functions/v1',
-  urlFuncionesProduccion: '',
+  urlFuncionesProduccion: 'https://ref-de-produccion.supabase.co',
 
   /**
    * Tras guardar una marca, en cuanto intenta subirla. No es inmediato para
