@@ -1,4 +1,4 @@
-# Panel del jefe
+# Panel administrativo
 
 La página web desde la que el jefe revisa la asistencia y administra el sistema
 desde su oficina. Angular + Supabase (Auth y RLS). Se publicará en Netlify

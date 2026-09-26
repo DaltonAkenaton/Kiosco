@@ -21,7 +21,7 @@ import { Sesion } from '../servicios/sesion';
       >
         <div>
           <p class="text-lg font-bold">Control de Asistencia</p>
-          <p class="text-sm opacity-80">Panel del jefe</p>
+          <p class="text-sm opacity-80">Panel administrativo</p>
         </div>
 
         <nav class="flex flex-wrap gap-2">

@@ -152,7 +152,7 @@ export const SEGURIDAD_PIN = {
    * tiene 10 000 combinaciones; probar una mas no acerca a nadie). Lo que de
    * verdad protege es el retardo creciente de abajo y, sobre todo, la foto.
    *
-   * Este valor tambien sera ajustable desde el panel del jefe, en la tabla
+   * Este valor tambien sera ajustable desde el panel administrativo, en la tabla
    * `configuracion` de Supabase. Aqui vive solo el valor por defecto.
    */
   intentosFallidosMaximos: 4,

@@ -24,7 +24,7 @@ import { Sesion } from '../servicios/sesion';
         (submit)="$event.preventDefault(); entrar()"
       >
         <div>
-          <h1 class="text-3xl font-bold">Panel del jefe</h1>
+          <h1 class="text-3xl font-bold">Panel administrativo</h1>
           <p class="text-texto-suave mt-1 text-lg">Control de Asistencia</p>
         </div>
 

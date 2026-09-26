@@ -139,7 +139,7 @@ export function umbralDeRelojMs(): number {
  * curso). Si en produccion alguien lograra invocarlo, podria poner el kiosco
  * en modo 'lista' y dejar los nombres de todo el personal a la vista.
  *
- * En el kiosco real, el modo se cambia desde el panel del jefe y baja por
+ * En el kiosco real, el modo se cambia desde el panel administrativo y baja por
  * sincronizacion — nunca desde la pantalla que tiene enfrente el empleado.
  *
  * Devuelve `true` si el cambio se aplico.
