@@ -37,6 +37,8 @@ interface Fila {
   banderas: string[];
   en_cuarentena: boolean;
   corregida: boolean;
+  /** Minutos que repuso quedandose despues de su hora de salida (migracion 0019). */
+  minutos_repuestos: number | null;
 }
 
 /** Cada estado en palabras, con su color y su explicacion (ⓘ). */
@@ -45,14 +47,19 @@ export const ESTADOS: Record<string, { texto: string; color: string; ayuda: stri
   retardo: {
     texto: 'Retardo',
     color: 'var(--kiosko-atencion)',
-    ayuda: 'Entró después de la tolerancia, pero antes de los minutos para falta (se cambian en Configuración).',
+    ayuda: 'Llegó después de la tolerancia. Si se quedó más tiempo al salir, aquí mismo dice cuánto repuso.',
+  },
+  retardo_mayor: {
+    texto: 'Retardo mayor',
+    color: 'var(--kiosko-salida)',
+    ayuda: 'Llegó muy tarde (más que los minutos para "retardo mayor" de Configuración), pero SÍ vino: no es falta. Si se quedó más tiempo al salir, aquí dice cuánto repuso.',
   },
   falta: {
     texto: 'Falta',
     color: 'var(--kiosko-peligro)',
-    ayuda: 'Tenía turno y no registró entrada, o entró tan tarde que ya cuenta como falta. Si fue una ausencia justificada, regístrala en Ausencias.',
+    ayuda: 'Tenía turno y no vino (terminó su turno sin registrar entrada). Si fue por enfermedad, un accidente u otra razón válida, regístralo en Ausencias como falta justificada o incapacidad: deja de contar como falta.',
   },
-  pendiente: { texto: 'Pendiente', color: 'var(--kiosko-texto-suave)', ayuda: 'Todavía no es la hora (o no ha pasado el margen para llegar).' },
+  pendiente: { texto: 'Todavía no llega', color: 'var(--kiosko-texto-suave)', ayuda: 'Su turno ya empezó o está por empezar y aún no registra entrada. Puede llegar tarde: si termina su turno sin llegar, será falta.' },
   incidencia: { texto: 'Ausencia justificada', color: 'var(--kiosko-texto)', ayuda: 'Vacaciones, incapacidad, permiso...: no cuenta como falta.' },
   festivo: { texto: 'Día festivo', color: 'var(--kiosko-texto)', ayuda: 'No se esperaba a nadie ese día.' },
   sin_turno: {
@@ -89,6 +96,7 @@ interface Resumen {
   programados: number;
   aTiempo: number;
   retardos: number;
+  retardosMayores: number;
   faltas: number;
   justificadas: number;
   sinSalida: number;
@@ -122,8 +130,10 @@ export class Reportes implements OnInit {
   protected readonly hora = hora;
 
   protected readonly AYUDA_RECALCULO =
-    'Este reporte se calcula en el momento con la configuración de hoy. Si cambias la tolerancia o los ' +
-    'minutos para falta, los días pasados se vuelven a calcular solos. Los registros no se tocan.';
+    'Este reporte se calcula en el momento. Si cambias la tolerancia en Configuración, los días pasados se ' +
+    'vuelven a calcular solos; los registros no se tocan. En cambio, si cambias el HORARIO de un turno, ' +
+    'eso vale a partir del día que elijas: los días anteriores se siguen calculando con el horario que tenían. ' +
+    'Falta es sólo no venir; llegar tarde es retardo (o "retardo mayor" si fue mucho), y se muestra si repuso el tiempo.';
 
   protected readonly resumen = computed<Resumen[]>(() => {
     const porPersona = new Map<string, Resumen>();
@@ -131,10 +141,11 @@ export class Reportes implements OnInit {
       const r =
         porPersona.get(f.empleado_id) ??
         ({ empleadoId: f.empleado_id, nombre: this.nombre(f.empleado_id), programados: 0, aTiempo: 0, retardos: 0,
-           faltas: 0, justificadas: 0, sinSalida: 0, fueraDeHorario: 0, horas: 0 } satisfies Resumen);
+           retardosMayores: 0, faltas: 0, justificadas: 0, sinSalida: 0, fueraDeHorario: 0, horas: 0 } satisfies Resumen);
       if (f.estado !== 'sin_turno' && f.estado !== 'festivo' && f.estado !== 'pendiente') r.programados++;
       if (f.estado === 'a_tiempo') r.aTiempo++;
-      if (f.estado === 'retardo') r.retardos++;
+      if (f.estado === 'retardo' || f.estado === 'retardo_mayor') r.retardos++;
+      if (f.estado === 'retardo_mayor') r.retardosMayores++;
       if (f.estado === 'falta') r.faltas++;
       if (f.estado === 'incidencia') r.justificadas++;
       if (f.estado === 'sin_turno') r.fueraDeHorario++;
@@ -167,8 +178,13 @@ export class Reportes implements OnInit {
       this.error.set('No se pudo calcular el reporte. Revisa el internet y vuelve a intentar.');
       return;
     }
+    // Por dia; dentro del dia, por la hora en que empieza el turno (el
+    // matutino antes que el nocturno) y luego por nombre.
     const filas = (data as Fila[]).sort(
-      (a, b) => a.fecha.localeCompare(b.fecha) || this.nombre(a.empleado_id).localeCompare(this.nombre(b.empleado_id)),
+      (a, b) =>
+        a.fecha.localeCompare(b.fecha) ||
+        (a.programado_inicio ?? a.entrada ?? '').localeCompare(b.programado_inicio ?? b.entrada ?? '') ||
+        this.nombre(a.empleado_id).localeCompare(this.nombre(b.empleado_id)),
     );
     this.filas.set(filas);
   }
@@ -184,6 +200,14 @@ export class Reportes implements OnInit {
 
   protected numero(id: string): string {
     return this.empleados().get(id)?.numero ?? '';
+  }
+
+  /** El dia completo, para el encabezado de cada dia: "lunes 21 de septiembre". */
+  protected fechaLarga(iso: string): string {
+    const texto = new Date(`${iso}T12:00:00Z`).toLocaleDateString('es-MX', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC',
+    });
+    return texto.charAt(0).toUpperCase() + texto.slice(1);
   }
 
   protected fechaCorta(iso: string): string {
@@ -204,11 +228,11 @@ export class Reportes implements OnInit {
   protected descargarDias(): void {
     const z = this.zona();
     const encabezado = ['fecha', 'numero', 'nombre', 'turno', 'entrada_programada', 'entrada', 'salida', 'minutos_tarde',
-      'horas', 'estado', 'salida_estado', 'ausencia', 'revision'];
+      'minutos_repuestos', 'horas', 'estado', 'salida_estado', 'ausencia', 'revision'];
     const renglones = this.filas().map((f) => [
       f.fecha, this.numero(f.empleado_id), this.nombre(f.empleado_id), f.turno ?? '',
       f.programado_inicio ? hora(f.programado_inicio, z) : '', f.entrada ? hora(f.entrada, z) : '',
-      f.salida ? hora(f.salida, z) : '', f.minutos_tarde ?? '', f.horas ?? '',
+      f.salida ? hora(f.salida, z) : '', f.minutos_tarde ?? '', f.minutos_repuestos ?? '', f.horas ?? '',
       ESTADOS[f.estado]?.texto ?? f.estado, f.estado_salida ? (ESTADOS_DE_SALIDA[f.estado_salida]?.texto || 'Completa') : '',
       f.incidencia ? (INCIDENCIAS[f.incidencia] ?? f.incidencia) : '',
       [...f.banderas.map((b) => (NOMBRES_DE_BANDERAS as Record<string, string>)[b] ?? b), f.corregida ? 'Corregida' : '', f.en_cuarentena ? 'En cuarentena' : '']
@@ -218,10 +242,10 @@ export class Reportes implements OnInit {
   }
 
   protected descargarResumen(): void {
-    const encabezado = ['numero', 'nombre', 'dias_con_turno', 'a_tiempo', 'retardos', 'faltas', 'ausencias_justificadas',
+    const encabezado = ['numero', 'nombre', 'dias_con_turno', 'a_tiempo', 'retardos', 'de_ellos_mayores', 'faltas', 'ausencias_justificadas',
       'sin_registrar_salida', 'fuera_de_horario', 'horas_trabajadas'];
     const renglones = this.resumen().map((r) => [
-      this.numero(r.empleadoId), r.nombre, r.programados, r.aTiempo, r.retardos, r.faltas, r.justificadas,
+      this.numero(r.empleadoId), r.nombre, r.programados, r.aTiempo, r.retardos, r.retardosMayores, r.faltas, r.justificadas,
       r.sinSalida, r.fueraDeHorario, r.horas.toFixed(2),
     ]);
     this.descargar(`asistencia-resumen_${this.desde()}_a_${this.hasta()}.csv`, [encabezado, ...renglones]);

@@ -79,7 +79,13 @@ export class Horarios implements OnInit {
   protected readonly DIAS = DIAS;
 
   // --- Editar un turno ---
-  protected readonly turnoEditado = signal<{ id: string | null; nombre: string; inicio: string; fin: string; tolerancia: string; falta: string } | null>(null);
+  protected readonly turnoEditado = signal<{
+    id: string | null; nombre: string; inicio: string; fin: string; tolerancia: string; falta: string;
+    /** A partir de que dia vale el horario nuevo (migracion 0019). */
+    aPartirDe: string;
+    /** Las horas que tenia, para saber si cambiaron. */
+    inicioAntes: string; finAntes: string;
+  } | null>(null);
 
   // --- Cambiar el horario de alguien ---
   protected readonly horarioDe = signal<{ id: string; nombre: string } | null>(null);
@@ -92,10 +98,10 @@ export class Horarios implements OnInit {
 
   protected readonly AYUDA = {
     turnos:
-      'Un turno es una plantilla para asignar rápido: nombre y horas. La tolerancia y los minutos para falta ' +
+      'Un turno es una plantilla para asignar rápido: nombre y horas. La tolerancia y los minutos para "retardo mayor" ' +
       'normalmente se dejan vacíos, y entonces se usan los de Configuración. Llénalos sólo si ESE turno necesita ' +
-      'otra regla. Ojo: cambiar las horas de un turno cambia también cómo se calculan los días pasados de todos ' +
-      'los que lo tienen; si sólo una persona cambió de horario, cambia su horario abajo.',
+      'otra regla. Si cambias las horas de un turno, eliges a partir de qué día: los días anteriores se siguen ' +
+      'calculando con el horario que tenían. Si sólo una persona cambió de horario, cambia su horario abajo.',
     propio: 'Si ese día la persona entra o sale a otra hora que la del turno, escríbela aquí. Vacío = la del turno.',
     desde:
       'El horario nuevo cuenta desde ese día. Los días anteriores se siguen calculando con el horario que tenía ' +
@@ -170,12 +176,19 @@ export class Horarios implements OnInit {
     this.turnoEditado.set(
       t
         ? { id: t.id, nombre: t.nombre, inicio: this.hhmm(t.hora_inicio), fin: this.hhmm(t.hora_fin),
-            tolerancia: t.tolerancia_minutos?.toString() ?? '', falta: t.minutos_para_falta?.toString() ?? '' }
-        : { id: null, nombre: '', inicio: '06:00', fin: '14:00', tolerancia: '', falta: '' },
+            tolerancia: t.tolerancia_minutos?.toString() ?? '', falta: t.minutos_para_falta?.toString() ?? '',
+            aPartirDe: hoyEn(this.sesion.zona()), inicioAntes: this.hhmm(t.hora_inicio), finAntes: this.hhmm(t.hora_fin) }
+        : { id: null, nombre: '', inicio: '06:00', fin: '14:00', tolerancia: '', falta: '',
+            aPartirDe: '', inicioAntes: '', finAntes: '' },
     );
   }
 
-  protected cambiarTurno(campo: 'nombre' | 'inicio' | 'fin' | 'tolerancia' | 'falta', valor: string): void {
+  /** ¿Se estan cambiando las HORAS de un turno que ya existia? Entonces se pregunta desde cuando. */
+  protected cambianLasHoras(t: { id: string | null; inicio: string; fin: string; inicioAntes: string; finAntes: string }): boolean {
+    return !!t.id && (t.inicio !== t.inicioAntes || t.fin !== t.finAntes);
+  }
+
+  protected cambiarTurno(campo: 'nombre' | 'inicio' | 'fin' | 'tolerancia' | 'falta' | 'aPartirDe', valor: string): void {
     this.turnoEditado.update((t) => (t ? { ...t, [campo]: valor } : t));
   }
 
@@ -193,6 +206,8 @@ export class Horarios implements OnInit {
       this.sesion.bd.rpc('guardar_turno', {
         p_id: t.id, p_nombre: t.nombre, p_inicio: t.inicio, p_fin: t.fin,
         p_tolerancia: tol, p_falta: falta, p_motivo: motivo,
+        // Sin cambio de horas, no hay "a partir de": se corrige tal cual.
+        p_desde: this.cambianLasHoras(t) ? t.aPartirDe || null : null,
       }),
       () => this.turnoEditado.set(null),
     );

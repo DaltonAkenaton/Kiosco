@@ -92,15 +92,22 @@
       <label class="flex flex-col gap-1">Tolerancia (minutos)
         <input class="campo w-40" inputmode="numeric" placeholder="la general" [value]="t.tolerancia" (input)="cambiarTurno('tolerancia', valor($event))" />
       </label>
-      <label class="flex flex-col gap-1">Minutos para falta
+      <label class="flex flex-col gap-1">Minutos para "retardo mayor"
         <input class="campo w-40" inputmode="numeric" placeholder="la general" [value]="t.falta" (input)="cambiarTurno('falta', valor($event))" />
       </label>
     </div>
     <p class="text-texto-suave text-base">Déjalos vacíos para usar los de Configuración (lo normal).</p>
-    @if (t.id) {
-      <p class="rounded-xl px-4 py-2 text-base" style="background-color: rgb(234 179 8 / 0.14)">
-        Cambiar las horas de un turno cambia cómo se calculan también los días pasados de todos los que lo tienen.
-      </p>
+    @if (cambianLasHoras(t)) {
+      <div class="aviso aviso-atencion flex flex-col gap-2 text-base font-normal">
+        <label class="flex flex-col gap-1">
+          <b>¿A partir de qué día vale el horario nuevo?</b>
+          <input type="date" class="campo w-52" [value]="t.aPartirDe" (change)="cambiarTurno('aPartirDe', valor($event))" />
+        </label>
+        <span>
+          Los días <b>anteriores</b> se siguen calculando con el horario de antes
+          ({{ t.inicioAntes }}–{{ t.finAntes }}), así nadie aparece con retardos que no tuvo.
+        </span>
+      </div>
     }
   </panel-dialogo>
 }

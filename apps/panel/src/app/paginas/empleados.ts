@@ -25,7 +25,21 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { desempatarUsuario, generarUsuario } from '@kiosko/compartido';
 import { Ayuda } from '../componentes/ayuda';
 import { Dialogo, mensajeDeError } from '../componentes/dialogo';
+import { leerHojaDeExcel } from '../servicios/leer-excel';
 import { Sesion } from '../servicios/sesion';
+import { fecha, hora } from '../textos';
+
+/** Lo que devuelve `datos_de_empleado` (migracion 0017). */
+interface DatosArco {
+  generado_en: string;
+  aviso: string;
+  empleado: Record<string, unknown> & { nombre: string; apellido_paterno: string; apellido_materno: string };
+  marcas: { tipo: string; origen: string; hora: string; kiosco: string | null; foto_estado: string; banderas: string[] }[];
+  correcciones: { accion: string; motivo: string; creado_en: string }[];
+  ausencias: { tipo: string; desde: string; hasta: string; notas: string }[];
+  horarios: { turno: string; desde: string; hasta: string | null }[];
+  consultas_de_sus_fotos: { accion: string; cuando: string }[];
+}
 
 interface Empleado {
   id: string;
@@ -83,6 +97,11 @@ export class Empleados implements OnInit {
   protected readonly errorAccion = signal<string | null>(null);
   protected readonly pines = signal<PinParaEntregar[]>([]);
 
+  /** ARCO: la constancia en pantalla, lista para imprimir o guardar como PDF. */
+  protected readonly constancia = signal<{ empleado: Empleado; datos: DatosArco } | null>(null);
+  protected readonly fecha = fecha;
+  protected readonly hora = hora;
+
   /** Importar: el nombre del archivo elegido, para mostrarlo en español. */
   protected readonly nombreArchivo = signal('');
 
@@ -102,11 +121,6 @@ export class Empleados implements OnInit {
     pinTemporal:
       'Este PIN lo dio el jefe (por ejemplo, porque la persona olvidó el suyo). Funciona igual que ' +
       'cualquier otro.',
-    importar:
-      'Para dar de alta a muchos a la vez. En Excel, haz una hoja con las columnas nombre, ' +
-      'apellido_paterno, apellido_materno y numero (el número de empleado, si lo tienen). Guárdala con ' +
-      '"Guardar como" > "CSV UTF-8". Aquí se revisa antes de guardar, y al final se muestran los PIN de ' +
-      'todos para imprimirlos.',
     arco:
       'La ley de protección de datos personales le da a cada persona derecho a saber qué datos suyos ' +
       'tiene el sistema (Acceso), a corregirlos (Rectificación), a pedir que se borren (Cancelación) ' +
@@ -298,12 +312,50 @@ export class Empleados implements OnInit {
       return r;
     });
     if (!ok || !datos) return;
-    const archivo = new Blob([JSON.stringify(datos, null, 2)], { type: 'application/json' });
+    this.constancia.set({ empleado, datos: datos as DatosArco });
+  }
+
+  /**
+   * Ademas de la hoja impresa, el archivo con TODO en formato de datos
+   * (JSON). La ley pide entregar los datos "en un formato estructurado y
+   * comunmente utilizado" si la persona lo solicita asi (portabilidad).
+   */
+  protected descargarArchivoArco(): void {
+    const c = this.constancia();
+    if (!c) return;
+    const archivo = new Blob([JSON.stringify(c.datos, null, 2)], { type: 'application/json' });
     const enlace = document.createElement('a');
     enlace.href = URL.createObjectURL(archivo);
-    enlace.download = `datos-${empleado.usuario}-${new Date().toISOString().slice(0, 10)}.json`;
+    enlace.download = `datos-${c.empleado.usuario}-${new Date().toISOString().slice(0, 10)}.json`;
     enlace.click();
     URL.revokeObjectURL(enlace.href);
+  }
+
+  protected imprimirConstancia(): void {
+    window.print();
+  }
+
+  /** "2026-09-26" -> "26/09/2026" */
+  protected dma(iso: string | null): string {
+    if (!iso) return '';
+    const [a, m, d] = iso.slice(0, 10).split('-');
+    return `${d}/${m}/${a}`;
+  }
+
+  protected palabraDeAusencia(tipo: string): string {
+    const palabras: Record<string, string> = {
+      vacaciones: 'Vacaciones', incapacidad: 'Incapacidad', permiso: 'Permiso', comision: 'Comisión',
+      falta_justificada: 'Falta justificada',
+    };
+    return palabras[tipo] ?? tipo;
+  }
+
+  protected palabraDeFoto(estado: string): string {
+    const palabras: Record<string, string> = {
+      con_foto: 'Tomada (sólo en el kiosco)', conservada: 'Conservada (en el kiosco)', sin_camara: 'Sin foto',
+      obstruida: 'Cámara tapada', eliminada_por_antiguedad: 'Borrada por antigüedad', faltante: 'Falta', alterada: 'Alterada',
+    };
+    return palabras[estado] ?? estado;
   }
 
   /** Supresion: la persona deja de ser identificable. No se puede deshacer. */
@@ -329,29 +381,41 @@ export class Empleados implements OnInit {
     const archivo = (evento.target as HTMLInputElement).files?.[0];
     if (!archivo) return;
     this.nombreArchivo.set(archivo.name);
-    const texto = (await archivo.text()).replace(/^﻿/, '');
-    const lineas = texto.split(/\r?\n/).filter((l) => l.trim() !== '');
-    if (lineas.length < 2) {
-      this.errorAccion.set('El archivo está vacío o sólo tiene los títulos.');
+
+    // Excel normal (.xlsx) o "CSV": los dos terminan como renglones de texto.
+    let renglones: string[][];
+    try {
+      renglones = /\.xlsx$/i.test(archivo.name) ? await leerHojaDeExcel(archivo) : this.renglonesDeCsv(await archivo.text());
+    } catch (fallo) {
+      this.porImportar.set([]);
+      this.errorAccion.set((fallo as Error).message);
+      return;
+    }
+    if (renglones.length < 2) {
+      this.porImportar.set([]);
+      this.errorAccion.set('El archivo está vacío o sólo tiene los títulos. Llena un renglón por persona debajo de los títulos.');
       return;
     }
 
-    // Excel en español a veces separa con ";" en vez de ",".
-    const separador = (lineas[0]!.match(/;/g)?.length ?? 0) > (lineas[0]!.match(/,/g)?.length ?? 0) ? ';' : ',';
-    const titulos = lineas[0]!.split(separador).map((t) => t.trim().toLowerCase().replace(/\s+/g, '_'));
+    // Titulos sin acentos ni mayusculas: "Número" = "numero".
+    const titulos = renglones[0]!.map((t) =>
+      t.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_'),
+    );
     const columna = (nombres: string[]): number => titulos.findIndex((t) => nombres.includes(t));
     const iNombre = columna(['nombre', 'nombres']);
     const iPaterno = columna(['apellido_paterno', 'paterno']);
     const iMaterno = columna(['apellido_materno', 'materno']);
-    const iNumero = columna(['numero', 'numero_empleado', 'número', 'no_empleado']);
+    const iNumero = columna(['numero', 'numero_empleado', 'no_empleado', 'numero_de_empleado']);
     if (iNombre < 0 || iPaterno < 0) {
-      this.errorAccion.set('No encontré las columnas "nombre" y "apellido_paterno" en la primera fila.');
+      this.porImportar.set([]);
+      this.errorAccion.set(
+        'No encontré las columnas "nombre" y "apellido_paterno" en la primera fila. Lo más fácil: descarga la plantilla y copia ahí tus datos.',
+      );
       return;
     }
 
     const usados = this.empleados().map((e) => e.usuario);
-    const filas = lineas.slice(1).map((linea) => {
-      const c = linea.split(separador).map((v) => v.trim().replace(/^"|"$/g, ''));
+    const filas = renglones.slice(1).map((c) => {
       const d = {
         nombre: c[iNombre] ?? '',
         paterno: c[iPaterno] ?? '',
@@ -373,6 +437,52 @@ export class Empleados implements OnInit {
     });
     this.errorAccion.set(null);
     this.porImportar.set(filas);
+  }
+
+  /** Un CSV a renglones. Excel en español a veces separa con ";" en vez de ",". */
+  private renglonesDeCsv(texto: string): string[][] {
+    const lineas = texto.replace(/^\uFEFF/, '').split(/\r?\n/).filter((l) => l.trim() !== '');
+    if (lineas.length === 0) return [];
+    const separador = (lineas[0]!.match(/;/g)?.length ?? 0) > (lineas[0]!.match(/,/g)?.length ?? 0) ? ';' : ',';
+    return lineas.map((l) => l.split(separador).map((v) => v.trim().replace(/^"|"$/g, '')));
+  }
+
+  /**
+   * La plantilla para llenar en Excel: los titulos exactos y dos renglones
+   * de ejemplo. Se descarga como CSV porque Excel lo abre con doble clic;
+   * despues se puede guardar como Excel normal y tambien se acepta.
+   */
+  protected descargarPlantilla(): void {
+    this.descargarCsv('plantilla-empleados.csv', [
+      ['nombre', 'apellido_paterno', 'apellido_materno', 'numero'],
+      ['María Elena', 'Garza', 'Salinas', '1234'],
+      ['José Luis', 'Treviño', '', ''],
+    ]);
+  }
+
+  /** La lista del personal, para abrirla en Excel. */
+  protected exportarLista(): void {
+    this.descargarCsv(`empleados-${new Date().toISOString().slice(0, 10)}.csv`, [
+      ['numero', 'nombre', 'apellido_paterno', 'apellido_materno', 'usuario', 'estado'],
+      ...this.empleados()
+        .filter((e) => !e.anonimizado_en)
+        .map((e) => [e.numero_empleado ?? '', e.nombre, e.apellido_paterno, e.apellido_materno, e.usuario, e.activo ? 'Activo' : 'Dado de baja']),
+    ]);
+  }
+
+  private descargarCsv(nombre: string, tabla: string[][]): void {
+    const celda = (v: string): string => {
+      let t = v;
+      if (/^[=+\-@]/.test(t)) t = `'${t}`; // que Excel no lo tome como formula
+      return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+    };
+    // El BOM al inicio: sin el, Excel muestra "MarÃ­a" en vez de "María".
+    const csv = '\uFEFF' + tabla.map((r) => r.map(celda).join(',')).join('\r\n') + '\r\n';
+    const enlace = document.createElement('a');
+    enlace.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    enlace.download = nombre;
+    enlace.click();
+    URL.revokeObjectURL(enlace.href);
   }
 
   protected async guardarImportacion(motivo: string): Promise<void> {

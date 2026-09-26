@@ -212,6 +212,20 @@ main table tbody tr:hover {
 main table tbody td {
   border-top: 1px solid var(--kiosko-borde);
 }
+/* El renglon con el nombre del dia ("martes 22 de septiembre de 2026") que
+   separa un dia del siguiente en las tablas largas. */
+main table tbody tr.encabezado-dia td {
+  background-color: color-mix(in srgb, var(--kiosko-institucion-primario) 55%, var(--kiosko-fondo));
+  color: var(--kiosko-texto);
+  font-weight: 700;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  letter-spacing: 0.01em;
+}
+main table tbody tr.encabezado-dia:hover {
+  background-color: transparent;
+}
+
 /* Dentro de una ventana (dialogo) las tablas van sin marco propio. */
 panel-dialogo table,
 .hoja-de-pines table {

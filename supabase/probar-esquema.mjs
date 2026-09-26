@@ -761,6 +761,9 @@ await marcar(empMatutino, 'entrada', '2026-09-22T11:00:00Z'); // mar 22: nunca m
 await marcar(empMatutino, 'entrada', '2026-09-11T11:00:00Z'); // vie 11: 06:00...
 const salidaComoEntrada = await marcar(empMatutino, 'entrada', '2026-09-11T19:00:00Z'); // ...y la salida quedo como ENTRADA
 
+await marcar(empMatutino, 'entrada', '2026-09-08T11:50:00Z'); // mar 8: 06:50, 50 min tarde...
+await marcar(empMatutino, 'salida', '2026-09-08T19:40:00Z');  // ...y se quedo hasta las 14:40
+
 // --- Sabatino: el sabado entra a las 7 ---
 await marcar(sabatino, 'entrada', '2026-09-19T12:05:00Z'); // sab 07:05
 await marcar(sabatino, 'salida', '2026-09-19T18:00:00Z');  // 13:00
@@ -796,8 +799,10 @@ const dia = (filas, fecha, cond = () => true) =>
   comprobar('dia festivo: no cuenta como falta', dia(semana, '2026-09-16')?.estado === 'festivo');
   comprobar('dia con turno y sin ningun registro: falta',
     dia(semana, '2026-09-17')?.estado === 'falta' && dia(semana, '2026-09-17')?.entrada === null);
-  comprobar('llego 45 min tarde (mas que los 30 para falta): cuenta como falta, pero se ve a que hora llego',
-    dia(semana, '2026-09-18')?.estado === 'falta' && dia(semana, '2026-09-18')?.minutos_tarde === 45);
+  comprobar('llego 45 min tarde: SI vino, asi que es "retardo mayor" y no falta (0019)',
+    dia(semana, '2026-09-18')?.estado === 'retardo_mayor' && dia(semana, '2026-09-18')?.minutos_tarde === 45);
+  comprobar('y como salio a su hora, no repuso nada', dia(semana, '2026-09-18')?.minutos_repuestos === null);
+  comprobar('un retardo de 20 min sin quedarse mas: tampoco repuso', dia(semana, '2026-09-15')?.minutos_repuestos === null);
   comprobar('vacaciones: incidencia, no falta', dia(semana, '2026-09-10')?.estado === 'incidencia'
     && dia(semana, '2026-09-10')?.incidencia === 'vacaciones');
   const domingo = dia(semana, '2026-09-20');
@@ -812,6 +817,58 @@ const dia = (filas, fecha, cond = () => true) =>
   comprobar('la salida que quedo como entrada: se ve como salida no registrada',
     dia(semana, '2026-09-11')?.estado_salida === 'salida_no_registrada');
 }
+
+// --- 0019: repuso el tiempo, regla vieja opcional, "todavia no llega" ---
+{
+  const martes8 = dia(await reporte(empMatutino, '2026-09-08', '2026-09-08'), '2026-09-08');
+  comprobar('llego 50 min tarde y se quedo 40 min mas: "repuso 40 min"',
+    martes8?.estado === 'retardo_mayor' && martes8?.minutos_tarde === 50 && martes8?.minutos_repuestos === 40,
+    JSON.stringify({ estado: martes8?.estado, tarde: martes8?.minutos_tarde, repuso: martes8?.minutos_repuestos }));
+}
+await entrarComo(ID_ADMIN);
+await bd.query(`select actualizar_configuracion('llegar_muy_tarde_es_falta', '1', 'Probar la regla vieja')`);
+comprobar('con la regla vieja encendida, llegar 45 min tarde vuelve a ser falta',
+  dia(await reporte(empMatutino, '2026-09-18', '2026-09-18'), '2026-09-18')?.estado === 'falta');
+await bd.query(`select actualizar_configuracion('llegar_muy_tarde_es_falta', '0', 'Regresar a la regla nueva')`);
+{
+  // Un turno que empezo hace una hora y termina en 3: quien no ha llegado
+  // todavia puede llegar tarde: "pendiente", no falta.
+  await bd.query('reset role');
+  const enCurso = await crearEmpleado('jencurso');
+  const { rows: [t] } = await bd.query(`
+    insert into turnos (nombre, hora_inicio, hora_fin)
+    values ('Turno en curso', ((now() - interval '1 hour') at time zone 'America/Matamoros')::time(0),
+                              ((now() + interval '3 hours') at time zone 'America/Matamoros')::time(0))
+    returning id`);
+  await bd.query(`insert into turno_versiones (turno_id, vigente_desde, hora_inicio, hora_fin)
+                  select id, '2000-01-01', hora_inicio, hora_fin from turnos where id = $1`, [t.id]);
+  await entrarComo(ID_ADMIN);
+  await bd.query(`select asignar_horario($1, $2, '2026-01-01', '[{"dia":0},{"dia":1},{"dia":2},{"dia":3},{"dia":4},{"dia":5},{"dia":6}]', 'Turno en curso de prueba')`,
+    [enCurso, t.id]);
+  const hoy = (await bd.query(`select (now() at time zone 'America/Matamoros')::date::text as d`)).rows[0].d;
+  const fila = (await reporte(enCurso, hoy, hoy))[0];
+  comprobar('su turno empezo hace una hora y no ha llegado: "todavia no llega" (pendiente), no falta',
+    fila?.estado === 'pendiente', fila?.estado);
+}
+
+// --- 0019: cambiar el horario de un turno NO cambia el pasado ---
+{
+  const antes = dia(await reporte(empMatutino, '2026-09-14', '2026-09-14'), '2026-09-14');
+  const matutino = await idTurno('Matutino');
+  await bd.query(`select guardar_turno($1, 'Matutino', '05:00', '13:00', null, null, 'La dirección adelantó el turno', '2026-10-05')`,
+    [matutino]);
+  const despues = dia(await reporte(empMatutino, '2026-09-14', '2026-09-14'), '2026-09-14');
+  comprobar('adelantar el Matutino a las 5:00 desde el 5 de octubre: el 14 de septiembre sigue igual (a tiempo, 06:00)',
+    despues?.estado === antes?.estado && despues?.programado_inicio?.toISOString() === '2026-09-14T11:00:00.000Z',
+    `${despues?.estado} ${despues?.programado_inicio?.toISOString()}`);
+  const octubre = dia(await reporte(empMatutino, '2026-10-05', '2026-10-05'), '2026-10-05');
+  comprobar('y desde el 5 de octubre ya se espera a las 5:00',
+    octubre?.programado_inicio?.toISOString() === '2026-10-05T10:00:00.000Z', octubre?.programado_inicio?.toISOString());
+  await bd.query(`select guardar_turno($1, 'Matutino', '06:00', '14:00', null, null, 'Regresar el turno a como estaba', '2026-10-05')`,
+    [matutino]);
+}
+// Lo que sigue (correcciones) corre como administrador, igual que antes.
+await entrarComo(ID_ADMIN);
 
 // --- Correcciones: la marca original no se toca ---
 await bd.query(`select corregir_marca($1, 'cambiar_tipo', 'Se equivoco de boton al salir')`, [salidaComoEntrada]);

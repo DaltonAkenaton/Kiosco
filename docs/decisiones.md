@@ -1246,6 +1246,58 @@ El hash no cambia. Las llaves apartadas no se borran.
 
 ---
 
+## D-039 · Falta es no venir; llegar tarde es retardo, y se ve si repuso
+
+**Decidido (el autor, 26-09-2026):**
+- **Falta** = no registró entrada en todo su turno.
+- Llegar tarde = **retardo**; más de "minutos para retardo mayor" (30) =
+  **retardo mayor**. No es falta: la persona vino (se le ponchó una llanta).
+- **Repuso**: si llegó tarde y salió después de su hora, se informa cuánto
+  (nunca más de lo que llegó tarde). El sistema no descuenta ni compensa.
+- Quien no ha llegado es **"todavía no llega"** mientras dure su turno.
+- La regla anterior queda como opción: `llegar_muy_tarde_es_falta` (0).
+
+**Por qué:** en la práctica (ejemplo del autor en su trabajo) a quien llega
+una hora tarde se le deja entrar y repone el tiempo. Marcarlo falta mezclaba
+dos cosas distintas y escondía la reposición.
+
+---
+
+## D-040 · El horario de un turno tiene historia
+
+**Decidido:** `turno_versiones` guarda el horario de cada turno a partir de
+cada fecha. Cambiar las horas pide "a partir de qué día"; el reporte califica
+cada día con el horario vigente ESE día.
+
+**Descartado:** crear un turno nuevo con otro nombre y mover a todos a mano
+(propenso a errores); dejar que editar reescribiera el pasado (ponía retardos
+que nunca ocurrieron).
+
+---
+
+## D-041 · El historial viejo de asistencia (en Excel) no se importa
+
+**Decidido:** el sistema arranca limpio en una fecha de corte. Del sistema
+anterior sólo se importa el catálogo de empleados; el Excel histórico se
+conserva como archivo. Es lo que se hace normalmente al cambiar de sistema de
+asistencia.
+
+**Por qué:** los registros del sistema son evidencia (foto, kiosco, reloj);
+los del Excel no, y mezclarlos vuelve incomparables los reportes.
+
+**Reconsiderar si:** el jefe necesita reportes continuos que crucen la fecha
+de corte; entonces se importarían como captura manual marcada "importado".
+
+---
+
+## D-042 · El empleado elige su PIN en el kiosco (pendiente, fase del kiosco)
+
+**Decidido:** como en un cajero: el jefe da un PIN temporal y, la primera vez
+que el empleado checa, el kiosco le pide inventar uno propio y escribirlo dos
+veces. Se hace al trabajar el kiosco (toca kiosco y nube).
+
+---
+
 ## Plantilla para decisiones nuevas
 
 ```markdown

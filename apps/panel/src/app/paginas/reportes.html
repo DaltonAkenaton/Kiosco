@@ -65,7 +65,10 @@
           </td>
           <td class="py-2 pr-4 text-right tabular-nums">{{ r.programados }}</td>
           <td class="py-2 pr-4 text-right tabular-nums">{{ r.aTiempo }}</td>
-          <td class="py-2 pr-4 text-right tabular-nums" [class.font-bold]="r.retardos > 0">{{ r.retardos }}</td>
+          <td class="py-2 pr-4 text-right tabular-nums" [class.font-bold]="r.retardos > 0">
+            {{ r.retardos }}
+            @if (r.retardosMayores) { <span class="text-texto-suave text-sm font-normal">({{ r.retardosMayores }} mayor{{ r.retardosMayores === 1 ? '' : 'es' }})</span> }
+          </td>
           <td class="py-2 pr-4 text-right tabular-nums" [class.font-bold]="r.faltas > 0"
               [style.color]="r.faltas > 0 ? 'var(--kiosko-peligro)' : null">{{ r.faltas }}</td>
           <td class="py-2 pr-4 text-right tabular-nums">{{ r.justificadas }}</td>
@@ -92,8 +95,13 @@
       </tr>
     </thead>
     <tbody>
-      @for (f of filas(); track f.fecha + f.empleado_id + (f.entrada ?? f.salida ?? '')) {
+      @for (f of filas(); track f.fecha + f.empleado_id + (f.entrada ?? f.salida ?? ''); let i = $index) {
         @let e = ESTADOS[f.estado];
+        @if (i === 0 || filas()[i - 1].fecha !== f.fecha) {
+          <tr class="encabezado-dia">
+            <td colspan="7">{{ fechaLarga(f.fecha) }}</td>
+          </tr>
+        }
         <tr class="border-borde border-b">
           <td class="py-2 pr-4 whitespace-nowrap">{{ fechaCorta(f.fecha) }}</td>
           <td class="py-2 pr-4 font-semibold">{{ nombre(f.empleado_id) }}</td>
@@ -105,6 +113,9 @@
           <td class="py-2 pr-4 tabular-nums">
             {{ f.entrada ? hora(f.entrada, zona()) : '—' }}
             @if (f.minutos_tarde) { <span class="text-texto-suave">(+{{ f.minutos_tarde }} min)</span> }
+            @if (f.minutos_repuestos) {
+              <span class="block text-sm" style="color: var(--kiosko-entrada)">repuso {{ f.minutos_repuestos }} min</span>
+            }
           </td>
           <td class="py-2 pr-4 tabular-nums">
             {{ f.salida ? hora(f.salida, zona()) : '—' }}

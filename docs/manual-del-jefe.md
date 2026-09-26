@@ -94,8 +94,18 @@ Elige el rango de fechas. Dos vistas:
 Cómo se decide cada cosa (se ajusta en **Configuración**):
 
 - **A tiempo**: llegó dentro de la tolerancia (10 minutos por defecto).
-- **Retardo**: después de la tolerancia, pero antes de los minutos para falta (30).
-- **Falta**: no llegó, o llegó después de esos 30 minutos.
+- **Retardo**: llegó después de la tolerancia.
+- **Retardo mayor**: llegó más de 30 minutos tarde (configurable). **Sí vino**:
+  no es falta.
+- **Repuso X min**: llegó tarde y se quedó más tiempo al salir. El sistema lo
+  informa; qué hacer con eso lo decides tú.
+- **Todavía no llega**: su turno ya empezó y no ha registrado entrada. Puede
+  llegar tarde; si termina su turno sin llegar, es falta.
+- **Falta**: **no vino** en todo su turno. Si fue por enfermedad, un accidente
+  u otra razón válida, regístralo en **Ausencias** (falta justificada o
+  incapacidad) y deja de contar como falta.
+- Si prefieres la regla de antes (llegar muy tarde = falta), en Configuración
+  pon "Llegar muy tarde cuenta como falta" en **Sí**.
 - **No registró salida**: entró y no marcó salida. El sistema **no inventa** la
   hora: corrígelo tú con "Registrar a mano" si sabes a qué hora salió.
 - **Ausencia justificada** / **Festivo**: lo que registres en Ausencias.
@@ -115,12 +125,16 @@ kiosco y si algún kiosco o cámara está fallando.
 - **+ Agregar empleado**: nombre y apellidos. El sistema propone el usuario y
   **genera el PIN**. Te lo muestra **una sola vez**: imprímelo o anótalo y
   dáselo a la persona en privado.
-- **Importar lista de Excel**: para muchos a la vez. El ⓘ explica cómo preparar
-  el archivo. Al final imprime la hoja con todos los PIN.
+- **Importar lista de Excel**: para muchos a la vez. En la ventana, **Descargar
+  plantilla**, llénala en Excel (un renglón por persona), guárdala y elígela.
+  Sirve el Excel normal. Al final imprime la hoja con todos los PIN.
+- **⬇ Descargar lista**: la lista del personal para abrir en Excel.
 - **PIN nuevo**: si alguien lo olvidó. El viejo deja de servir.
 - **Dar de baja**: ya no puede checar. **No se borra nada**; se puede reactivar.
-- **Sus datos (ARCO)**: descarga todo lo que el sistema tiene de esa persona.
-  Es para cuando la persona lo pide por escrito (derechos ARCO).
+- **Sus datos (ARCO)**: muestra una **constancia** con todo lo que el sistema
+  tiene de esa persona, para imprimirla o guardarla como PDF (y, si la pide,
+  el archivo de datos). Es para cuando la persona lo solicita por escrito: la
+  UAT, como institución pública, está obligada a entregárselo.
 - **Suprimir sus datos**: sólo con autorización de la **Unidad de
   Transparencia**. Borra su nombre de todo el sistema, **no se puede deshacer**.
   Sus registros de entrada y salida se quedan, sin nombre. Antes hay que darla
@@ -139,7 +153,10 @@ sistema. En el sistema real esa opción debe quedar en **0**.
 ### Horarios
 
 - **Turnos**: plantillas (Matutino 06–14, Vespertino 14–22, Nocturno 22–06).
-  El nocturno cuenta para el día en que **empieza**.
+  El nocturno cuenta para el día en que **empieza**. Si cambias las **horas**
+  de un turno, el panel pregunta **"¿a partir de qué día?"**: los días
+  anteriores se siguen calculando con el horario viejo, así nadie aparece con
+  retardos que no tuvo.
 - **Horario de cada persona**: qué turno, qué días, y si algún día entra a otra
   hora (por ejemplo, el sábado a las 7). Un cambio de horario es "a partir del
   día X": los días anteriores se siguen calculando con el horario viejo.
@@ -147,8 +164,13 @@ sistema. En el sistema real esa opción debe quedar en **0**.
 
 ### Ausencias y días festivos
 
-- **+ Registrar ausencia**: vacaciones, incapacidad, permiso, comisión o falta
-  justificada, con fechas. Esos días salen como "ausencia justificada".
+- **+ Registrar ausencia**, con fechas. Esos días salen como "ausencia
+  justificada":
+  - **Vacaciones**.
+  - **Incapacidad**: enfermedad, accidente, maternidad (con incapacidad del IMSS/ISSSTE).
+  - **Permiso**: fallecimiento de un familiar, nacimiento de un hijo, trámites.
+  - **Comisión**: está trabajando, pero en otro lugar.
+  - **Falta justificada**: faltó por una razón válida sin papel (se enfermó ese día).
 - **+ Agregar día festivo**: ese día nadie tiene falta.
 
 ### Kioscos

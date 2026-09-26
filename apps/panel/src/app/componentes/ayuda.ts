@@ -17,27 +17,35 @@
  *    - se abre con CLIC y no al pasar el raton: mucha gente no sabe que hay
  *      que dejar el cursor quieto encima para que salga algo;
  *    - trae un boton "Entendido" para cerrarla, ademas de cerrarse sola al
- *      picar en cualquier otro lado;
+ *      picar en cualquier otro lado, con Esc o al desplazar la pagina;
  *    - no hace nada mas: picarla nunca abre una foto ni cambia un filtro.
+ *
+ *  Dos arreglos de la fase de pruebas (26-09-2026):
+ *    - SOLO UNA abierta a la vez en toda la pagina (antes se podian abrir
+ *      todas y se encimaban);
+ *    - la ventanita se coloca en la pantalla, no dentro de la tabla: si no
+ *      cabe abajo se abre arriba, y nunca se sale por los lados.
  *
  *  Uso:
  *      <panel-ayuda titulo="Conservada" texto="Esta foto no se borrara..." />
  */
 
-import { Component, HostListener, computed, input, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, computed, inject, input, signal, viewChild } from '@angular/core';
 
-/** Clases de Tailwind para cada lado. Escritas completas para que Tailwind las encuentre. */
-const POSICIONES = {
-  centro: 'left-1/2 -translate-x-1/2',
-  derecha: 'right-0',
-  izquierda: 'left-0',
-} as const;
+/** La ayuda abierta en este momento, en toda la pagina (a lo mas una). */
+const abiertaAhora = signal<object | null>(null);
+
+const ANCHO = 320;
+const MARGEN = 8;
+/** Alto aproximado de la ventanita, para decidir si cabe abajo. */
+const ALTO_ESPERADO = 220;
 
 @Component({
   selector: 'panel-ayuda',
   template: `
-    <span class="relative ml-1 inline-block align-middle">
+    <span class="ml-1 inline-block align-middle">
       <button
+        #boton
         type="button"
         class="boton-tactil inline-flex h-6 w-6 items-center justify-center rounded-full border-2
                text-sm font-black leading-none"
@@ -52,9 +60,12 @@ const POSICIONES = {
       @if (abierta()) {
         <span
           role="dialog"
-          class="absolute top-full z-[70] mt-2 flex w-80 flex-col gap-2 rounded-2xl border-2 p-4
-                 text-left text-base font-normal normal-case tracking-normal shadow-2xl"
-          [class]="posicion()"
+          class="fixed z-[80] flex flex-col gap-2 rounded-2xl border-2 p-4 text-left text-base font-normal
+                 whitespace-normal normal-case tracking-normal shadow-2xl"
+          [style.width.px]="ancho"
+          [style.left.px]="lugar().izquierda"
+          [style.top.px]="lugar().arriba"
+          [style.bottom.px]="lugar().abajo"
           style="background-color: var(--kiosko-superficie); border-color: var(--kiosko-borde); color: var(--kiosko-texto)"
           (click)="$event.stopPropagation()"
         >
@@ -64,7 +75,7 @@ const POSICIONES = {
             type="button"
             class="boton-tactil self-end rounded-xl px-4 py-1 text-base font-bold"
             style="background-color: var(--kiosko-institucion-primario)"
-            (click)="abierta.set(false)"
+            (click)="cerrar()"
           >
             Entendido
           </button>
@@ -79,24 +90,63 @@ export class Ayuda {
   /** La explicacion, en palabras de todos los dias. */
   readonly texto = input.required<string>();
   /**
-   * Hacia donde se abre. 'centro' por defecto; 'derecha' cuando el simbolo
-   * esta pegado al borde derecho de la pantalla, para que no se salga.
+   * Se conserva por compatibilidad: la posicion ahora se calcula sola segun
+   * el espacio que haya en la pantalla.
    */
   readonly alinear = input<'centro' | 'derecha' | 'izquierda'>('centro');
 
-  protected readonly abierta = signal(false);
-  protected readonly posicion = computed(() => POSICIONES[this.alinear()]);
+  private readonly boton = viewChild.required<ElementRef<HTMLButtonElement>>('boton');
+  private readonly anfitrion = inject(ElementRef);
+
+  protected readonly ancho = ANCHO;
+  protected readonly abierta = computed(() => abiertaAhora() === this);
+  protected readonly lugar = signal<{ izquierda: number; arriba: number | null; abajo: number | null }>({
+    izquierda: 0,
+    arriba: 0,
+    abajo: null,
+  });
 
   protected alternar(evento: MouseEvent): void {
     // Sin esto, picar la "i" dentro de un renglon de la tabla abriria
-    // tambien la foto de ese renglon.
+    // tambien lo que haga ese renglon.
     evento.stopPropagation();
-    this.abierta.update((a) => !a);
+    if (this.abierta()) {
+      this.cerrar();
+      return;
+    }
+    this.colocar();
+    abiertaAhora.set(this); // y cualquier otra abierta se cierra sola
   }
 
-  /** Picar en cualquier otro lado la cierra. */
-  @HostListener('document:click')
-  protected alPicarFuera(): void {
-    this.abierta.set(false);
+  protected cerrar(): void {
+    if (this.abierta()) abiertaAhora.set(null);
+  }
+
+  /** Junto al circulito, dentro de la pantalla. */
+  private colocar(): void {
+    const r = this.boton().nativeElement.getBoundingClientRect();
+    const izquierda = Math.min(
+      Math.max(MARGEN, r.left + r.width / 2 - ANCHO / 2),
+      window.innerWidth - ANCHO - MARGEN,
+    );
+    const cabeAbajo = window.innerHeight - r.bottom >= ALTO_ESPERADO;
+    this.lugar.set(
+      cabeAbajo
+        ? { izquierda, arriba: r.bottom + MARGEN, abajo: null }
+        : { izquierda, arriba: null, abajo: window.innerHeight - r.top + MARGEN },
+    );
+  }
+
+  /** Picar en cualquier otro lado, Esc o desplazar la pagina la cierran. */
+  @HostListener('document:click', ['$event'])
+  protected alPicarFuera(evento: MouseEvent): void {
+    if (!this.anfitrion.nativeElement.contains(evento.target as Node)) this.cerrar();
+  }
+
+  @HostListener('document:keydown.escape')
+  @HostListener('window:resize')
+  @HostListener('window:scroll')
+  protected alMoverse(): void {
+    this.cerrar();
   }
 }

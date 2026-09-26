@@ -263,7 +263,11 @@ app.whenReady().then(async () => {
     await escribir('input[placeholder^="Buscar"]', 'rgomez');
     await picar('Sus datos (ARCO)');
     await escribir('panel-dialogo input.campo', 'Solicitud ARCO de acceso (prueba del panel)');
-    await picar('Descargar sus datos');
+    await picar('Ver sus datos');
+    await esperar(800);
+    comprobar('la constancia ARCO se ve legible (no un archivo raro)', (await texto()).includes('Constancia de datos personales'));
+    await capturar('8-constancia-arco');
+    await picar('Cerrar');
     const { rows: [arco] } = await bd.query(
       `select count(*)::int n from bitacora_auditoria where registro_id = $1 and datos_despues ->> 'arco' = 'exportacion_de_datos'`, [idCreado]);
     comprobar('descargar sus datos deja constancia en la bitacora', arco.n === 1);

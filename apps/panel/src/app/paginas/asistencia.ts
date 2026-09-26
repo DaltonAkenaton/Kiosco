@@ -14,8 +14,9 @@
  *  el filtro "Revisar la foto en el kiosco" junta los casos para que el jefe
  *  haga un solo viaje en vez de uno por caso.
  *
- *  Lo que TODAVIA no hay: "a tiempo / retardo / falta". Eso necesita los
- *  turnos y llega en el bloque 9.
+ *  "A tiempo / retardo / falta" estan en Reportes: aqui se ven los registros
+ *  tal cual, separados por dia y con el TURNO de cada persona, para que "entra
+ *  el matutino a las 6:00" no se confunda con "sale el velador a las 6:00".
  */
 
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
@@ -34,6 +35,7 @@ import {
 
 interface Marca {
   id: string;
+  empleado_id: string;
   tipo: 'entrada' | 'salida';
   origen: 'kiosco' | 'manual';
   hora_estimada: string;
@@ -47,6 +49,16 @@ interface Marca {
 }
 
 type Revision = '' | 'cualquiera' | 'foto_en_kiosco' | 'cuarentena' | string;
+
+/** El horario asignado a una persona, para saber de que turno es cada registro. */
+interface Asignacion {
+  empleado_id: string;
+  vigente_desde: string;
+  vigente_hasta: string | null;
+  turno: { nombre: string; hora_inicio: string; hora_fin: string } | null;
+}
+
+const SIN_TURNO = '(sin turno)';
 
 /** Tope de renglones por consulta: con 20 personas, 500 son ~12 dias completos. */
 const MAXIMO = 500;
@@ -65,6 +77,20 @@ export class Asistencia implements OnInit {
   protected readonly empleadoId = signal('');
   protected readonly dispositivoId = signal('');
   protected readonly revision = signal<Revision>('');
+  /** Filtro por turno. Se aplica aqui mismo, sin volver a preguntar a la base. */
+  protected readonly turnoFiltro = signal('');
+  protected readonly asignaciones = signal<Asignacion[]>([]);
+
+  /** Los nombres de turno para el filtro. */
+  protected readonly turnos = computed(() =>
+    [...new Set(this.asignaciones().map((a) => a.turno?.nombre).filter((n): n is string => !!n))].sort(),
+  );
+
+  /** Los registros que se ven, ya con el filtro de turno. */
+  protected readonly visibles = computed(() => {
+    const filtro = this.turnoFiltro();
+    return filtro ? this.marcas().filter((m) => this.turnoDe(m) === filtro) : this.marcas();
+  });
 
   protected readonly empleados = signal<{ id: string; nombre: string }[]>([]);
   protected readonly dispositivos = signal<{ id: string; nombre: string }[]>([]);
@@ -98,10 +124,14 @@ export class Asistencia implements OnInit {
   });
 
   async ngOnInit(): Promise<void> {
-    const [emp, disp] = await Promise.all([
+    const [emp, disp, asig] = await Promise.all([
       this.sesion.bd.from('empleados').select('id, nombre, apellido_paterno, numero_empleado').order('nombre'),
       this.sesion.bd.from('dispositivos').select('id, nombre').order('nombre'),
+      this.sesion.bd
+        .from('asignaciones_turno')
+        .select('empleado_id, vigente_desde, vigente_hasta, turno:turnos(nombre, hora_inicio, hora_fin)'),
     ]);
+    this.asignaciones.set((asig.data ?? []) as unknown as Asignacion[]);
     this.empleados.set(
       (emp.data ?? []).map((e) => ({
         id: e.id,
@@ -125,7 +155,7 @@ export class Asistencia implements OnInit {
     let consulta = this.sesion.bd
       .from('marcas')
       .select(
-        'id, tipo, origen, hora_estimada, recibido_en, banderas, foto_estado, en_cuarentena, ' +
+        'id, empleado_id, tipo, origen, hora_estimada, recibido_en, banderas, foto_estado, en_cuarentena, ' +
           'empleado:empleados(nombre, apellido_paterno, apellido_materno, numero_empleado), ' +
           'dispositivo:dispositivos(nombre), correcciones(accion, datos, motivo, creado_en)',
       )
@@ -162,6 +192,44 @@ export class Asistencia implements OnInit {
       return;
     }
     this.marcas.set((data ?? []) as unknown as Marca[]);
+  }
+
+  /**
+   * El turno al que pertenece un registro: el que la persona tenia asignado
+   * ese dia. Una SALIDA de madrugada de un turno que cruza la medianoche
+   * (el velador, 22:00-06:00) es del turno que empezo el dia ANTERIOR.
+   */
+  protected turnoDe(m: Marca): string {
+    const zona = this.sesion.zona();
+    const partes = new Intl.DateTimeFormat('en-CA', {
+      timeZone: zona, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+    }).formatToParts(new Date(m.hora_estimada));
+    const p = (t: string): string => partes.find((x) => x.type === t)?.value ?? '';
+    const dia = `${p('year')}-${p('month')}-${p('day')}`;
+    const horaLocal = `${p('hour')}:${p('minute')}`;
+
+    const vigenteEn = (fecha: string): Asignacion | undefined =>
+      this.asignaciones()
+        .filter((a) => a.empleado_id === m.empleado_id && a.vigente_desde <= fecha && (!a.vigente_hasta || fecha < a.vigente_hasta))
+        .sort((a, b) => b.vigente_desde.localeCompare(a.vigente_desde))[0];
+
+    let asignada = vigenteEn(dia);
+    const cruza = (a?: Asignacion): boolean => !!a?.turno && a.turno.hora_fin < a.turno.hora_inicio;
+    if (this.tipoVigente(m) === 'salida' && horaLocal < '12:00') {
+      const ayer = new Date(`${dia}T12:00:00Z`);
+      ayer.setUTCDate(ayer.getUTCDate() - 1);
+      const anterior = vigenteEn(ayer.toISOString().slice(0, 10));
+      if (cruza(anterior)) asignada = anterior;
+    }
+    return asignada?.turno?.nombre ?? SIN_TURNO;
+  }
+
+  /** "martes 22 de septiembre de 2026", para el renglon que separa los dias. */
+  protected diaLargo(iso: string): string {
+    const texto = new Date(iso).toLocaleDateString('es-MX', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: this.sesion.zona(),
+    });
+    return texto.charAt(0).toUpperCase() + texto.slice(1);
   }
 
   protected nombreCompleto(m: Marca): string {

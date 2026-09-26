@@ -7,6 +7,7 @@
     <div class="flex flex-wrap gap-3">
       <button type="button" class="boton-principal" (click)="abrir({ tipo: 'alta' })">+ Agregar empleado</button>
       <button type="button" class="boton-secundario" (click)="abrir({ tipo: 'importar' })">Importar lista de Excel</button>
+      <button type="button" class="boton-secundario" (click)="exportarLista()">⬇ Descargar lista</button>
       @if (sesion.permiteDemostracion()) {
         <button type="button" class="boton-secundario" (click)="abrir({ tipo: 'demo' })">🧪 Generar datos de demostración</button>
       }
@@ -146,12 +147,12 @@
       </panel-dialogo>
     }
     @case ('datos') {
-      <panel-dialogo [titulo]="'Datos de ' + nombreCompleto(a.empleado)" textoBoton="Descargar sus datos"
+      <panel-dialogo [titulo]="'Datos de ' + nombreCompleto(a.empleado)" textoBoton="Ver sus datos"
                      ejemploMotivo="Ej.: la persona lo pidió por escrito el 23 de septiembre (solicitud ARCO)"
                      [ocupado]="guardando()" [error]="errorAccion()" (confirmar)="descargarDatos(a.empleado, $event)" (cancelar)="cerrar()">
         <p>
-          Se descarga un archivo con <b>todo</b> lo que el sistema guarda de esta persona: sus datos, sus registros,
-          correcciones, ausencias, horarios y quién consultó sus fotos.
+          Se muestra una <b>constancia</b> con todo lo que el sistema guarda de esta persona: sus datos, sus registros,
+          correcciones, ausencias, horarios y cuántas veces se consultaron sus fotos. Se puede imprimir o guardar como PDF.
           <panel-ayuda titulo="¿Qué son los derechos ARCO?" [texto]="AYUDA.arco" alinear="izquierda" />
         </p>
         <p class="text-texto-suave">Las fotos no vienen aquí: sólo existen en el kiosco. Si también las pide, se exportan desde el modo administrador del kiosco.</p>
@@ -198,14 +199,23 @@
     @case ('importar') {
       <panel-dialogo titulo="Importar lista de Excel" [textoBoton]="'Dar de alta a ' + importables()" ejemploMotivo="Ej.: alta inicial del personal"
                      [ocupado]="guardando()" [error]="errorAccion()" (confirmar)="guardarImportacion($event)" (cancelar)="cerrar()">
-        <p>
-          Elige el archivo CSV.
-          <panel-ayuda titulo="¿Cómo preparo el archivo?" [texto]="AYUDA.importar" alinear="izquierda" />
+        <ol class="flex list-decimal flex-col gap-1 pl-6 text-base">
+          <li>
+            <button type="button" class="boton-secundario !px-3 !py-1" (click)="descargarPlantilla()">⬇ Descargar plantilla</button>
+            y ábrela en Excel (doble clic).
+          </li>
+          <li>Escribe <b>un renglón por persona</b>, debajo de los títulos. <b>No cambies la primera fila</b>.</li>
+          <li>Borra los dos renglones de ejemplo (María Elena y José Luis).</li>
+          <li>Guarda el archivo (<b>Archivo → Guardar</b>). Si Excel pregunta por el formato, cualquiera sirve.</li>
+          <li>Aquí abajo, pica <b>Elegir archivo…</b> y revisa la lista antes de dar de alta.</li>
+        </ol>
+        <p class="text-texto-suave text-base">
+          El número de empleado y el apellido materno pueden ir vacíos. El usuario y el PIN los pone el sistema.
         </p>
         <!-- El boton nativo dice "Browse... No file selected" en el idioma del
              navegador. Se esconde y se pinta uno propio, en español. -->
         <label class="flex flex-wrap items-center gap-3">
-          <input type="file" accept=".csv,text/csv" class="sr-only" (change)="leerArchivo($event)" />
+          <input type="file" accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" class="sr-only" (change)="leerArchivo($event)" />
           <span class="boton-secundario">📄 Elegir archivo…</span>
           <span class="text-texto-suave">{{ nombreArchivo() || 'Todavía no eliges ninguno' }}</span>
         </label>
@@ -229,6 +239,68 @@
       </panel-dialogo>
     }
   }
+}
+
+<!-- ====================== CONSTANCIA ARCO (derecho de acceso) ====================== -->
+@if (constancia(); as c) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-6" style="background-color: rgb(0 0 0 / 0.8)">
+    <div class="ventana bg-superficie border-borde hoja-de-pines flex max-h-full w-full max-w-4xl flex-col gap-4 overflow-y-auto rounded-3xl border-2 p-8 text-base">
+      <div class="no-imprimir flex flex-wrap gap-3">
+        <button type="button" class="boton-principal" (click)="imprimirConstancia()">🖨 Imprimir o guardar como PDF</button>
+        <button type="button" class="boton-secundario" (click)="descargarArchivoArco()">⬇ Archivo de datos (.json)</button>
+        <button type="button" class="boton-secundario ml-auto" (click)="constancia.set(null)">Cerrar</button>
+      </div>
+
+      <h2 class="text-2xl font-bold">Constancia de datos personales</h2>
+      <p>
+        Sistema de Control de Asistencia · Universidad Autónoma de Tamaulipas.<br />
+        Generada el {{ fecha(c.datos.generado_en, sesion.zona()) }} a las {{ hora(c.datos.generado_en, sesion.zona()) }}.
+      </p>
+      <p><b>Titular:</b> {{ c.datos.empleado.nombre }} {{ c.datos.empleado.apellido_paterno }} {{ c.datos.empleado.apellido_materno }}
+        · usuario {{ c.empleado.usuario }}{{ c.empleado.numero_empleado ? ' · número ' + c.empleado.numero_empleado : '' }}
+        · {{ c.empleado.activo ? 'activo' : 'dado de baja' }}</p>
+      <p class="text-texto-suave">{{ c.datos.aviso }}</p>
+
+      <h3 class="text-lg font-bold">Registros de entrada y salida ({{ c.datos.marcas.length }})</h3>
+      @if (c.datos.marcas.length) {
+        <table class="w-full text-left">
+          <thead><tr class="text-texto-suave"><th class="pr-3">Fecha</th><th class="pr-3">Hora</th><th class="pr-3">Tipo</th><th class="pr-3">Dónde</th><th>Foto</th></tr></thead>
+          <tbody>
+            @for (m of c.datos.marcas; track $index) {
+              <tr class="border-borde border-t">
+                <td class="pr-3">{{ fecha(m.hora, sesion.zona()) }}</td>
+                <td class="pr-3 tabular-nums">{{ hora(m.hora, sesion.zona()) }}</td>
+                <td class="pr-3">{{ m.tipo === 'entrada' ? 'Entrada' : 'Salida' }}</td>
+                <td class="pr-3">{{ m.origen === 'manual' ? 'Captura manual' : (m.kiosco ?? 'Kiosco') }}</td>
+                <td>{{ palabraDeFoto(m.foto_estado) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      } @else { <p>Ninguno.</p> }
+
+      <h3 class="text-lg font-bold">Horarios asignados</h3>
+      @for (h of c.datos.horarios; track $index) {
+        <p>{{ h.turno }}: desde el {{ dma(h.desde) }}{{ h.hasta ? ' hasta el ' + dma(h.hasta) : ' (vigente)' }}</p>
+      } @empty { <p>Ninguno.</p> }
+
+      <h3 class="text-lg font-bold">Ausencias registradas</h3>
+      @for (a of c.datos.ausencias; track $index) {
+        <p>{{ palabraDeAusencia(a.tipo) }}: del {{ dma(a.desde) }} al {{ dma(a.hasta) }}{{ a.notas ? ' — ' + a.notas : '' }}</p>
+      } @empty { <p>Ninguna.</p> }
+
+      <h3 class="text-lg font-bold">Correcciones a sus registros</h3>
+      @for (x of c.datos.correcciones; track $index) {
+        <p>{{ fecha(x.creado_en, sesion.zona()) }}: {{ x.accion === 'anular' ? 'se anuló un registro' : 'se cambió el tipo de un registro' }} — {{ x.motivo }}</p>
+      } @empty { <p>Ninguna.</p> }
+
+      <h3 class="text-lg font-bold">Consultas de sus fotografías</h3>
+      <p>
+        {{ c.datos.consultas_de_sus_fotos.length }} consulta(s) o exportación(es) registradas por personal autorizado.
+        Las fotografías no se incluyen aquí: sólo existen, cifradas, en el kiosco, y se borran solas a los 30 días.
+      </p>
+    </div>
+  </div>
 }
 
 <!-- ====================== LOS PIN, UNA SOLA VEZ ====================== -->

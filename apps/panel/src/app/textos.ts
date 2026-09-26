@@ -124,8 +124,8 @@ export const PALABRAS_CONFIGURACION: Record<string, { nombre: string; explicacio
     seUsaEn: 'Los reportes de asistencia',
   },
   minutos_para_falta: {
-    nombre: 'Minutos tarde para contar falta',
-    explicacion: 'A partir de cuántos minutos tarde ya no es retardo sino falta.',
+    nombre: 'Minutos tarde para "retardo mayor"',
+    explicacion: 'A partir de cuántos minutos tarde el retardo se marca como RETARDO MAYOR. No es falta: la persona sí vino. (Si quieres que llegar así de tarde cuente como falta, enciende la opción de abajo.)',
     seUsaEn: 'Los reportes de asistencia',
   },
   horas_para_cierre_automatico: {
@@ -182,6 +182,11 @@ export const PALABRAS_CONFIGURACION: Record<string, { nombre: string; explicacio
     nombre: 'Minutos que dura un código de alta',
     explicacion: 'Cuánto tiempo sirve el código para dar de alta un kiosco nuevo.',
     seUsaEn: 'Este panel',
+  },
+  llegar_muy_tarde_es_falta: {
+    nombre: 'Llegar muy tarde cuenta como falta',
+    explicacion: 'Con "No" (lo normal), falta es sólo NO venir: quien llega tarde es retardo, y el reporte dice si repuso el tiempo quedándose más. Con "Sí", llegar más tarde que los minutos de "retardo mayor" cuenta como falta aunque haya venido.',
+    seUsaEn: 'Los reportes de asistencia',
   },
   minutos_anticipacion_entrada: {
     nombre: 'Minutos antes de la entrada que cuentan',

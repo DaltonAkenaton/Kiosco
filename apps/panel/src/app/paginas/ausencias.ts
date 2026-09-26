@@ -33,12 +33,13 @@ interface Festivo {
   descripcion: string;
 }
 
+/** Cada tipo, con ejemplos: el jefe no tiene por que saber cual elegir. */
 const TIPOS = [
-  { valor: 'vacaciones', texto: 'Vacaciones' },
-  { valor: 'incapacidad', texto: 'Incapacidad' },
-  { valor: 'permiso', texto: 'Permiso' },
-  { valor: 'comision', texto: 'Comisión (trabajando en otro lado)' },
-  { valor: 'falta_justificada', texto: 'Falta justificada' },
+  { valor: 'vacaciones', texto: 'Vacaciones', ejemplo: 'sus días de vacaciones' },
+  { valor: 'incapacidad', texto: 'Incapacidad', ejemplo: 'enfermedad, accidente, maternidad (con incapacidad del IMSS o ISSSTE)' },
+  { valor: 'permiso', texto: 'Permiso', ejemplo: 'fallecimiento de un familiar, nacimiento de un hijo, trámites' },
+  { valor: 'comision', texto: 'Comisión', ejemplo: 'está trabajando, pero en otro lugar' },
+  { valor: 'falta_justificada', texto: 'Falta justificada', ejemplo: 'faltó por una razón válida sin papel (se enfermó ese día, un accidente)' },
 ];
 
 @Component({

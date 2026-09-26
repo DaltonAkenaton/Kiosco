@@ -35,12 +35,15 @@ lineas as (
   union all select 2, repeat('=', 44)
 
   union all select 10, '' union all select 11,
-    'RETARDOS (' || (select count(*) from rep where estado = 'retardo') || ')'
-  union all select 12, '  - ' || persona || ': ' || minutos_tarde || ' min tarde (' || coalesce(turno, '') || ')'
-    from rep where estado = 'retardo'
+    'RETARDOS (' || (select count(*) from rep where estado in ('retardo', 'retardo_mayor')) || ')'
+  union all select 12, '  - ' || persona || ': ' || minutos_tarde || ' min tarde'
+         || case when estado = 'retardo_mayor' then ' (retardo mayor)' else '' end
+         || case when coalesce(minutos_repuestos, 0) > 0 then ', repuso ' || minutos_repuestos || ' min' else '' end
+         || ' (' || coalesce(turno, '') || ')'
+    from rep where estado in ('retardo', 'retardo_mayor')
 
   union all select 20, '' union all select 21,
-    'FALTAS (' || (select count(*) from rep where estado = 'falta') || ')'
+    'FALTAS: no vinieron (' || (select count(*) from rep where estado = 'falta') || ')'
   union all select 22, '  - ' || persona || ' (' || coalesce(turno, '') || ')'
     from rep where estado = 'falta'
 

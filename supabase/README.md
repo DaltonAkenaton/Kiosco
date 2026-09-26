@@ -48,6 +48,7 @@ migración fallará y nadie sabrá por qué.
 | 0016 | `jornadas_y_reportes` | Marcas válidas, jornadas y el reporte de asistencia (calculados al momento); horarios, ausencias, festivos y correcciones |
 | 0017 | `administradores_arco_y_limites` | Administradores desde el panel, derechos ARCO (exportar y anonimizar), límite de altas de kiosco, bandera `foto_no_guardada` |
 | 0018 | `inactividad_y_demostracion` | Cierre de sesión del panel por inactividad (configurable) y generador de datos de demostración, apagado por defecto |
+| 0019 | `retardos_y_versiones_de_turno` | Falta = no vino; retardo mayor y "repuso"; historia de horarios de cada turno (cambiar un turno no reescribe el pasado) |
 
 ---
 

@@ -78,7 +78,7 @@
     </label>
     <label class="flex flex-col gap-1">Qué
       <select class="campo" (change)="cambiarNueva('tipo', valor($event))">
-        @for (t of TIPOS; track t.valor) { <option [value]="t.valor" [selected]="t.valor === n.tipo">{{ t.texto }}</option> }
+        @for (t of TIPOS; track t.valor) { <option [value]="t.valor" [selected]="t.valor === n.tipo">{{ t.texto }} — {{ t.ejemplo }}</option> }
       </select>
     </label>
     <div class="flex flex-wrap gap-3">
