@@ -141,8 +141,13 @@
                      [ocupado]="guardando()" [error]="errorAccion()" (confirmar)="cambiarEstado(a.empleado, $event)" (cancelar)="cerrar()">
         @if (a.empleado.activo) {
           <p>Ya no podrá registrar su asistencia. <b>No se borra nada:</b> sus registros anteriores se conservan y se puede reactivar después.</p>
+          <p class="text-texto-suave text-base">Su horario termina hoy: desde mañana ya no se le cuentan faltas.</p>
         } @else {
           <p>Volverá a aparecer en los kioscos y podrá registrar su asistencia con el PIN que tenía.</p>
+          <p class="aviso aviso-atencion text-base font-normal">
+            Su horario se cerró cuando se le dio de baja: <b>asígnale su horario otra vez en Horarios</b>, o no se le
+            calcularán retardos ni faltas.
+          </p>
         }
       </panel-dialogo>
     }

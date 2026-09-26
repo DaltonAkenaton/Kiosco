@@ -129,6 +129,12 @@ app.whenReady().then(async () => {
   comprobar('el paquete lleva el hash de la foto', paquete && paquete.fotoHash === foto.hash);
 
   comprobar('tras ENTRADA se sugiere SALIDA', bd.accionSugeridaPara(dgomez.id) === 'salida');
+  // Olvido checar la salida y regresa al DIA SIGUIENTE (analisis 26-09-2026):
+  // la entrada de ayer ya no esta "abierta"; hoy toca ENTRADA, no salida.
+  comprobar('si olvidó la salida y vuelve al día siguiente, se sugiere ENTRADA (no salida)',
+    bd.accionSugeridaPara(dgomez.id, Date.now() + 20 * 60 * 60 * 1000) === 'entrada');
+  comprobar('pero a las 8 horas de haber entrado sí se sugiere SALIDA',
+    bd.accionSugeridaPara(dgomez.id, Date.now() + 8 * 60 * 60 * 1000) === 'salida');
 
   // --- Deteccion de camara tapada ---
   comprobar('imagen negra y plana = obstruida', bd.pareceObstruida({ brilloPromedio: 5, varianza: 2 }) === true);
@@ -769,6 +775,17 @@ app.whenReady().then(async () => {
   comprobar('el kiosco obedece la configuracion de la nube (6 intentos de PIN)', bd.reglasDelPin().intentosMaximos === 6);
   comprobar('un valor absurdo NO se obedece: se usa el respaldo',
     bd.umbralesDeCamara().brilloMinimo === 45, String(bd.umbralesDeCamara().brilloMinimo));
+  comprobar('la zona horaria que manda la nube se obedece', bd.zonaHorariaVigente() === 'America/Matamoros');
+  bdSql.prepare(`INSERT OR REPLACE INTO configuracion_cache (clave, valor) VALUES ('zona_horaria', '"Marte/Olympus"')`).run();
+  comprobar('una zona que no existe NO se obedece: se usa la de respaldo', bd.zonaHorariaVigente() === 'America/Matamoros');
+  // Las horas para "salida no registrada" tambien mandan en la sugerencia.
+  bdSql.prepare(`INSERT OR REPLACE INTO configuracion_cache (clave, valor) VALUES ('horas_para_cierre_automatico', '10')`).run();
+  const ultimaDalton = bdSql.prepare('SELECT tipo, hora_estimada_ms AS ms FROM ultimas_marcas_cache WHERE empleado_id = ?').get(idNube);
+  bdSql.prepare('UPDATE ultimas_marcas_cache SET tipo = ? WHERE empleado_id = ?').run('entrada', idNube);
+  comprobar('con "salida no registrada" en 10 h: a las 12 h de entrar ya se sugiere ENTRADA',
+    bd.accionSugeridaPara(idNube, ultimaDalton.ms + 12 * 3_600_000) === 'entrada');
+  comprobar('y a las 8 h todavía SALIDA', bd.accionSugeridaPara(idNube, ultimaDalton.ms + 8 * 3_600_000) === 'salida');
+  bdSql.prepare('UPDATE ultimas_marcas_cache SET tipo = ? WHERE empleado_id = ?').run(ultimaDalton.tipo, idNube);
   bdSql.prepare('DELETE FROM configuracion_cache').run();
   comprobar('sin configuracion, el respaldo de configuracion.ts', bd.reglasDelPin().intentosMaximos === 4);
 

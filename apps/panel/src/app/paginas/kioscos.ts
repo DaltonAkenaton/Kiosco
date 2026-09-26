@@ -28,6 +28,7 @@ interface Kiosco {
   ultima_conexion: string | null;
   version_app: string | null;
   camara_ok: boolean | null;
+  camara_caida_desde: string | null;
   pendientes: number;
   desfase_reloj_ms: number | null;
 }
@@ -47,6 +48,7 @@ export class Kioscos implements OnInit, OnDestroy {
   protected readonly kioscos = signal<Kiosco[]>([]);
   protected readonly fotosPorRevisar = signal<Map<string, number>>(new Map());
   protected readonly minutosSinConexion = signal(60);
+  protected readonly minutosCamara = signal(15);
   protected readonly ahora = signal(Date.now());
   protected readonly error = signal<string | null>(null);
 
@@ -92,7 +94,12 @@ export class Kioscos implements OnInit, OnDestroy {
       if (!k.ultima_conexion || this.ahora() - new Date(k.ultima_conexion).getTime() > limiteMs) {
         lista.push(`${k.nombre}: no se reporta desde ${haceCuanto(k.ultima_conexion, this.ahora()).replace('hace ', 'hace ')}.`);
       }
-      if (k.camara_ok === false) lista.push(`${k.nombre}: la cámara no funciona. Los registros salen sin foto.`);
+      // La camara avisa cuando lleva caida mas que "Minutos de camara caida
+      // para avisar" (Configuracion). Un parpadeo de un minuto no es alerta.
+      if (k.camara_ok === false && k.camara_caida_desde &&
+          this.ahora() - new Date(k.camara_caida_desde).getTime() > this.minutosCamara() * 60_000) {
+        lista.push(`${k.nombre}: la cámara no funciona desde ${haceCuanto(k.camara_caida_desde, this.ahora())}. Los registros salen sin foto.`);
+      }
       const fotos = this.fotosPorRevisar().get(k.id) ?? 0;
       if (fotos > 0) lista.push(`${k.nombre}: ${fotos} foto(s) faltan o están alteradas.`);
     }
@@ -113,12 +120,15 @@ export class Kioscos implements OnInit, OnDestroy {
       this.sesion.bd
         .from('dispositivos')
         .select(
-          'id, nombre, ubicacion, activo, enrolado_en, revocado_en, ultima_conexion, version_app, camara_ok, pendientes, desfase_reloj_ms',
+          'id, nombre, ubicacion, activo, enrolado_en, revocado_en, ultima_conexion, version_app, camara_ok, camara_caida_desde, pendientes, desfase_reloj_ms',
         )
         .order('activo', { ascending: false })
         .order('nombre'),
       this.sesion.bd.from('fotos_por_revisar').select('dispositivo_id, casos'),
-      this.sesion.bd.from('configuracion').select('valor').eq('clave', 'minutos_kiosco_sin_conexion_alerta').maybeSingle(),
+      this.sesion.bd
+        .from('configuracion')
+        .select('clave, valor')
+        .in('clave', ['minutos_kiosco_sin_conexion_alerta', 'minutos_camara_caida_alerta']),
     ]);
     if (kioscos.error) {
       this.error.set('No se pudo traer la lista de kioscos. Revisa el internet.');
@@ -127,7 +137,10 @@ export class Kioscos implements OnInit, OnDestroy {
     this.error.set(null);
     this.kioscos.set(kioscos.data as Kiosco[]);
     this.fotosPorRevisar.set(new Map((fotos.data ?? []).map((f) => [f.dispositivo_id as string, Number(f.casos)])));
-    if (typeof config.data?.valor === 'number') this.minutosSinConexion.set(config.data.valor);
+    for (const c of config.data ?? []) {
+      if (c.clave === 'minutos_kiosco_sin_conexion_alerta' && typeof c.valor === 'number') this.minutosSinConexion.set(c.valor);
+      if (c.clave === 'minutos_camara_caida_alerta' && typeof c.valor === 'number') this.minutosCamara.set(c.valor);
+    }
     this.ahora.set(Date.now());
   }
 

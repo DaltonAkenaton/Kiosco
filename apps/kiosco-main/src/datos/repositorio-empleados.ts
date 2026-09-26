@@ -20,7 +20,8 @@
  *    3. Se puede probar sin base de datos, sustituyendolo por uno falso.
  */
 
-import type { EmpleadoEnCache } from '@kiosko/compartido';
+import { CONFIG, type EmpleadoEnCache } from '@kiosko/compartido';
+import { numeroConfigurado } from '../configuracion-vigente';
 import { baseDeDatos } from './base-de-datos';
 
 /**
@@ -237,11 +238,22 @@ export function listarActivosConUltimaMarca(): (EmpleadoEnCache & {
  * ¿Que accion sugerir?
  *
  * Sin marcas previas -> entrada (lo logico al empezar el dia).
- * Ultima fue entrada -> salida.
+ * Ultima fue entrada -> salida... SALVO que haya sido hace mucho.
  * Ultima fue salida  -> entrada.
+ *
+ * El "salvo" importa (analisis del 26-09-2026): quien OLVIDO checar su salida
+ * ayer llega hoy y, sin esto, el kiosco le sugeria SALIDA; como se confirma
+ * solo a los pocos segundos, su llegada quedaba registrada como salida. Si la
+ * ultima entrada es mas vieja que las horas para "salida no registrada"
+ * (Configuracion, 16 por defecto), esa jornada ya se cerro: toca ENTRADA.
  */
-export function accionSugeridaPara(empleadoId: string): 'entrada' | 'salida' {
+export function accionSugeridaPara(empleadoId: string, ahoraMs: number = Date.now()): 'entrada' | 'salida' {
   const ultima = ultimaMarcaDe(empleadoId);
   if (!ultima) return 'entrada';
-  return ultima.tipo === 'entrada' ? 'salida' : 'entrada';
+  if (ultima.tipo === 'salida') return 'entrada';
+  const horasLimite = numeroConfigurado('horas_para_cierre_automatico', CONFIG.jornada.horasParaCierreAutomatico, {
+    minimo: 4,
+    maximo: 48,
+  });
+  return ahoraMs - ultima.horaEstimadaMs > horasLimite * 3_600_000 ? 'entrada' : 'salida';
 }

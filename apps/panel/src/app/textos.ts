@@ -135,7 +135,7 @@ export const PALABRAS_CONFIGURACION: Record<string, { nombre: string; explicacio
   },
   dias_retencion_fotos: {
     nombre: 'Días que se guardan las fotos',
-    explicacion: 'Después de estos días, las fotos se borran solas del kiosco para cuidar la privacidad (salvo las marcadas "Conservar"). Los registros de asistencia NO se borran nunca.',
+    explicacion: 'Después de estos días, las fotos se borran solas del kiosco para cuidar la privacidad (salvo las marcadas "Conservar"). Los registros de asistencia NO se borran nunca. OJO: si BAJAS este número, en la siguiente limpieza el kiosco borra todas las fotos más viejas que eso, y no se pueden recuperar. Si hay un caso en disputa, márcalo "Conservar" antes.',
     seUsaEn: 'Los kioscos',
   },
   intentos_pin_maximos: {

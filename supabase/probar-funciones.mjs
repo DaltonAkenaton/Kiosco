@@ -198,6 +198,15 @@ try {
     'select version_app, camara_ok, pendientes, desfase_reloj_ms, ultima_conexion from dispositivos where id = $1', [KIOSCO]);
   comprobar('el panel ya ve version, camara, pendientes y desfase',
     tras.version_app === '0.2.0' && tras.camara_ok === false && tras.pendientes === 7 && tras.desfase_reloj_ms === 1500);
+  // 0021: el latido con la camara caida deja anotado DESDE CUANDO, para que
+  // el panel avise pasados los minutos de Configuracion (no al primer parpadeo).
+  const caida = async () => (await bd.query('select camara_caida_desde c from dispositivos where id = $1', [KIOSCO])).rows[0].c;
+  const primeraCaida = await caida();
+  await llamar('latido', { versionApp: '0.2.0', camaraOk: false, pendientes: 7, desfaseRelojMs: 1500 }, TOKEN);
+  comprobar('cámara caída: el latido anota desde cuándo y no lo reinicia en el siguiente',
+    primeraCaida !== null && String(await caida()) === String(primeraCaida));
+  await llamar('latido', { versionApp: '0.2.0', camaraOk: true, pendientes: 7, desfaseRelojMs: 1500 }, TOKEN);
+  comprobar('al volver la cámara, se borra', (await caida()) === null);
 
   // ==========================================================================
   //  catalogo

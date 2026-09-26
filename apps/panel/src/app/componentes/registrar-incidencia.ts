@@ -64,7 +64,7 @@ export interface IncidenciaSugerida {
     <panel-dialogo
       titulo="Registrar una incidencia"
       [textoBoton]="para() === 'una' ? 'Registrar' : 'Registrar para varios'"
-      ejemploMotivo="Ej.: la huella no lo tomó; lo vio el supervisor a las 6:00"
+      ejemploMotivo="Ej.: sí vino a las 6:00, lo vio el supervisor; no aparece su registro"
       [ocupado]="guardando()"
       [error]="error()"
       (confirmar)="guardar($event)"

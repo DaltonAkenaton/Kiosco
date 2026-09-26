@@ -150,6 +150,11 @@ export class Asistencia implements OnInit {
   }
 
   protected async buscar(): Promise<void> {
+    if (this.desde() && this.hasta() && this.desde() > this.hasta()) {
+      this.marcas.set([]);
+      this.error.set('La fecha "Desde" es después de "Hasta". Revisa las fechas.');
+      return;
+    }
     this.cargando.set(true);
     this.error.set(null);
     const zona = this.sesion.zona();

@@ -17,7 +17,8 @@ with
 cfg as (
   select zona_horaria() as zona,
          (now() at time zone zona_horaria())::date - 1 as ayer,
-         config_entero('minutos_kiosco_sin_conexion_alerta', 60) as min_sin_conexion
+         config_entero('minutos_kiosco_sin_conexion_alerta', 60) as min_sin_conexion,
+         config_entero('minutos_camara_caida_alerta', 15) as min_camara
 ),
 rep as (
   select r.*, trim(e.nombre || ' ' || e.apellido_paterno) as persona
@@ -71,7 +72,9 @@ lineas as (
   union all select 52, '  - ' || d.nombre || ': ' ||
          case when d.ultima_conexion is null or d.ultima_conexion < now() - make_interval(mins => cfg.min_sin_conexion)
                 then 'SIN CONEXION desde ' || coalesce(to_char(d.ultima_conexion at time zone cfg.zona, 'DD/MM HH24:MI'), 'nunca')
-              when d.camara_ok is false then 'conectado, pero la CAMARA NO FUNCIONA'
+              when d.camara_ok is false
+                   and d.camara_caida_desde < now() - make_interval(mins => cfg.min_camara)
+                then 'conectado, pero la CAMARA NO FUNCIONA desde ' || to_char(d.camara_caida_desde at time zone cfg.zona, 'DD/MM HH24:MI')
               else 'bien' end ||
          case when coalesce(d.pendientes, 0) > 0 then ' (' || d.pendientes || ' registros sin enviar)' else '' end
     from dispositivos d, cfg where d.activo

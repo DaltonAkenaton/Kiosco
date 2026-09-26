@@ -389,6 +389,23 @@ app.whenReady().then(async () => {
     await ir('/asistencia');
     comprobar('con su contrasena propia ya puede usar el panel', (await js('location.pathname')) === '/asistencia');
 
+    // ====================================================================
+    console.log('\n--- cierre de sesión por inactividad ---');
+    // No se esperan 30 minutos de verdad: se le dice al panel que la ultima
+    // actividad fue hace casi 30 (y luego hace mas de 30) y se deja que revise.
+    const limite = Number(await js(`localStorage.getItem('panel-minutos-inactividad') ?? '30'`));
+    await js(`localStorage.setItem('panel-ultima-actividad', String(Date.now() - (${limite} * 60 - 40) * 1000))`);
+    await esperar(6500);
+    comprobar('a 40 segundos del límite aparece el aviso "¿Sigues ahí?"', (await texto()).includes('¿Sigues ahí?'));
+    await picar('Sigo aquí');
+    await esperar(6500);
+    comprobar('"Sigo aquí" quita el aviso y la sesión sigue', !(await texto()).includes('¿Sigues ahí?') &&
+      (await js('location.pathname')) !== '/entrar');
+    await js(`localStorage.setItem('panel-ultima-actividad', String(Date.now() - (${limite} * 60 + 5) * 1000))`);
+    await esperar(6500);
+    comprobar('pasado el límite, la sesión se cierra sola', (await js('location.pathname')) === '/entrar');
+    comprobar('y la pantalla de entrada explica por qué', (await texto()).includes('se cerró sola'));
+
     comprobar('ninguna pantalla dejo errores en la consola', erroresDeConsola.length === 0, erroresDeConsola.slice(0, 2).join(' | '));
   } catch (fallo) {
     console.log('FALLA  la prueba se detuvo:', fallo.message);

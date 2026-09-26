@@ -63,6 +63,12 @@ export const ESTADOS: Record<string, { texto: string; color: string; ayuda: stri
     color: 'var(--kiosko-peligro)',
     ayuda: 'Tenía turno y no vino (terminó su turno sin registrar entrada). Si fue por enfermedad, un accidente u otra razón válida, regístralo en Ausencias como falta justificada o incapacidad: deja de contar como falta.',
   },
+  sin_entrada: {
+    texto: 'Sin entrada',
+    color: 'var(--kiosko-atencion)',
+    ayuda: 'Registró su SALIDA pero no su entrada: sí vino, olvidó checar al llegar (o el kiosco no lo tomó). No cuenta como falta. Con "Justificar" → "No se registró" el día cuenta completo.',
+  },
+  programado: { texto: 'Programado', color: 'var(--kiosko-texto-suave)', ayuda: 'Su turno de ese día todavía no empieza.' },
   pendiente: { texto: 'Todavía no llega', color: 'var(--kiosko-texto-suave)', ayuda: 'Su turno ya empezó o está por empezar y aún no registra entrada. Puede llegar tarde: si termina su turno sin llegar, será falta.' },
   incidencia: { texto: 'Ausencia justificada', color: 'var(--kiosko-texto)', ayuda: 'No vino, con razón (vacaciones, incapacidad, permiso...): no cuenta como falta, pero tampoco suma horas trabajadas.' },
   justificado: {
@@ -155,7 +161,7 @@ export class Reportes implements OnInit {
         ({ empleadoId: f.empleado_id, nombre: this.nombre(f.empleado_id), programados: 0, aTiempo: 0, retardos: 0,
            retardosMayores: 0, faltas: 0, justificadas: 0, porBueno: 0, horasQueCuentan: 0, sinSalida: 0,
            fueraDeHorario: 0, horas: 0 } satisfies Resumen);
-      if (f.estado !== 'sin_turno' && f.estado !== 'festivo' && f.estado !== 'pendiente') r.programados++;
+      if (!['sin_turno', 'festivo', 'pendiente', 'programado'].includes(f.estado)) r.programados++;
       if (f.estado === 'a_tiempo') r.aTiempo++;
       if (f.estado === 'retardo' || f.estado === 'retardo_mayor') r.retardos++;
       if (f.estado === 'retardo_mayor') r.retardosMayores++;
@@ -164,7 +170,8 @@ export class Reportes implements OnInit {
       if (f.estado === 'justificado') r.porBueno++;
       r.horasQueCuentan += Number(f.horas_acreditadas ?? 0);
       if (f.estado === 'sin_turno') r.fueraDeHorario++;
-      if (f.estado_salida === 'salida_no_registrada') r.sinSalida++;
+      // "Incompletos": entro y no registro salida, o salio sin registrar entrada.
+      if (f.estado_salida === 'salida_no_registrada' || f.estado === 'sin_entrada') r.sinSalida++;
       r.horas += Number(f.horas ?? 0);
       porPersona.set(f.empleado_id, r);
     }
@@ -189,7 +196,7 @@ export class Reportes implements OnInit {
   /** ¿Tiene algo que justificar ese dia? Falta, retardo o salida sin registrar. */
   protected sePuedeJustificar(f: Fila): boolean {
     return (
-      ['falta', 'retardo', 'retardo_mayor'].includes(f.estado) ||
+      ['falta', 'retardo', 'retardo_mayor', 'sin_entrada'].includes(f.estado) ||
       (f.estado !== 'justificado' && f.estado !== 'incidencia' &&
         ['salida_no_registrada', 'salida_sin_entrada'].includes(f.estado_salida ?? ''))
     );
@@ -213,6 +220,11 @@ export class Reportes implements OnInit {
 
   protected async buscar(): Promise<void> {
     if (!this.desde() || !this.hasta()) return;
+    if (this.desde() > this.hasta()) {
+      this.filas.set([]);
+      this.error.set('La fecha "Desde" es después de "Hasta". Revisa las fechas.');
+      return;
+    }
     this.cargando.set(true);
     this.error.set(null);
     const { data, error } = await this.sesion.bd.rpc('reporte_asistencia', {

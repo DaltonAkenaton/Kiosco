@@ -101,6 +101,9 @@ Cómo se decide cada cosa (se ajusta en **Configuración**):
   informa; qué hacer con eso lo decides tú.
 - **Todavía no llega**: su turno ya empezó y no ha registrado entrada. Puede
   llegar tarde; si termina su turno sin llegar, es falta.
+- **Programado**: su turno de ese día todavía no empieza (días futuros).
+- **Sin entrada**: registró su **salida** pero no su entrada: sí vino. No es
+  falta; con **Justificar → No se registró** el día cuenta completo.
 - **Falta**: **no vino** en todo su turno. Si fue por enfermedad, un accidente
   u otra razón válida, regístralo en **Ausencias** (falta justificada o
   incapacidad) y deja de contar como falta.
@@ -130,7 +133,9 @@ kiosco y si algún kiosco o cámara está fallando.
   Sirve el Excel normal. Al final imprime la hoja con todos los PIN.
 - **⬇ Descargar lista**: la lista del personal para abrir en Excel.
 - **PIN nuevo**: si alguien lo olvidó. El viejo deja de servir.
-- **Dar de baja**: ya no puede checar. **No se borra nada**; se puede reactivar.
+- **Dar de baja**: ya no puede checar y **su horario termina ese día** (ya no
+  le cuentan faltas). **No se borra nada**; se puede reactivar, y entonces hay
+  que asignarle su horario otra vez en Horarios.
 - **Sus datos (ARCO)**: muestra una **constancia** con todo lo que el sistema
   tiene de esa persona, para imprimirla o guardarla como PDF (y, si la pide,
   el archivo de datos). Es para cuando la persona lo solicita por escrito: la
@@ -205,9 +210,11 @@ sin enviar, relojes movidos.
 
 ### Configuración
 
-Las reglas del sistema: tolerancia, minutos para falta, horas para "no
-registró salida", días que se guardan las fotos, intentos de PIN, umbrales de
-la cámara y del reloj… Cada una tiene su ⓘ y su rango permitido. Un cambio
+Las reglas del sistema: tolerancia, minutos para "retardo mayor", horas para
+"no registró salida", días que se guardan las fotos, intentos de PIN, umbrales
+de la cámara y del reloj… Cada una tiene su ⓘ y su rango permitido. Si un
+valor choca con otra regla (por ejemplo, una tolerancia mayor que los minutos
+de "retardo mayor"), el panel no lo deja guardar y explica por qué. Un cambio
 llega a los kioscos en unos minutos y los reportes se recalculan solos.
 
 ### Accesos

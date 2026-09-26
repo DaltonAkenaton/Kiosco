@@ -878,8 +878,10 @@ await bd.query(`select corregir_marca($1, 'anular', 'Registro duplicado por erro
   const viernes11 = dia(semana, '2026-09-11');
   comprobar('corregida a salida: jornada completa de 8 horas, marcada como corregida',
     viernes11?.estado_salida === 'completa' && Number(viernes11?.horas) === 8 && viernes11?.corregida === true);
-  comprobar('anulada la entrada del 18: ese dia queda como falta SIN entrada',
-    dia(semana, '2026-09-18')?.estado === 'falta' && dia(semana, '2026-09-18')?.entrada === null);
+  // Desde la 0021: como quedo su SALIDA de ese dia, si vino: "sin entrada",
+  // no falta (antes de la 0021 salia como falta).
+  comprobar('anulada la entrada del 18 (quedó su salida): "sin entrada", no falta',
+    dia(semana, '2026-09-18')?.estado === 'sin_entrada' && dia(semana, '2026-09-18')?.entrada === null);
   const { rows: [original] } = await bd.query('select tipo from marcas where id = $1', [salidaComoEntrada]);
   comprobar('la marca original sigue intacta (tipo entrada)', original.tipo === 'entrada');
 }
@@ -903,11 +905,11 @@ await bd.query(`select actualizar_configuracion('tolerancia_retardo_minutos', '1
 
 // --- 0020: incidencias que "se dan por buenas" ---
 {
-  await bd.query(`select registrar_incidencia($1, 'olvido_registro', '2026-09-17', '2026-09-17', 'La huella no lo tomó, sí vino')`, [empMatutino]);
+  await bd.query(`select registrar_incidencia($1, 'olvido_registro', '2026-09-17', '2026-09-17', 'Sí vino, el kiosco no lo registró')`, [empMatutino]);
   await bd.query(`select registrar_incidencia($1, 'retardo_justificado', '2026-09-15', '2026-09-15', 'Se ponchó la llanta, avisó')`, [empMatutino]);
   const semana = await reporte(empMatutino, '2026-09-10', '2026-09-17');
   const jueves = dia(semana, '2026-09-17');
-  comprobar('"no se registró" (la huella no lo tomó): el día que era falta queda "justificado" con sus 8 horas',
+  comprobar('"no se registró" (el kiosco no lo tomó): el día que era falta queda "justificado" con sus 8 horas',
     jueves?.estado === 'justificado' && Number(jueves?.horas_acreditadas) === 8,
     `${jueves?.estado} ${jueves?.horas_acreditadas}`);
   const martes = dia(semana, '2026-09-15');
@@ -926,6 +928,98 @@ await bd.query(`select actualizar_configuracion('tolerancia_retardo_minutos', '1
     dia(await reporte(sabatino, '2026-09-21', '2026-09-21'), '2026-09-21')?.estado === 'justificado');
   await debeFallar('incidencia para varios: a lo más un mes',
     `select registrar_incidencia_grupal(null, 'falla_sistema', '2026-01-01', '2026-06-01', 'Rango demasiado largo')`, 'mes');
+}
+
+// --- 0021: arreglos del analisis a fondo (cada uno se comprobo roto antes) ---
+{
+  const intenta = async (sql, p = []) => {
+    await bd.query('savepoint intento');
+    try {
+      await bd.query(sql, p);
+      await bd.query('release savepoint intento');
+      return true;
+    } catch {
+      await bd.query('rollback to savepoint intento');
+      return false;
+    }
+  };
+  const hoyLocal = (await bd.query(`select (now() at time zone 'America/Matamoros')::date::text d`)).rows[0].d;
+  const masDias = async (n) => (await bd.query(`select ($1::date + $2::int)::text d`, [hoyLocal, n])).rows[0].d;
+
+  await bd.query('reset role');
+  const deBaja = await crearEmpleado('jdebaja');
+  const olvidadizo = await crearEmpleado('jolvidadizo');
+  await entrarComo(ID_ADMIN);
+  const matutino = await idTurno('Matutino');
+  const lav = '[{"dia":1},{"dia":2},{"dia":3},{"dia":4},{"dia":5}]';
+  await bd.query(`select asignar_horario($1, $2, '2026-09-01', $3, 'Horario de la prueba 0021')`, [deBaja, matutino, lav]);
+  await bd.query(`select asignar_horario($1, $2, '2026-09-01', $3, 'Horario de la prueba 0021')`, [olvidadizo, matutino, lav]);
+
+  // (a) Dar de baja cierra el horario: no mas faltas despues.
+  await bd.query(`select cambiar_estado_empleado($1, false, 'Renunció (prueba 0021)')`, [deBaja]);
+  const trasBaja = await reporte(deBaja, await masDias(1), await masDias(10));
+  comprobar('(a) dado de baja: ya no le cuentan faltas los días siguientes', trasBaja.length === 0, String(trasBaja.length));
+
+  // (b, g) Cierre automatico vs. turno mas largo
+  comprobar('(b) "salida no registrada" en 4 h con turnos de 8: se rechaza',
+    !(await intenta(`select actualizar_configuracion('horas_para_cierre_automatico', '4', 'Prueba 0021 cierre corto')`)));
+  comprobar('(g) un turno de 20 h con el cierre en 16: se rechaza',
+    !(await intenta(`select guardar_turno(null, 'Turno larguísimo', '06:00', '02:00', null, null, 'Prueba 0021 turno largo')`)));
+
+  // (c) Reglas cruzadas
+  comprobar('(c) "retardo mayor" por debajo de la tolerancia: se rechaza',
+    !(await intenta(`select actualizar_configuracion('minutos_para_falta', '5', 'Prueba 0021 cruzada')`)));
+  comprobar('(c) tolerancia por encima de "retardo mayor": se rechaza',
+    !(await intenta(`select actualizar_configuracion('tolerancia_retardo_minutos', '40', 'Prueba 0021 cruzada')`)));
+
+  // (i) Anticipacion minima
+  comprobar('(i) anticipación de 0 minutos (5:59 sería falta): se rechaza',
+    !(await intenta(`select actualizar_configuracion('minutos_anticipacion_entrada', '0', 'Prueba 0021 anticipacion')`)));
+
+  // (d) Dias futuros
+  const futuros = await reporte(olvidadizo, await masDias(1), await masDias(7));
+  comprobar('(d) los días futuros dicen "programado", no "todavía no llega"',
+    futuros.length > 0 && futuros.every((f) => f.estado === 'programado'), [...new Set(futuros.map((f) => f.estado))].join(','));
+
+  // (e) Olvido la entrada pero si registro la salida
+  await bd.query('reset role');
+  await marcar(olvidadizo, 'salida', '2026-09-15T19:00:00Z'); // mar 15, 14:00
+  await entrarComo(ID_ADMIN);
+  const martes = await reporte(olvidadizo, '2026-09-15', '2026-09-15');
+  comprobar('(e) olvidó la entrada pero registró la salida: "sin entrada" (sí vino), no falta',
+    martes.length === 1 && martes[0].estado === 'sin_entrada' && martes[0].salida !== null,
+    martes.map((f) => f.estado).join(','));
+
+  // (f) Incidencia duplicada
+  await bd.query(`select registrar_incidencia($1, 'vacaciones', '2026-09-16', '2026-09-16', 'Prueba 0021 duplicado')`, [olvidadizo]);
+  comprobar('(f) la misma incidencia dos veces: se rechaza',
+    !(await intenta(`select registrar_incidencia($1, 'vacaciones', '2026-09-16', '2026-09-16', 'Prueba 0021 duplicado')`, [olvidadizo])));
+
+  // (j) Horario a alguien dado de baja
+  comprobar('(j) asignarle horario a alguien dado de baja: se rechaza (pide reactivarlo)',
+    !(await intenta(`select asignar_horario($1, $2, '2026-10-01', $3, 'Prueba 0021 baja con horario')`, [deBaja, matutino, lav])));
+
+  // (k) Trabajo un dia marcado como ausencia: sus horas cuentan
+  await bd.query('reset role');
+  await marcar(olvidadizo, 'entrada', '2026-09-16T11:00:00Z');
+  await marcar(olvidadizo, 'salida', '2026-09-16T19:00:00Z');
+  await entrarComo(ID_ADMIN);
+  const conAusencia = dia(await reporte(olvidadizo, '2026-09-16', '2026-09-16'), '2026-09-16');
+  comprobar('(k) trabajó un día marcado como vacaciones: sus 8 horas sí cuentan',
+    conAusencia?.estado === 'incidencia' && Number(conAusencia?.horas_acreditadas) === 8, JSON.stringify(conAusencia?.horas_acreditadas));
+
+  // (h) Camara caida: desde cuando
+  await bd.query('reset role');
+  const { rows: [k] } = await bd.query(`insert into dispositivos (nombre, token_hash) values ('Kiosco cámara', 'hash-camara') returning id`);
+  const caidaDesde = async () => (await bd.query('select camara_caida_desde c from dispositivos where id = $1', [k.id])).rows[0].c;
+  await bd.query('update dispositivos set camara_ok = false where id = $1', [k.id]);
+  const primera = await caidaDesde();
+  await bd.query('update dispositivos set camara_ok = false, pendientes = 2 where id = $1', [k.id]);
+  const sigue = await caidaDesde();
+  await bd.query('update dispositivos set camara_ok = true where id = $1', [k.id]);
+  comprobar('(h) la cámara caída guarda desde cuándo, lo conserva y se borra al volver',
+    primera !== null && String(primera) === String(sigue) && (await caidaDesde()) === null);
+  await entrarComo(ID_ADMIN);
 }
 
 // --- Quien puede ver el reporte ---

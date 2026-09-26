@@ -1316,6 +1316,31 @@ calificación del día.
 
 ---
 
+## D-044 · La configuración valida que sus reglas no se contradigan
+
+**Decidido (análisis del 26-09-2026):** además de su rango, cada opción que
+depende de otra se revisa al cambiarla: tolerancia < "retardo mayor";
+"salida no registrada" > turno más largo (y ningún turno más largo que eso);
+anticipación ≥ 60 min y anticipación + turno más largo < 24 h.
+
+**Por qué:** esas combinaciones no fallaban: calculaban mal en silencio
+(jornadas partidas, faltas a quien llegó 5:59). Un error silencioso en
+reportes de asistencia es peor que un mensaje al guardar.
+
+---
+
+## D-045 · Dar de baja cierra el horario
+
+**Decidido:** al pasar un empleado a inactivo (baja o supresión ARCO), sus
+asignaciones terminan ese día y lo programado a futuro se borra. Al
+reactivarlo hay que asignarle horario otra vez (el panel lo avisa), y no se
+puede asignar horario a alguien de baja.
+
+**Por qué:** su horario seguía vigente y el reporte le contaba faltas para
+siempre.
+
+---
+
 ## Plantilla para decisiones nuevas
 
 ```markdown

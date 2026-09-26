@@ -722,6 +722,21 @@ export const FOTOS = {
 } as const;
 
 // ============================================================================
+//  8.b2  JORNADA
+// ============================================================================
+//  El valor que manda vive en la tabla `configuracion`
+//  (horas_para_cierre_automatico, la decide el jefe). Aqui solo el RESPALDO,
+//  para cuando el kiosco todavia no ha bajado la configuracion.
+export const JORNADA = {
+  /**
+   * Horas tras una entrada sin salida para darla por cerrada ("salida no
+   * registrada"). El kiosco lo usa para no sugerir SALIDA a quien olvido
+   * checar la salida del dia anterior.
+   */
+  horasParaCierreAutomatico: 16,
+} as const;
+
+// ============================================================================
 //  8.c  MODO ADMINISTRADOR EN EL KIOSCO  (CLAUDE.md 5.2)
 // ============================================================================
 //  La unica forma de ver las fotos. Se entra con el boton del ENGRANE de la
@@ -901,6 +916,7 @@ export const CONFIG = {
   fotos: FOTOS,
   modoAdmin: MODO_ADMIN,
   exportacion: EXPORTACION,
+  jornada: JORNADA,
 } as const;
 
 /** El tipo de CONFIG, por si necesitas escribirlo en una firma de funcion. */

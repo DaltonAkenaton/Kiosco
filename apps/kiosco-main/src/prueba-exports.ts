@@ -108,7 +108,7 @@ export {
   reintentarRechazados,
   leerEstadoLocal,
 } from './datos/repositorio-sincronizacion';
-export { reglasDelPin, umbralesDeCamara, numeroConfigurado } from './configuracion-vigente';
+export { reglasDelPin, umbralesDeCamara, numeroConfigurado, zonaHorariaVigente } from './configuracion-vigente';
 export {
   calcularDesfase,
   enrolar,
