@@ -17,6 +17,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { hoyEn } from '@kiosko/compartido';
 import { Ayuda } from '../componentes/ayuda';
+import { descargarExcel } from '../servicios/escribir-excel';
 import { type IncidenciaSugerida, RegistrarIncidencia, TIPOS_DE_INCIDENCIA } from '../componentes/registrar-incidencia';
 import { senalRecordada } from '../servicios/recordar';
 import { Sesion } from '../servicios/sesion';
@@ -41,6 +42,8 @@ interface Fila {
   corregida: boolean;
   /** Minutos que repuso quedandose despues de su hora de salida (migracion 0019). */
   minutos_repuestos: number | null;
+  /** Tiempo extra: lo que se quedo despues de su hora y no fue para reponer (0022). */
+  minutos_extra: number | null;
   /** Las horas que cuentan: trabajadas, o las del turno si el dia se dio por bueno (0020). */
   horas_acreditadas: number | null;
 }
@@ -281,47 +284,53 @@ export class Reportes implements OnInit {
   }
 
   // --------------------------------------------------------------------------
-  //  Descargar para Excel (CSV con BOM: Excel respeta los acentos)
+  //  Descargar en Excel (un .xlsx de verdad, con las dos vistas) e imprimir
   // --------------------------------------------------------------------------
 
-  protected descargarDias(): void {
+  protected descargarExcel(): void {
     const z = this.zona();
-    const encabezado = ['fecha', 'numero', 'nombre', 'turno', 'entrada_programada', 'entrada', 'salida', 'minutos_tarde',
-      'minutos_repuestos', 'horas', 'estado', 'salida_estado', 'ausencia', 'revision'];
-    const renglones = this.filas().map((f) => [
-      f.fecha, this.numero(f.empleado_id), this.nombre(f.empleado_id), f.turno ?? '',
-      f.programado_inicio ? hora(f.programado_inicio, z) : '', f.entrada ? hora(f.entrada, z) : '',
-      f.salida ? hora(f.salida, z) : '', f.minutos_tarde ?? '', f.minutos_repuestos ?? '', f.horas ?? '',
-      ESTADOS[f.estado]?.texto ?? f.estado, f.estado_salida ? (ESTADOS_DE_SALIDA[f.estado_salida]?.texto || 'Completa') : '',
-      f.incidencia ? (INCIDENCIAS[f.incidencia] ?? f.incidencia) : '',
-      [...f.banderas.map((b) => (NOMBRES_DE_BANDERAS as Record<string, string>)[b] ?? b), f.corregida ? 'Corregida' : '', f.en_cuarentena ? 'En cuarentena' : '']
-        .filter(Boolean).join('; '),
-    ]);
-    this.descargar(`asistencia-por-dia_${this.desde()}_a_${this.hasta()}.csv`, [encabezado, ...renglones]);
+    const minutosEnHoras = (m: number | null): string => (m ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} min` : '');
+    const resumen = [
+      ['Número', 'Nombre', 'Días con turno', 'A tiempo', 'Retardos', 'De ellos, mayores', 'Faltas',
+        'Ausencias justificadas', 'Justificados', 'Registros incompletos', 'Fuera de horario', 'Horas trabajadas', 'Horas que cuentan'],
+      ...this.resumen().map((r) => [
+        this.numero(r.empleadoId), r.nombre, r.programados, r.aTiempo, r.retardos, r.retardosMayores, r.faltas,
+        r.justificadas, r.porBueno, r.sinSalida, r.fueraDeHorario, Number(r.horas.toFixed(2)), Number(r.horasQueCuentan.toFixed(2)),
+      ]),
+    ];
+    const dias = [
+      ['Fecha', 'Número', 'Nombre', 'Turno', 'Entrada programada', 'Salida programada', 'Entró', 'Salió',
+        'Minutos tarde', 'Repuso', 'Tiempo extra', 'Horas', 'Horas que cuentan', 'Resultado', 'Salida', 'Incidencia', 'Revisión'],
+      ...this.filas().map((f) => [
+        f.fecha.slice(0, 10), this.numero(f.empleado_id), this.nombre(f.empleado_id), f.turno ?? '',
+        f.programado_inicio ? hora(f.programado_inicio, z) : '', f.programado_fin ? hora(f.programado_fin, z) : '',
+        f.entrada ? hora(f.entrada, z) : '', f.salida ? hora(f.salida, z) : '',
+        f.minutos_tarde ?? '', minutosEnHoras(f.minutos_repuestos), minutosEnHoras(f.minutos_extra),
+        f.horas !== null ? Number(f.horas) : '', f.horas_acreditadas !== null ? Number(f.horas_acreditadas) : '',
+        ESTADOS[f.estado]?.texto ?? f.estado,
+        f.estado_salida ? (ESTADOS_DE_SALIDA[f.estado_salida]?.texto || 'Completa') : '',
+        f.incidencia ? (INCIDENCIAS[f.incidencia] ?? f.incidencia) : '',
+        [...f.banderas.map((b) => (NOMBRES_DE_BANDERAS as Record<string, string>)[b] ?? b),
+          f.corregida ? 'Corregido' : '', f.en_cuarentena ? 'En cuarentena' : ''].filter(Boolean).join('; '),
+      ]),
+    ];
+    const titulo = this.vista() === 'resumen' ? 'Resumen' : 'Día por día';
+    const hojas = [
+      { nombre: 'Resumen por persona', filas: resumen },
+      { nombre: 'Día por día', filas: dias },
+    ];
+    // La hoja que se estaba viendo va primero (es la que abre Excel).
+    if (titulo !== 'Resumen') hojas.reverse();
+    descargarExcel(`asistencia_${this.desde()}_a_${this.hasta()}.xlsx`, hojas);
   }
 
-  protected descargarResumen(): void {
-    const encabezado = ['numero', 'nombre', 'dias_con_turno', 'a_tiempo', 'retardos', 'de_ellos_mayores', 'faltas', 'ausencias_justificadas',
-      'dias_dados_por_buenos', 'sin_registrar_salida', 'fuera_de_horario', 'horas_trabajadas', 'horas_que_cuentan'];
-    const renglones = this.resumen().map((r) => [
-      this.numero(r.empleadoId), r.nombre, r.programados, r.aTiempo, r.retardos, r.retardosMayores, r.faltas, r.justificadas,
-      r.porBueno, r.sinSalida, r.fueraDeHorario, r.horas.toFixed(2), r.horasQueCuentan.toFixed(2),
-    ]);
-    this.descargar(`asistencia-resumen_${this.desde()}_a_${this.hasta()}.csv`, [encabezado, ...renglones]);
+  /** Imprime lo que se ve (o "Guardar como PDF" en la ventana de impresion). */
+  protected imprimir(): void {
+    window.print();
   }
 
-  private descargar(nombre: string, tabla: (string | number)[][]): void {
-    const celda = (v: string | number): string => {
-      let t = String(v);
-      if (/^[=+\-@]/.test(t)) t = `'${t}`; // que Excel no lo tome como formula
-      return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
-    };
-    const csv = '﻿' + tabla.map((r) => r.map(celda).join(',')).join('\r\n') + '\r\n';
-    const enlace = document.createElement('a');
-    enlace.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-    enlace.download = nombre;
-    enlace.click();
-    URL.revokeObjectURL(enlace.href);
+  protected fechaImpresion(): string {
+    return new Date().toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short', timeZone: this.zona() });
   }
 
   private lunesDeEstaSemana(): string {

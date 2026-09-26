@@ -109,6 +109,11 @@ interface RegistroPendiente {
   /** Lo que se va a registrar. Cambia si el empleado presiona "cambiar". */
   tipo: TipoMarca;
   /**
+   * Si el kiosco no pudo adivinar entrada o salida, el aviso que se muestra.
+   * Con aviso NO hay cuenta regresiva: la persona elige.
+   */
+  duda: string | null;
+  /**
    * La foto tomada AL VALIDAR EL PIN, no al confirmar.
    *
    * Se guarda aqui, en memoria, durante los segundos de la cuenta regresiva.
@@ -919,6 +924,7 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
       nombre: resultado.nombreParaMostrar,
       hora: resultado.horaLocalTexto,
       tipo: resultado.accionSugerida,
+      duda: resultado.duda,
       foto,
     });
   }
@@ -983,6 +989,16 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
     // encarga de que esta pantalla no se quede puesta para siempre.
     this.cancelarInactividad();
 
+    if (registro.duda) {
+      // El kiosco no sabe si llega o se va: NO se confirma solo. Si la
+      // persona se va sin elegir, se cancela y se avisa que no quedo nada.
+      this.detenerCuentaRegresiva();
+      this.msRestantes.set(0);
+      const segundos = this.configuracion()?.segundosParaElegirSiHayDuda ?? 30;
+      this.temporizadorInactividad = setTimeout(() => this.cancelarConfirmacion(), segundos * 1000);
+      return;
+    }
+
     this.arrancarCuentaRegresiva();
   }
 
@@ -1030,6 +1046,8 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
     if (!pendiente) return;
 
     this.detenerCuentaRegresiva();
+    // Si habia duda, su espera de 30 s se cancela: ya se eligio.
+    this.cancelarInactividad();
     this.paso.set('guardando');
 
     /**
@@ -1085,9 +1103,12 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
     const pendiente = this.pendiente();
     if (!pendiente) return;
 
+    // Si habia duda, la persona ya eligio: se quita el aviso y su espera.
+    this.cancelarInactividad();
     this.pendiente.set({
       ...pendiente,
       tipo: pendiente.tipo === 'entrada' ? 'salida' : 'entrada',
+      duda: null,
     });
 
     /**

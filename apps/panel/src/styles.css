@@ -305,24 +305,58 @@ panel-dialogo table,
   }
 }
 
-/* Al imprimir la hoja de PIN: solo la hoja, en blanco y negro, sin botones. */
+/* Lo que solo aparece en papel (el encabezado de un reporte impreso). */
+.solo-impresion {
+  display: none;
+}
+
+/* Al imprimir (o "Guardar como PDF"): solo la hoja de PIN / constancia, o el
+   area imprimible de la pantalla (reportes, asistencia), en blanco y negro,
+   sin menu ni botones. Si hay una ventana de PIN abierta, se imprime ella. */
 @media print {
+  @page {
+    size: landscape;
+    margin: 12mm;
+  }
+  html,
+  body {
+    background: #fff !important;
+  }
   body * {
     visibility: hidden;
   }
   .hoja-de-pines,
-  .hoja-de-pines * {
+  .hoja-de-pines *,
+  .area-imprimible,
+  .area-imprimible * {
     visibility: visible;
     color: #000 !important;
     background: #fff !important;
     border-color: #999 !important;
+    box-shadow: none !important;
   }
-  .hoja-de-pines {
+  .hoja-de-pines,
+  .area-imprimible {
     position: absolute;
     inset: 0 auto auto 0;
+    width: 100%;
     max-height: none;
   }
-  .no-imprimir {
+  .no-imprimir,
+  .area-imprimible panel-ayuda {
     display: none !important;
+  }
+  .solo-impresion {
+    display: block !important;
+  }
+  main table {
+    font-size: 10pt;
+  }
+  main table tr {
+    break-inside: avoid;
+  }
+  main table tbody tr.encabezado-dia td {
+    font-weight: 700;
+    border-top: 2px solid #000 !important;
   }
 }

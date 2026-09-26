@@ -248,12 +248,32 @@ export function listarActivosConUltimaMarca(): (EmpleadoEnCache & {
  * (Configuracion, 16 por defecto), esa jornada ya se cerro: toca ENTRADA.
  */
 export function accionSugeridaPara(empleadoId: string, ahoraMs: number = Date.now()): 'entrada' | 'salida' {
+  return sugerenciaPara(empleadoId, ahoraMs).accion;
+}
+
+/**
+ * La sugerencia, y si hay DUDA.
+ *
+ * Hay duda cuando la ultima fue una ENTRADA de hace mas de un turno normal
+ * (JORNADA.horasParaPreguntar) pero todavia no pasan las horas de "salida no
+ * registrada": pudo ser un turno doble (se va) o una salida olvidada (llega).
+ * El kiosco no puede saberlo; entonces sugiere ENTRADA (lo mas comun) pero la
+ * pantalla NO la confirma sola: pregunta.
+ */
+export function sugerenciaPara(
+  empleadoId: string,
+  ahoraMs: number = Date.now(),
+): { accion: 'entrada' | 'salida'; dudosa: boolean; ultimaEntradaMs: number | null } {
   const ultima = ultimaMarcaDe(empleadoId);
-  if (!ultima) return 'entrada';
-  if (ultima.tipo === 'salida') return 'entrada';
+  if (!ultima || ultima.tipo === 'salida') return { accion: 'entrada', dudosa: false, ultimaEntradaMs: null };
   const horasLimite = numeroConfigurado('horas_para_cierre_automatico', CONFIG.jornada.horasParaCierreAutomatico, {
     minimo: 4,
     maximo: 48,
   });
-  return ahoraMs - ultima.horaEstimadaMs > horasLimite * 3_600_000 ? 'entrada' : 'salida';
+  const transcurridas = (ahoraMs - ultima.horaEstimadaMs) / 3_600_000;
+  if (transcurridas > horasLimite) return { accion: 'entrada', dudosa: false, ultimaEntradaMs: ultima.horaEstimadaMs };
+  if (transcurridas > CONFIG.jornada.horasParaPreguntar) {
+    return { accion: 'entrada', dudosa: true, ultimaEntradaMs: ultima.horaEstimadaMs };
+  }
+  return { accion: 'salida', dudosa: false, ultimaEntradaMs: ultima.horaEstimadaMs };
 }

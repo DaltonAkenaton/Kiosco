@@ -49,7 +49,19 @@ app.whenReady().then(async () => {
   const w = new BrowserWindow({ show: false, width: 1440, height: 1000 });
   // Las descargas (ARCO) se cancelan: si no, Electron abriria una ventana de
   // "Guardar como" en la pantalla del usuario.
-  w.webContents.session.on('will-download', (evento) => evento.preventDefault());
+  // Las descargas: si se dio carpeta de capturas, se guardan ahi (para
+  // revisarlas a mano); si no, se cancelan. Nunca abren "Guardar como".
+  const descargados = [];
+  w.webContents.session.on('will-download', (evento, item) => {
+    if (!carpetaCapturas) {
+      evento.preventDefault();
+      descargados.push(item.getFilename());
+      return;
+    }
+    fs.mkdirSync(carpetaCapturas, { recursive: true });
+    item.setSavePath(path.join(carpetaCapturas, item.getFilename()));
+    descargados.push(item.getFilename());
+  });
   const erroresDeConsola = [];
   w.webContents.on('console-message', (_e, nivel, mensaje) => {
     // Nivel 3 = error. Los avisos de seguridad de Electron en desarrollo no cuentan.
@@ -80,6 +92,20 @@ app.whenReady().then(async () => {
     await esperar(900);
   };
   const texto = () => js('document.body.innerText');
+
+  /** El enlace del ultimo correo que le llego a `correo` en Mailpit (Supabase local). */
+  const enlaceDelCorreo = async (correo) => {
+    for (let intento = 0; intento < 10; intento++) {
+      const lista = await (await fetch(`http://127.0.0.1:54324/api/v1/search?query=${encodeURIComponent('to:' + correo)}`)).json();
+      const id = lista.messages?.[0]?.ID;
+      if (id) {
+        const correoCompleto = await (await fetch(`http://127.0.0.1:54324/api/v1/message/${id}`)).json();
+        return correoCompleto.Text.match(/https?:\/\/\S+verify\S+/)?.[0]?.replace(/[)\]>]+$/, '') ?? null;
+      }
+      await esperar(500);
+    }
+    return null;
+  };
   const capturar = async (nombre) => {
     if (!carpetaCapturas) return;
     fs.mkdirSync(carpetaCapturas, { recursive: true });
@@ -279,6 +305,29 @@ app.whenReady().then(async () => {
     await capturar('9-justificar');
 
     // ====================================================================
+    console.log('\n--- Excel y PDF ---');
+    descargados.length = 0;
+    await picar('⬇ Descargar Excel');
+    await esperar(1000);
+    comprobar('Reportes descarga un Excel de verdad (.xlsx)', descargados.some((d) => d.endsWith('.xlsx')), descargados.join(','));
+    if (carpetaCapturas) {
+      const pdf = await w.webContents.printToPDF({ landscape: true, printBackground: true });
+      fs.writeFileSync(path.join(carpetaCapturas, 'reporte.pdf'), pdf);
+      comprobar('Reportes se puede guardar como PDF', pdf.length > 1000, `${pdf.length} bytes`);
+    }
+    await ir('/empleados');
+    descargados.length = 0;
+    await picar('⬇ Descargar lista (Excel)');
+    await picar('Importar lista de Excel');
+    await picar('⬇ Descargar plantilla');
+    await esperar(1000);
+    comprobar('la lista del personal y la plantilla se descargan en Excel',
+      descargados.includes('plantilla-empleados.xlsx') && descargados.some((d) => d.startsWith('empleados-') && d.endsWith('.xlsx')),
+      descargados.join(','));
+    await js(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`);
+    await esperar(300);
+
+    // ====================================================================
     console.log('\n--- bitacora y mi cuenta ---');
     await ir('/bitacora');
     const bitacora = await texto();
@@ -388,6 +437,41 @@ app.whenReady().then(async () => {
     await esperar(1500);
     await ir('/asistencia');
     comprobar('con su contrasena propia ya puede usar el panel', (await js('location.pathname')) === '/asistencia');
+
+    // ====================================================================
+    console.log('\n--- ¿olvidaste tu contraseña? ---');
+    // El correo local lo "recibe" Mailpit (http://127.0.0.1:54324): de ahi se
+    // saca el enlace, como si la persona lo abriera desde su Gmail.
+    await picar('Salir');
+    await ir('/entrar');
+    await escribir('input[type=email]', correoAcceso);
+    await picar('¿Olvidaste tu contraseña?');
+    await picar('Mandarme el correo para cambiarla');
+    await esperar(2000);
+    comprobar('pedir el correo dice que llegará (sin decir si el correo existe)', (await texto()).includes('en unos minutos le llega un correo'));
+    const enlace = await enlaceDelCorreo(correoAcceso);
+    comprobar('el correo llega con el enlace para cambiarla', Boolean(enlace), enlace ? 'llegó' : 'sin correo');
+    await w.loadURL(enlace);
+    await esperar(2500);
+    comprobar('el enlace abre la pantalla "Contraseña nueva"',
+      (await js('location.pathname')) === '/nueva-contrasena' && (await texto()).includes('Guardar y entrar'));
+    await js(`(() => { for (const el of document.querySelectorAll('input[type=password]')) {
+      el.value = 'recuperada-1234'; el.dispatchEvent(new Event('input', { bubbles: true })); } })()`);
+    await esperar(200);
+    await picar('Guardar y entrar');
+    await esperar(2500);
+    comprobar('con la contraseña nueva entra directo al panel', (await js('location.pathname')) === '/asistencia');
+    await picar('Salir');
+    await ir('/entrar');
+    await escribir('input[type=email]', correoAcceso);
+    await escribir('input[autocomplete=current-password]', 'recuperada-1234');
+    await picar('Entrar');
+    await esperar(1500);
+    comprobar('y la próxima vez entra con ella', (await js('location.pathname')) === '/asistencia');
+    await w.loadURL(enlace);
+    await esperar(2500);
+    comprobar('el mismo enlace no sirve dos veces', (await texto()).includes('Este enlace ya no sirve'));
+    await ir('/asistencia');
 
     // ====================================================================
     console.log('\n--- cierre de sesión por inactividad ---');

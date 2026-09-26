@@ -1341,6 +1341,86 @@ siempre.
 
 ---
 
+## D-046 · "Toque repetido" a 60 minutos, no a 16 horas
+
+**Decidido:** dos entradas (o dos salidas) seguidas cuentan como una sola sólo
+si están a menos de `minutos_toque_repetido` (60, configurable). Si llega una
+entrada nueva después de eso, la jornada anterior queda de inmediato como "no
+registró salida".
+
+**Descartado:** usar el límite de "salida no registrada" (16 h) para esto.
+
+**Por qué:** quien trabajó 15:00–23:00 y olvidó la salida, al entrar al día
+siguiente a las 6:00 (15 h después) **perdía esa entrada**: el sistema la
+tomaba por un doble toque. Salía falta un día en que sí trabajó.
+
+**Reconsiderar si:** alguien checa dos veces con más de una hora de
+diferencia "por si no quedó" (no debería: el kiosco confirma en pantalla).
+
+---
+
+## D-047 · Tiempo extra: se informa desde 30 minutos
+
+**Decidido:** el reporte calcula `minutos_extra` = lo que se quedó después de
+su hora de salida, menos lo que ya contó como reponer un retardo, y sólo si
+llega a `minutos_minimos_tiempo_extra` (30, configurable).
+
+**Descartado:** pagar o descontar (el sistema informa, CLAUDE.md 1.2);
+contar cualquier minuto (salir 3 minutos tarde llenaba el reporte de "+3 min").
+
+**Por qué:** un turno doble (14–16 h) se contaba bien como horas, pero nadie
+podía ver que era tiempo extra.
+
+---
+
+## D-048 · Excel de verdad (.xlsx) y PDF con la impresión del navegador
+
+**Decidido:** las descargas del panel son archivos `.xlsx` armados por el
+propio panel (`escribir-excel.ts`, sin librerías) con varias hojas, títulos en
+negritas, filtros y la primera fila fija. Todo el texto va como texto: una
+celda que empieza con `=` **nunca** se ejecuta como fórmula. La plantilla de
+importación trae ejemplos y una hoja de instrucciones. El PDF sale de
+"Imprimir → Guardar como PDF" con una hoja de estilos de impresión.
+
+**Descartado:** CSV (en Windows en español Excel lo abría todo en **una sola
+columna**, porque espera `;` y no `,`); librerías como SheetJS (pesadas y con
+historial de vulnerabilidades); una librería de PDF (el navegador ya lo hace).
+
+**Por qué:** fue lo que vio el autor al probar: "todo está en una columna".
+
+---
+
+## D-049 · "¿Olvidaste tu contraseña?" por correo, con el Gmail del sistema
+
+**Decidido:** la pantalla de entrada manda un enlace de un solo uso (Supabase
+Auth) que abre `/nueva-contrasena`. Responde lo mismo exista o no el correo.
+El correo sale del Gmail del sistema (SMTP con contraseña de aplicación), con
+texto en español.
+
+**Descartado:** el correo de fábrica de Supabase (sólo llega a miembros del
+equipo de Supabase y muy pocas veces por hora); preguntas de seguridad.
+
+**Por qué:** "¿qué pasaría si se me olvida la contraseña?". Antes el único
+camino era otro administrador; si no había otro, sólo soporte.
+
+**Respaldo:** otro administrador (Accesos) y, al final,
+`npm run supabase:primer-admin`, que pone contraseña temporal y reactiva.
+
+---
+
+## D-050 · El kiosco pregunta cuando no puede adivinar
+
+**Decidido:** si la última marca es una entrada de hace más de
+`JORNADA.horasParaPreguntar` (10 h) y menos del cierre automático (16 h), el
+kiosco no sugiere nada con confianza: muestra "Tu última ENTRADA fue el… ¿Vienes
+llegando o te vas?" y **no** confirma solo (se cancela a los 30 s).
+
+**Por qué:** en ese rango puede ser un turno doble que termina (SALIDA) o una
+salida olvidada y un día nuevo (ENTRADA). Adivinar mal y confirmar solo es
+peor que preguntar.
+
+---
+
 ## Plantilla para decisiones nuevas
 
 ```markdown

@@ -1022,6 +1022,34 @@ await bd.query(`select actualizar_configuracion('tolerancia_retardo_minutos', '1
   await entrarComo(ID_ADMIN);
 }
 
+// --- 0022: salida olvidada y entrada al dia siguiente; turno doble ---
+{
+  await bd.query('reset role');
+  const vespertino15 = await crearEmpleado('jdoble');
+  await entrarComo(ID_ADMIN);
+  await bd.query(`select asignar_horario($1, $2, '2026-09-01', '[{"dia":1},{"dia":2},{"dia":3},{"dia":4},{"dia":5}]', 'Horario de la prueba 0022')`,
+    [vespertino15, await idTurno('Matutino')]);
+  await bd.query('reset role');
+  // Lunes 21: entra 15:00 (un turno de tarde de apoyo) y OLVIDA la salida.
+  await marcar(vespertino15, 'entrada', '2026-09-21T20:00:00Z');
+  // Martes 22: entra a las 6:00 (15 h despues) y sale a las 14:00.
+  await marcar(vespertino15, 'entrada', '2026-09-22T11:00:00Z');
+  await marcar(vespertino15, 'salida', '2026-09-22T19:00:00Z');
+  // Miercoles 23: turno doble, de 6:00 a 20:00.
+  await marcar(vespertino15, 'entrada', '2026-09-23T11:00:00Z');
+  await marcar(vespertino15, 'salida', '2026-09-24T01:00:00Z');
+  await entrarComo(ID_ADMIN);
+  const s = await reporte(vespertino15, '2026-09-21', '2026-09-23');
+  const martes22 = dia(s, '2026-09-22');
+  comprobar('olvidó la salida de las 15:00 y al día siguiente entró a las 6:00: esa entrada NO se pierde (jornada de 8 h)',
+    martes22?.estado === 'a_tiempo' && Number(martes22?.horas) === 8, `${martes22?.estado} ${martes22?.horas}`);
+  comprobar('y la de la tarde anterior queda como "no registró salida"',
+    s.some((f) => f.estado_salida === 'salida_no_registrada'));
+  const miercoles = dia(s, '2026-09-23');
+  comprobar('turno doble de 6:00 a 20:00: 14 horas y "+6 h extra"',
+    Number(miercoles?.horas) === 14 && miercoles?.minutos_extra === 360, `${miercoles?.horas} ${miercoles?.minutos_extra}`);
+}
+
 // --- Quien puede ver el reporte ---
 await entrarComo(ID_SUPERVISOR);
 comprobar('un supervisor puede ver el reporte', (await reporte(empMatutino, '2026-09-14', '2026-09-14')).length > 0);

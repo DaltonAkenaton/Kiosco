@@ -7,7 +7,7 @@
     <div class="flex flex-wrap gap-3">
       <button type="button" class="boton-principal" (click)="abrir({ tipo: 'alta' })">+ Agregar empleado</button>
       <button type="button" class="boton-secundario" (click)="abrir({ tipo: 'importar' })">Importar lista de Excel</button>
-      <button type="button" class="boton-secundario" (click)="exportarLista()">⬇ Descargar lista</button>
+      <button type="button" class="boton-secundario" (click)="exportarLista()">⬇ Descargar lista (Excel)</button>
       @if (sesion.permiteDemostracion()) {
         <button type="button" class="boton-secundario" (click)="abrir({ tipo: 'demo' })">🧪 Generar datos de demostración</button>
       }
@@ -207,7 +207,7 @@
         <ol class="flex list-decimal flex-col gap-1 pl-6 text-base">
           <li>
             <button type="button" class="boton-secundario !px-3 !py-1" (click)="descargarPlantilla()">⬇ Descargar plantilla</button>
-            y ábrela en Excel (doble clic).
+            y ábrela en Excel (doble clic). Trae una hoja de instrucciones.
           </li>
           <li>Escribe <b>un renglón por persona</b>, debajo de los títulos. <b>No cambies la primera fila</b>.</li>
           <li>Borra los dos renglones de ejemplo (María Elena y José Luis).</li>

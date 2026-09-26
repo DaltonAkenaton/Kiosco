@@ -58,7 +58,7 @@ import {
   zonaHorariaVigente,
 } from '../configuracion-vigente';
 import {
-  accionSugeridaPara,
+  sugerenciaPara,
   buscarPorId,
   buscarPorNumeroEmpleado,
   buscarPorUsuario,
@@ -143,6 +143,7 @@ function configuracionParaInterfaz(): ConfiguracionParaInterfaz {
     sonidosActivos: CONFIG.interfaz.sonidosActivos,
     volumenSonidos: CONFIG.interfaz.volumenSonidos,
     segundosInactividadParaLimpiar: CONFIG.interfaz.segundosInactividadParaLimpiar,
+    segundosParaElegirSiHayDuda: CONFIG.interfaz.segundosParaElegirSiHayDuda,
     segundosMensajeExito: CONFIG.interfaz.segundosMensajeExito,
     videoEnEspejo: CONFIG.interfaz.videoEnEspejo,
     mostrarTecladoEnPantalla: CONFIG.interfaz.mostrarTecladoEnPantalla,
@@ -187,6 +188,16 @@ function horaLocalDe(milisegundos: number): string {
     hour12: false,
     timeZone: zonaHorariaVigente(),
   });
+}
+
+/** "jueves 24 a las 15:00", para el aviso de duda de entrada o salida. */
+function fechaYHoraLocalDe(milisegundos: number): string {
+  const dia = new Date(milisegundos).toLocaleDateString('es-MX', {
+    weekday: 'long',
+    day: 'numeric',
+    timeZone: zonaHorariaVigente(),
+  });
+  return `${dia} a las ${horaLocalDe(milisegundos)}`;
 }
 
 /**
@@ -323,7 +334,12 @@ export function registrarManejadoresIpc(): void {
         // `identificar()` en pantalla-principal.ts.)
         const reloj = leerReloj();
 
-        const accionSugerida = accionSugeridaPara(empleado.id);
+        const sugerencia = sugerenciaPara(empleado.id, reloj.horaEstimadaMs);
+        const accionSugerida = sugerencia.accion;
+        const duda =
+          sugerencia.dudosa && sugerencia.ultimaEntradaMs !== null
+            ? `Tu última ENTRADA fue el ${fechaYHoraLocalDe(sugerencia.ultimaEntradaMs)} y no registraste salida. ¿Vienes llegando (ENTRADA) o te vas (SALIDA)?`
+            : null;
         const nombreParaMostrar = nombreCompleto(empleado);
 
         // --- 4. Guardar el pase y entregar solo el numerito ----------------
@@ -342,6 +358,7 @@ export function registrarManejadoresIpc(): void {
           accionSugerida,
           horaLocalTexto: horaLocalDe(reloj.horaEstimadaMs),
           pinTemporal: empleado.pinTemporal,
+          duda,
         };
       } catch (fallo) {
         // Cualquier error inesperado (base corrupta, disco lleno) se atrapa

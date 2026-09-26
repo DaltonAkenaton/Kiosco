@@ -29,6 +29,13 @@ export class Sesion {
   /** `false` si no hay a que Supabase conectarse (produccion sin configurar). */
   readonly configurada = ENTORNO.supabaseUrl !== '' && ENTORNO.supabaseLlavePublica !== '';
 
+  /**
+   * La direccion con la que se abrio la pagina, ANTES de que supabase-js la
+   * limpie. Si el enlace del correo ya se uso o vencio, Supabase regresa aqui
+   * con `error=...` (ver haySesionDeRecuperacion).
+   */
+  private readonly direccionInicial = typeof location === 'undefined' ? '' : location.hash + location.search;
+
   /** El cliente de Supabase. Con la llave PUBLICA: lo que se ve lo decide RLS. */
   readonly bd: SupabaseClient = createClient(
     ENTORNO.supabaseUrl || 'http://sin-configurar.invalid',
@@ -99,6 +106,64 @@ export class Sesion {
     }
     Inactividad.marcarActividad();
     this.motivoSalida.set(null);
+    return null;
+  }
+
+  /**
+   * "¿Olvidaste tu contraseña?": Supabase manda un correo con un enlace de un
+   * solo uso que abre /nueva-contrasena. Devuelve `null` si se pidio, o el
+   * mensaje a mostrar si no.
+   *
+   * Nunca dice si el correo existe o no: responde lo mismo, para que nadie
+   * use esta pantalla para averiguar que correos tienen acceso.
+   */
+  async pedirEnlaceDeContrasena(correo: string): Promise<string | null> {
+    if (!this.configurada) return 'El panel todavía no está conectado a la base de datos. Avisa a soporte.';
+    const { error } = await this.bd.auth.resetPasswordForEmail(correo.trim(), {
+      redirectTo: `${location.origin}/nueva-contrasena`,
+    });
+    if (!error) return null;
+    if (error.status === 429) {
+      return 'Ya se pidieron varios correos hace poco. Espera un rato (hasta una hora) y vuelve a intentar.';
+    }
+    // Un correo que no existe NO da error; esto es falta de internet o de
+    // configuracion del correo en Supabase (docs/manual-tecnico.md).
+    return 'No se pudo mandar el correo. Revisa el internet; si sigue, avisa a soporte.';
+  }
+
+  /**
+   * Al abrir el enlace del correo, supabase-js lee la llave que viene en la
+   * direccion y abre una sesion de "recuperacion". Devuelve `true` si la hay.
+   */
+  async haySesionDeRecuperacion(): Promise<boolean> {
+    if (!this.configurada) return false;
+    // Enlace usado o vencido: aunque ya hubiera una sesion abierta en este
+    // navegador, se dice que el enlace no sirve.
+    if (/(^|[#&?])error=/.test(this.direccionInicial)) return false;
+    const { data } = await this.bd.auth.getSession();
+    if (!data.session) return false;
+    // Cuenta como actividad: si no, el cierre por inactividad (que mira la
+    // ultima vez que se uso el panel, quiza hace dias) la cerraria al entrar.
+    Inactividad.marcarActividad();
+    return true;
+  }
+
+  /**
+   * Ya con la contrasena nueva puesta: revisa que sea administrador activo,
+   * y quita la marca de "contrasena temporal" si la tenia.
+   */
+  async terminarRecuperacion(): Promise<string | null> {
+    const { data } = await this.bd.auth.getUser();
+    if (!data.user) return 'El enlace ya no sirve. Pide otro correo.';
+    const motivo = await this.cargarAdministrador(data.user.id, data.user.email ?? '');
+    if (motivo) {
+      await this.bd.auth.signOut();
+      return motivo;
+    }
+    if (this._debeCambiarContrasena()) await this.contrasenaCambiada();
+    this.motivoSalida.set(null);
+    this.iniciada = Promise.resolve();
+    this._lista.set(true);
     return null;
   }
 

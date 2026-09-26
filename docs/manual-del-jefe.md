@@ -36,8 +36,18 @@
    contraseña temporal por una tuya.
 3. Arriba está el menú, siempre visible. **Salir** está a la derecha.
 
-¿Olvidaste la contraseña? Pídele a otro administrador que te dé una nueva en
-**Accesos → Contraseña nueva**.
+**¿Olvidaste la contraseña?** Tres caminos, del más fácil al último recurso:
+
+1. En la pantalla de entrada, escribe tu correo y pica **¿Olvidaste tu
+   contraseña?** → **Mandarme el correo para cambiarla**. Te llega un correo
+   (revisa también *spam*) con un enlace; al abrirlo pones una contraseña nueva
+   y entras directo. El enlace sirve una sola vez y por poco tiempo.
+2. Si el correo no llega, pídele a otro administrador que te dé una
+   contraseña temporal en **Accesos → Contraseña nueva**.
+3. Si nadie puede entrar, quien da soporte la cambia desde la página de
+   Supabase (manual técnico, "Nadie puede entrar al panel").
+
+En ningún caso se pierde información: sólo cambia la contraseña.
 
 **La sesión se cierra sola** si el panel se queda sin usar (30 minutos, se
 cambia en Configuración). Un minuto antes aparece un aviso con el botón
@@ -89,7 +99,15 @@ Elige el rango de fechas. Dos vistas:
   falta, horas trabajadas.
 - **Resumen por persona**: cuántos retardos, faltas y horas en el periodo.
 
-**⬇ Descargar para Excel**: baja la vista que estás viendo. Se abre con doble clic.
+**⬇ Descargar Excel**: baja un archivo de Excel con **dos hojas** ("Resumen
+por persona" y "Día por día"; la que estás viendo va primero), con cada dato
+en su columna, títulos en negritas y filtros listos. Se abre con doble clic.
+
+**🖨 Imprimir o PDF**: abre la ventana de impresión con el reporte en hoja
+horizontal y sin los botones. Para tener un PDF, en "Destino" elige
+**Guardar como PDF**. Sirve para mandarlo por correo o archivarlo.
+
+(Los mismos dos botones están en **Asistencia**, para la lista de registros.)
 
 Cómo se decide cada cosa (se ajusta en **Configuración**):
 
@@ -109,8 +127,15 @@ Cómo se decide cada cosa (se ajusta en **Configuración**):
   incapacidad) y deja de contar como falta.
 - Si prefieres la regla de antes (llegar muy tarde = falta), en Configuración
   pon "Llegar muy tarde cuenta como falta" en **Sí**.
+- **Tiempo extra**: se quedó después de su hora de salida (desde 30 minutos,
+  configurable; salir 5 minutos tarde no cuenta). Aparece como "+X extra"
+  debajo de la hora de salida. Si llegó tarde, primero se descuenta lo que
+  repuso. Un **turno doble** (14 o 16 horas) se ve así: su día normal más el
+  tiempo extra. El sistema lo informa; no paga ni descuenta nada.
 - **No registró salida**: entró y no marcó salida. El sistema **no inventa** la
-  hora: corrígelo tú con "Registrar a mano" si sabes a qué hora salió.
+  hora: corrígelo tú con "Registrar a mano" si sabes a qué hora salió. Si al
+  día siguiente ya registró su entrada nueva, el día anterior queda en "No
+  registró salida" en ese momento y el día nuevo se cuenta normal.
 - **Ausencia justificada** / **Festivo**: lo que registres en Ausencias.
 
 ### Resumen diario por correo
@@ -128,10 +153,13 @@ kiosco y si algún kiosco o cámara está fallando.
 - **+ Agregar empleado**: nombre y apellidos. El sistema propone el usuario y
   **genera el PIN**. Te lo muestra **una sola vez**: imprímelo o anótalo y
   dáselo a la persona en privado.
-- **Importar lista de Excel**: para muchos a la vez. En la ventana, **Descargar
-  plantilla**, llénala en Excel (un renglón por persona), guárdala y elígela.
-  Sirve el Excel normal. Al final imprime la hoja con todos los PIN.
-- **⬇ Descargar lista**: la lista del personal para abrir en Excel.
+- **Importar lista de Excel**: para muchos a la vez. En la ventana, **⬇
+  Descargar plantilla**: es un Excel con las columnas listas, dos renglones de
+  ejemplo y una hoja de **Instrucciones**. Borra los ejemplos, escribe un
+  renglón por persona, guárdala y elígela. Al final imprime la hoja con todos
+  los PIN.
+- **⬇ Descargar lista (Excel)**: la lista del personal (número, nombre,
+  usuario, si está activo y si ya cambió su PIN), cada dato en su columna.
 - **PIN nuevo**: si alguien lo olvidó. El viejo deja de servir.
 - **Dar de baja**: ya no puede checar y **su horario termina ese día** (ya no
   le cuentan faltas). **No se borra nada**; se puede reactivar, y entonces hay

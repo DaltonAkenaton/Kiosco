@@ -188,6 +188,16 @@ export const PALABRAS_CONFIGURACION: Record<string, { nombre: string; explicacio
     explicacion: 'Con "No" (lo normal), falta es sólo NO venir: quien llega tarde es retardo, y el reporte dice si repuso el tiempo quedándose más. Con "Sí", llegar más tarde que los minutos de "retardo mayor" cuenta como falta aunque haya venido.',
     seUsaEn: 'Los reportes de asistencia',
   },
+  minutos_toque_repetido: {
+    nombre: 'Minutos para contar un toque repetido',
+    explicacion: 'Si alguien registra ENTRADA dos veces seguidas («por si no quedó») en menos de estos minutos, cuenta como una sola. Igual con dos salidas.',
+    seUsaEn: 'Los reportes de asistencia',
+  },
+  minutos_minimos_tiempo_extra: {
+    nombre: 'Minutos para contar tiempo extra',
+    explicacion: 'Quedarse después de su hora de salida cuenta como tiempo extra a partir de estos minutos. Salir 5 minutos tarde no es tiempo extra. (Si llegó tarde, primero se cuenta lo que repuso.)',
+    seUsaEn: 'Los reportes de asistencia',
+  },
   minutos_anticipacion_entrada: {
     nombre: 'Minutos antes de la entrada que cuentan',
     explicacion: 'Qué tan temprano puede llegar alguien y que su registro cuente para ESE turno. Con 240 (4 horas), una entrada a las 2:30 cuenta para el turno de las 6:00. Más temprano, se ve como «fuera de horario».',

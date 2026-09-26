@@ -1,6 +1,10 @@
 <div class="flex flex-wrap items-start justify-between gap-4">
 <h1 class="text-2xl font-bold">Asistencia</h1>
-<button type="button" class="boton-principal" (click)="abrirManual()">+ Registrar a mano</button>
+<div class="flex flex-wrap gap-2">
+  <button type="button" class="boton-secundario" [disabled]="visibles().length === 0" (click)="descargarExcel()">⬇ Descargar Excel</button>
+  <button type="button" class="boton-secundario" [disabled]="visibles().length === 0" (click)="imprimir()">🖨 Imprimir o PDF</button>
+  <button type="button" class="boton-principal" (click)="abrirManual()">+ Registrar a mano</button>
+</div>
 </div>
 <p class="text-texto-suave mt-1">
   Los registros de entrada y salida que llegaron de los kioscos. Las horas son de
@@ -85,6 +89,12 @@
 }
 
 <!-- ====================== TABLA ====================== -->
+<div class="area-imprimible">
+<div class="solo-impresion mb-3">
+  <h1 class="text-xl font-bold">Registros de entrada y salida</h1>
+  <p>Del {{ fecha(desde() + 'T12:00:00Z', 'UTC') }} al {{ fecha(hasta() + 'T12:00:00Z', 'UTC') }}{{ turnoFiltro() ? ' · turno ' + turnoFiltro() : '' }}.
+     {{ visibles().length }} registro(s). Generado el {{ fechaImpresion() }}</p>
+</div>
 @if (visibles().length === 0 && !cargando()) {
   <p class="text-texto-suave mt-12 text-center text-xl">No hay registros con estos filtros. Prueba con otras fechas.</p>
 } @else {
@@ -162,7 +172,7 @@
             </td>
             <td class="py-2">
               @if (!anulada) {
-                <button type="button" class="boton-secundario !px-3 !py-1 text-sm" (click)="abrirCorreccion(m)">Corregir</button>
+                <button type="button" class="boton-secundario no-imprimir !px-3 !py-1 text-sm" (click)="abrirCorreccion(m)">Corregir</button>
               }
             </td>
           </tr>
@@ -171,6 +181,8 @@
     </table>
   </div>
 }
+
+</div>
 
 <!-- ====================== REGISTRO MANUAL ====================== -->
 @if (registrandoAMano()) {

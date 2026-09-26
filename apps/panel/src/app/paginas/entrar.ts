@@ -77,6 +77,33 @@ import { Sesion } from '../servicios/sesion';
         <button type="submit" class="boton-principal text-xl" [disabled]="entrando() || !correo() || !contrasena()">
           {{ entrando() ? 'Revisando…' : 'Entrar' }}
         </button>
+
+        <!-- ¿Olvidaste tu contrasena? -->
+        @if (!olvido()) {
+          <button type="button" class="text-texto-suave self-center underline" (click)="abrirOlvido()">
+            ¿Olvidaste tu contraseña?
+          </button>
+        } @else {
+          <div class="border-borde flex flex-col gap-3 border-t-2 pt-4">
+            @if (enlaceMandado()) {
+              <p class="aviso aviso-bien">
+                Listo. Si <b>{{ correo() }}</b> tiene acceso al panel, en unos minutos le llega un correo
+                con un enlace para poner una contraseña nueva. Revisa también la carpeta de <b>spam</b>.
+                El enlace sirve una sola vez y por poco tiempo.
+              </p>
+            } @else {
+              <p>
+                Escribe arriba tu correo y pica el botón. Te llega un correo con un enlace para poner una
+                contraseña nueva.
+                <panel-ayuda titulo="¿Y si no llega?" [texto]="ayudaOlvido" alinear="izquierda" />
+              </p>
+              <button type="button" class="boton-secundario" [disabled]="mandando() || !correo().includes('@')"
+                      (click)="mandarEnlace()">
+                {{ mandando() ? 'Mandando…' : 'Mandarme el correo para cambiarla' }}
+              </button>
+            }
+          </div>
+        }
       </form>
     </div>
   `,
@@ -96,6 +123,30 @@ export class Entrar {
     'Es la contraseña para entrar a esta página desde tu oficina. NO es la misma que usas en el ' +
     'modo administrador del kiosco: son dos distintas, a propósito, para que si alguien se roba ' +
     'la computadora del kiosco no pueda entrar aquí.';
+
+  protected readonly olvido = signal(false);
+  protected readonly mandando = signal(false);
+  protected readonly enlaceMandado = signal(false);
+
+  protected readonly ayudaOlvido =
+    'Si en unos minutos no llega (ni en spam), pide a otro administrador que te dé una contraseña ' +
+    'temporal desde Accesos. Si nadie más puede entrar, quien da soporte puede ponerte una desde ' +
+    'la página de Supabase (manual técnico: "Nadie puede entrar al panel"). No se pierde ningún ' +
+    'dato: sólo cambia la contraseña.';
+
+  protected abrirOlvido(): void {
+    this.olvido.set(true);
+    this.error.set(null);
+  }
+
+  protected async mandarEnlace(): Promise<void> {
+    this.mandando.set(true);
+    this.error.set(null);
+    const motivo = await this.sesion.pedirEnlaceDeContrasena(this.correo());
+    this.mandando.set(false);
+    if (motivo) this.error.set(motivo);
+    else this.enlaceMandado.set(true);
+  }
 
   protected async entrar(): Promise<void> {
     this.entrando.set(true);

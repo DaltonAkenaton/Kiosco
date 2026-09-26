@@ -23,6 +23,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { diaSiguiente, hoyEn, inicioDelDiaLocal, instanteLocal } from '@kiosko/compartido';
 import { Ayuda } from '../componentes/ayuda';
 import { Dialogo, mensajeDeError } from '../componentes/dialogo';
+import { descargarExcel } from '../servicios/escribir-excel';
 import { senalRecordada } from '../servicios/recordar';
 import { Sesion } from '../servicios/sesion';
 import {
@@ -237,6 +238,35 @@ export class Asistencia implements OnInit {
       weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: this.sesion.zona(),
     });
     return texto.charAt(0).toUpperCase() + texto.slice(1);
+  }
+
+  /** Los registros que se ven, en Excel. */
+  protected descargarExcel(): void {
+    const z = this.sesion.zona();
+    descargarExcel(`registros_${this.desde()}_a_${this.hasta()}.xlsx`, [
+      {
+        nombre: 'Registros',
+        filas: [
+          ['Fecha', 'Hora', 'Número', 'Nombre', 'Turno', 'Tipo', 'Kiosco', 'Foto', 'Revisión', 'Corrección'],
+          ...this.visibles().map((m) => [
+            fecha(m.hora_estimada, z), hora(m.hora_estimada, z), m.empleado?.numero_empleado ?? '', this.nombreCompleto(m),
+            this.turnoDe(m), this.tipoVigente(m) === 'entrada' ? 'Entrada' : 'Salida',
+            m.origen === 'manual' ? 'Captura manual' : (m.dispositivo?.nombre ?? ''),
+            this.estadoDeFoto(m.foto_estado).texto,
+            [m.en_cuarentena ? 'En cuarentena' : '', ...m.banderas.map((b) => this.NOMBRES_DE_BANDERAS[b] ?? b)].filter(Boolean).join('; '),
+            this.anulada(m) ? 'Anulado' : this.tipoVigente(m) !== m.tipo ? `Corregido (decía ${m.tipo})` : '',
+          ]),
+        ],
+      },
+    ]);
+  }
+
+  protected imprimir(): void {
+    window.print();
+  }
+
+  protected fechaImpresion(): string {
+    return new Date().toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short', timeZone: this.sesion.zona() });
   }
 
   protected nombreCompleto(m: Marca): string {

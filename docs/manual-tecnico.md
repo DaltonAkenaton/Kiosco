@@ -255,6 +255,63 @@ sólo cuando hay una versión descargada). Ver D-037.
 - **La llave `service_role`** no se guarda en ningún lado. Si se filtró:
   Project Settings → API → regenerarla (las Edge Functions toman la nueva solas).
 
+### Correo del panel ("¿Olvidaste tu contraseña?")
+
+El panel manda un correo con un enlace para cambiar la contraseña. Para que
+funcione en **cada** proyecto (pruebas y producción) hay que hacer tres cosas
+en supabase.com, una sola vez:
+
+1. **A dónde regresa el enlace.** Authentication → URL Configuration:
+   - *Site URL*: la dirección del panel, `https://mi-panel.netlify.app`.
+   - *Redirect URLs* → Add URL: `https://mi-panel.netlify.app/**`.
+
+   Sin esto, el enlace del correo lleva a una página que no existe.
+2. **Quién manda el correo.** El correo que trae Supabase de fábrica sólo
+   llega a los miembros del equipo de Supabase y muy pocas veces por hora: no
+   sirve para el jefe. Se usa el **Gmail del sistema**:
+   - En la cuenta de Google del sistema: Seguridad → activar **Verificación en
+     dos pasos** → buscar **Contraseñas de aplicaciones** → crear una llamada
+     "Supabase". Google muestra 16 letras: es la contraseña que va abajo
+     (anotarla en la hoja de credenciales, **nunca** en el repositorio).
+   - En Supabase: Authentication → Emails → **SMTP Settings** → *Enable custom
+     SMTP*:
+     | Campo | Valor |
+     |---|---|
+     | Sender email | el Gmail del sistema |
+     | Sender name | `Control de Asistencia` |
+     | Host | `smtp.gmail.com` |
+     | Port | `465` |
+     | Username | el Gmail del sistema |
+     | Password | la contraseña de aplicación de 16 letras |
+3. **El texto en español.** Authentication → Emails → Templates → **Reset
+   password**: asunto `Cambiar la contraseña del panel de asistencia` y como
+   cuerpo pegar el contenido de `supabase/plantillas/recuperar-contrasena.html`.
+
+**Probarlo:** en el panel, "¿Olvidaste tu contraseña?" con tu propio correo.
+Si no llega: revisar spam; Supabase → Logs → Auth dice el error de SMTP
+(casi siempre la contraseña de aplicación mal copiada).
+
+En local no hace falta nada: los correos los "recibe" Mailpit en
+http://127.0.0.1:54324 y `config.toml` ya tiene la plantilla.
+
+### Nadie puede entrar al panel
+
+Si todos los administradores olvidaron su contraseña y el correo no llega:
+
+- **La llave maestra:** en la PC de soporte, `npm run supabase:primer-admin`
+  con el correo de esa persona (pide la URL y la llave secreta del proyecto,
+  que están en la hoja de credenciales). Si la cuenta ya existe, le pone una
+  **contraseña temporal nueva** y la deja **activa como administrador**, aunque
+  estuviera dada de baja. Al entrar, el panel le pide ponerse una propia.
+- **Sin la PC de soporte:** supabase.com → el proyecto → Authentication →
+  **Users** → buscar el correo → los tres puntos → **Send password recovery**
+  (manda el mismo correo del panel).
+
+**Ningún dato se pierde** en ninguno de estos casos: la cuenta de acceso y los
+registros de asistencia son cosas separadas. Por eso conviene que siempre haya
+**al menos dos administradores** (el jefe y soporte): si uno olvida la
+contraseña, el otro le da una temporal desde Accesos.
+
 ---
 
 ## 10. Problemas comunes
@@ -270,6 +327,8 @@ sólo cuando hay una versión descargada). Ver D-037.
 | El jefe no puede entrar al modo administrador del kiosco | No ha puesto su usuario del kiosco, o el kiosco no ha sincronizado | Panel → Mi cuenta; esperar unos minutos con internet |
 | "Registros que la oficina no aceptó" | Persona inexistente en el panel, kiosco revocado | Arreglar en el panel y "Volver a enviarlos" |
 | Una corrida de Actions en rojo | Secreto vencido o mal copiado | Abrir la corrida, leer el primer error |
+| No llega el correo de "¿Olvidaste tu contraseña?" | SMTP sin configurar o contraseña de aplicación mal copiada | Sección 9, "Correo del panel"; Supabase → Logs → Auth |
+| El enlace del correo abre una página rara o de error | Falta la dirección del panel en Redirect URLs | Sección 9, "Correo del panel", paso 1 |
 
 Registro de la app (para soporte): el kiosco escribe en la consola de Electron;
 en desarrollo se ve en la terminal de `npm run kiosco:dev`.

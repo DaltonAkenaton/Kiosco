@@ -135,6 +135,12 @@ app.whenReady().then(async () => {
     bd.accionSugeridaPara(dgomez.id, Date.now() + 20 * 60 * 60 * 1000) === 'entrada');
   comprobar('pero a las 8 horas de haber entrado sí se sugiere SALIDA',
     bd.accionSugeridaPara(dgomez.id, Date.now() + 8 * 60 * 60 * 1000) === 'salida');
+  // Entre un turno normal (10 h) y las 16 h: no se sabe si se va tras un turno
+  // doble o si llega al dia siguiente sin haber checado salida. Pregunta.
+  const duda = bd.sugerenciaPara(dgomez.id, Date.now() + 15 * 60 * 60 * 1000);
+  comprobar('a las 15 h de su entrada (¿turno doble o salida olvidada?): el kiosco PREGUNTA, no confirma solo',
+    duda.dudosa === true && duda.accion === 'entrada');
+  comprobar('a las 8 h no hay duda', bd.sugerenciaPara(dgomez.id, Date.now() + 8 * 60 * 60 * 1000).dudosa === false);
 
   // --- Deteccion de camara tapada ---
   comprobar('imagen negra y plana = obstruida', bd.pareceObstruida({ brilloPromedio: 5, varianza: 2 }) === true);

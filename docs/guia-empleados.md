@@ -29,6 +29,10 @@ Te saluda por tu nombre y dice qué va a registrar:
 - Si dice ENTRADA y estás saliendo (o al revés), teclea **2** — *Cambiar a SALIDA*.
 - Si te equivocaste de persona, teclea **0** — *Cancelar*.
 
+Si se te olvidó registrar tu salida la vez pasada, el kiosco **te pregunta**
+("¿Vienes llegando o te vas?") y **no** se guarda solo: elige tú con **1** o
+**2**. Avísale al jefe para que anote a qué hora saliste.
+
 Escucharás un sonido distinto para **entrada**, **salida** y **error**.
 
 ---

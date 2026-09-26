@@ -1,0 +1,19 @@
+<!--
+  Correo de "¿Olvidaste tu contraseña?" del panel administrativo.
+
+  En Supabase local lo usa config.toml solo. En pruebas y produccion hay que
+  PEGARLO a mano: Authentication -> Emails -> "Reset password"
+  (asunto: "Cambiar la contraseña del panel de asistencia").
+  Paso a paso: docs/manual-tecnico.md, seccion "Correo del panel".
+-->
+<h2>Cambiar la contraseña del panel de asistencia</h2>
+
+<p>Alguien pidió cambiar la contraseña del <b>Panel administrativo</b> del
+Control de Asistencia para este correo.</p>
+
+<p><a href="{{ .ConfirmationURL }}">Poner una contraseña nueva</a></p>
+
+<p>El enlace sirve <b>una sola vez</b> y por poco tiempo.</p>
+
+<p>Si no lo pediste tú, ignora este correo: tu contraseña sigue igual y nadie
+puede cambiarla sin abrir este enlace.</p>

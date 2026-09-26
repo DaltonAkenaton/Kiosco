@@ -8,6 +8,7 @@ export { abrirBaseDeDatos, cerrarBaseDeDatos } from './datos/base-de-datos';
 export { sembrarEmpleadosDePrueba } from './datos/semilla';
 export {
   accionSugeridaPara,
+  sugerenciaPara,
   buscarPorId,
   buscarPorNumeroEmpleado,
   buscarPorUsuario,

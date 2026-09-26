@@ -35,6 +35,9 @@ const soloAdmin: CanActivateFn = () => {
 
 export const RUTAS: Routes = [
   { path: 'entrar', loadComponent: () => import('./paginas/entrar').then((m) => m.Entrar) },
+  // El enlace del correo "¿Olvidaste tu contraseña?". Sin guardia: la sesion
+  // la abre el propio enlace.
+  { path: 'nueva-contrasena', loadComponent: () => import('./paginas/nueva-contrasena').then((m) => m.NuevaContrasena) },
   {
     path: '',
     canActivate: [requiereSesion],

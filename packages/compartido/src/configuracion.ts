@@ -263,6 +263,14 @@ export const INTERFAZ = {
   segundosInactividadParaLimpiar: 20,
 
   /**
+   * Cuando el kiosco NO puede adivinar si es entrada o salida (ver
+   * JORNADA.horasParaPreguntar), no confirma solo: espera a que el empleado
+   * elija. Si se va sin elegir, a los tantos segundos se cancela y avisa que
+   * no se registro nada.
+   */
+  segundosParaElegirSiHayDuda: 30,
+
+  /**
    * Cuanto dura en pantalla la confirmacion del registro.
    *
    * Empezo en 2 segundos y en la primera prueba con una persona real no le
@@ -734,6 +742,15 @@ export const JORNADA = {
    * checar la salida del dia anterior.
    */
   horasParaCierreAutomatico: 16,
+
+  /**
+   * Si la ultima marca fue una ENTRADA de hace mas de estas horas (mas que un
+   * turno normal) pero menos que horasParaCierreAutomatico, el kiosco no sabe
+   * si la persona se va tras un turno doble o llega al dia siguiente y olvido
+   * la salida. Entonces NO confirma solo: pregunta. (Caso real: entra de
+   * 15:00 a 23:00, olvida la salida y al dia siguiente entra a las 6:00.)
+   */
+  horasParaPreguntar: 10,
 } as const;
 
 // ============================================================================

@@ -28,10 +28,10 @@
             [style.border-color]="vista() === 'dias' ? 'var(--kiosko-institucion-secundario)' : 'var(--kiosko-borde)'"
             (click)="vista.set('dias')">Día por día</button>
   </div>
-  <button type="button" class="boton-secundario ml-auto" [disabled]="filas().length === 0"
-          (click)="vista() === 'resumen' ? descargarResumen() : descargarDias()">
-    ⬇ Descargar para Excel
-  </button>
+  <div class="ml-auto flex flex-wrap gap-2">
+    <button type="button" class="boton-secundario" [disabled]="filas().length === 0" (click)="descargarExcel()">⬇ Descargar Excel</button>
+    <button type="button" class="boton-secundario" [disabled]="filas().length === 0" (click)="imprimir()">🖨 Imprimir o PDF</button>
+  </div>
 </div>
 
 @if (aviso(); as a) {
@@ -45,6 +45,13 @@
 @if (error(); as mensaje) {
   <p class="mt-4 font-bold" style="color: var(--kiosko-peligro)">{{ mensaje }}</p>
 }
+<!-- Lo que se imprime (o se guarda como PDF): encabezado + la tabla que se ve. -->
+<div class="area-imprimible">
+<div class="solo-impresion mb-3">
+  <h1 class="text-xl font-bold">Reporte de asistencia — {{ vista() === 'resumen' ? 'resumen por persona' : 'día por día' }}</h1>
+  <p>Del {{ fecha(desde() + 'T12:00:00Z', 'UTC') }} al {{ fecha(hasta() + 'T12:00:00Z', 'UTC') }}{{ empleadoId() ? ' · ' + nombre(empleadoId()) : '' }}.
+     Generado el {{ fechaImpresion() }} Sistema de Control de Asistencia.</p>
+</div>
 @if (cargando()) {
   <p class="text-texto-suave mt-6">Calculando…</p>
 } @else if (filas().length === 0) {
@@ -132,6 +139,9 @@
           <td class="py-2 pr-4 tabular-nums">
             {{ f.salida ? hora(f.salida, zona()) : '—' }}
             @if (f.minutos_salida_anticipada) { <span class="text-texto-suave">({{ f.minutos_salida_anticipada }} min antes)</span> }
+            @if (f.minutos_extra) {
+              <span class="block text-sm" style="color: var(--kiosko-institucion-terciario)">+{{ horas(f.minutos_extra / 60) }} extra</span>
+            }
           </td>
           <td class="py-2 pr-4 tabular-nums">{{ f.horas !== null ? horas(f.horas) : '—' }}</td>
           <td class="py-2">
@@ -146,7 +156,7 @@
             @if (f.corregida) { <span class="text-texto-suave"> · corregido</span> }
             @if (f.en_cuarentena) { <span style="color: var(--kiosko-atencion)"> · en cuarentena</span> }
             @if (sePuedeJustificar(f)) {
-              <button type="button" class="boton-secundario ml-2 !px-2 !py-0.5 text-sm" (click)="justificar(f)">Justificar</button>
+              <button type="button" class="boton-secundario no-imprimir ml-2 !px-2 !py-0.5 text-sm" (click)="justificar(f)">Justificar</button>
             }
           </td>
         </tr>
@@ -154,3 +164,4 @@
     </tbody>
   </table>
 }
+</div>

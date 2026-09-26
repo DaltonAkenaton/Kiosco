@@ -530,6 +530,12 @@
         @if (paso() === 'guardando') {
           <!-- Ya no hay nada que decidir: se esta escribiendo en disco. -->
           <p class="text-texto-suave texto-instruccion mt-2">Guardando...</p>
+        } @else if (registro.duda) {
+          <!-- El kiosco no pudo adivinar: se pregunta, sin cuenta regresiva. -->
+          <p class="mt-3 rounded-2xl px-5 py-3 text-xl font-bold"
+             style="background-color: rgb(234 179 8 / 0.18); border: 2px solid var(--kiosko-atencion)">
+            ⚠ {{ registro.duda }}
+          </p>
         } @else {
           <p class="text-texto-suave mt-1 text-lg">
             Se registra solo en

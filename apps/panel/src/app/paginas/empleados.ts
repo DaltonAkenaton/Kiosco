@@ -25,6 +25,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { desempatarUsuario, generarUsuario } from '@kiosko/compartido';
 import { Ayuda } from '../componentes/ayuda';
 import { Dialogo, mensajeDeError } from '../componentes/dialogo';
+import { descargarExcel } from '../servicios/escribir-excel';
 import { leerHojaDeExcel } from '../servicios/leer-excel';
 import { Sesion } from '../servicios/sesion';
 import { fecha, hora } from '../textos';
@@ -448,41 +449,55 @@ export class Empleados implements OnInit {
   }
 
   /**
-   * La plantilla para llenar en Excel: los titulos exactos y dos renglones
-   * de ejemplo. Se descarga como CSV porque Excel lo abre con doble clic;
-   * despues se puede guardar como Excel normal y tambien se acepta.
+   * La plantilla para llenar en Excel (un .xlsx de verdad): la primera hoja
+   * con los titulos exactos y dos renglones de ejemplo, y una segunda hoja
+   * con las instrucciones. El panel lee siempre la PRIMERA hoja.
    */
   protected descargarPlantilla(): void {
-    this.descargarCsv('plantilla-empleados.csv', [
-      ['nombre', 'apellido_paterno', 'apellido_materno', 'numero'],
-      ['María Elena', 'Garza', 'Salinas', '1234'],
-      ['José Luis', 'Treviño', '', ''],
+    descargarExcel('plantilla-empleados.xlsx', [
+      {
+        nombre: 'Empleados',
+        filas: [
+          ['nombre', 'apellido_paterno', 'apellido_materno', 'numero'],
+          ['María Elena', 'Garza', 'Salinas', '1234'],
+          ['José Luis', 'Treviño', '', ''],
+        ],
+        anchos: [24, 22, 22, 14],
+      },
+      {
+        nombre: 'Instrucciones',
+        sinTitulos: true,
+        anchos: [100],
+        filas: [
+          ['CÓMO LLENAR ESTA PLANTILLA'],
+          ['1. Ve a la hoja "Empleados" (abajo, en las pestañas).'],
+          ['2. Escribe una persona por renglón, debajo de los títulos. NO cambies la primera fila.'],
+          ['3. Borra los dos renglones de ejemplo (María Elena y José Luis).'],
+          ['4. "nombre" y "apellido_paterno" son obligatorios. "apellido_materno" y "numero" (de empleado) pueden ir vacíos.'],
+          ['5. No hace falta escribir usuario ni PIN: los pone el sistema.'],
+          ['6. Guarda el archivo (Archivo > Guardar) y en el panel: Empleados > Importar lista de Excel > Elegir archivo.'],
+          ['7. El panel te muestra la lista para revisar ANTES de dar de alta a nadie. Al final, imprime la hoja de los PIN.'],
+        ],
+      },
     ]);
   }
 
-  /** La lista del personal, para abrirla en Excel. */
+  /** La lista del personal, en Excel. */
   protected exportarLista(): void {
-    this.descargarCsv(`empleados-${new Date().toISOString().slice(0, 10)}.csv`, [
-      ['numero', 'nombre', 'apellido_paterno', 'apellido_materno', 'usuario', 'estado'],
-      ...this.empleados()
-        .filter((e) => !e.anonimizado_en)
-        .map((e) => [e.numero_empleado ?? '', e.nombre, e.apellido_paterno, e.apellido_materno, e.usuario, e.activo ? 'Activo' : 'Dado de baja']),
+    descargarExcel(`empleados-${new Date().toISOString().slice(0, 10)}.xlsx`, [
+      {
+        nombre: 'Empleados',
+        filas: [
+          ['Número', 'Nombre', 'Apellido paterno', 'Apellido materno', 'Usuario', 'Estado', 'PIN'],
+          ...this.empleados()
+            .filter((e) => !e.anonimizado_en)
+            .map((e) => [
+              e.numero_empleado ?? '', e.nombre, e.apellido_paterno, e.apellido_materno, e.usuario,
+              e.activo ? 'Activo' : 'Dado de baja', e.pin_temporal ? 'Temporal (lo dio el jefe)' : 'Propio',
+            ]),
+        ],
+      },
     ]);
-  }
-
-  private descargarCsv(nombre: string, tabla: string[][]): void {
-    const celda = (v: string): string => {
-      let t = v;
-      if (/^[=+\-@]/.test(t)) t = `'${t}`; // que Excel no lo tome como formula
-      return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
-    };
-    // El BOM al inicio: sin el, Excel muestra "MarÃ­a" en vez de "María".
-    const csv = '\uFEFF' + tabla.map((r) => r.map(celda).join(',')).join('\r\n') + '\r\n';
-    const enlace = document.createElement('a');
-    enlace.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-    enlace.download = nombre;
-    enlace.click();
-    URL.revokeObjectURL(enlace.href);
   }
 
   protected async guardarImportacion(motivo: string): Promise<void> {

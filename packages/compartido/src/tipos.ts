@@ -220,6 +220,13 @@ export type ResultadoIdentificacion =
 
       /** `true` si el jefe le puso un PIN temporal y conviene avisarle. */
       pinTemporal: boolean;
+
+      /**
+       * Si el kiosco NO puede adivinar (su ultima entrada fue hace mas de un
+       * turno normal y no registro salida), el aviso que se le muestra. Con
+       * aviso, la confirmacion NO corre sola: la persona elige.
+       */
+      duda: string | null;
     }
   | {
       ok: false;

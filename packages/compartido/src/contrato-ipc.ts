@@ -479,6 +479,7 @@ export interface ConfiguracionParaInterfaz {
   sonidosActivos: boolean;
   volumenSonidos: number;
   segundosInactividadParaLimpiar: number;
+  segundosParaElegirSiHayDuda: number;
   segundosMensajeExito: number;
   videoEnEspejo: boolean;
   mostrarTecladoEnPantalla: boolean;
