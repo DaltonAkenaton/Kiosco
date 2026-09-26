@@ -90,6 +90,11 @@ export class Configuracion implements OnInit {
     return `${String(o.valor)}${o.unidad ? ' ' + o.unidad.replace('dias', 'días') : ''}`;
   }
 
+  /** Una opcion de 0 a 1 es un "si o no": se muestra con dos botones, no con un numero. */
+  protected esSiNo(o: Opcion): boolean {
+    return o.tipo === 'entero' && Number(o.minimo) === 0 && Number(o.maximo) === 1;
+  }
+
   protected abrir(o: Opcion): void {
     this.errorAccion.set(null);
     this.nuevoValor.set(String(o.valor));

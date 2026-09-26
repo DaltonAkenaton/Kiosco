@@ -29,7 +29,7 @@
             </p>
           </div>
           <div class="flex shrink-0 items-center gap-3">
-            <span class="text-xl font-bold tabular-nums">{{ valorEnPalabras(o) }}</span>
+            <span class="text-xl font-bold tabular-nums">{{ esSiNo(o) ? (o.valor === 1 || o.valor === '1' ? 'Sí' : 'No') : valorEnPalabras(o) }}</span>
             @if (sesion.esAdmin()) {
               <button type="button" class="boton-secundario !px-3 !py-1" (click)="abrir(o)">Cambiar</button>
             }
@@ -45,6 +45,17 @@
   <panel-dialogo [titulo]="p.nombre" textoBoton="Guardar" ejemploMotivo="Ej.: acuerdo con la dirección del 23 de septiembre"
                  [ocupado]="guardando()" [error]="errorAccion()" (confirmar)="guardar(o, $event)" (cancelar)="editando.set(null)">
     <p>{{ p.explicacion }}</p>
+    @if (esSiNo(o)) {
+      <div class="flex flex-col gap-2">
+        <span>Valor nuevo</span>
+        <div class="flex gap-3">
+          <button type="button" class="flex-1" [class]="nuevoValor() === '1' ? 'boton-principal' : 'boton-secundario'"
+                  (click)="nuevoValor.set('1')">Sí</button>
+          <button type="button" class="flex-1" [class]="nuevoValor() === '0' ? 'boton-principal' : 'boton-secundario'"
+                  (click)="nuevoValor.set('0')">No</button>
+        </div>
+      </div>
+    } @else {
     <label class="flex flex-col gap-1">
       <span>
         Valor nuevo
@@ -55,6 +66,7 @@
       <input class="campo text-xl" [attr.inputmode]="o.tipo === 'entero' ? 'numeric' : null"
              [value]="nuevoValor()" (input)="nuevoValor.set(valor($event))" />
     </label>
-    <p class="text-texto-suave text-base">Valor actual: {{ valorEnPalabras(o) }}.</p>
+    }
+    <p class="text-texto-suave text-base">Valor actual: {{ esSiNo(o) ? (o.valor === 1 || o.valor === '1' ? 'Sí' : 'No') : valorEnPalabras(o) }}.</p>
   </panel-dialogo>
 }

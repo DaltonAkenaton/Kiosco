@@ -48,6 +48,11 @@ export const LARGO_MINIMO_MOTIVO = 10;
           <label class="flex flex-col gap-1">
             <span>¿Por qué? <span class="text-texto-suave">(queda anotado en la bitácora)</span></span>
             <input class="campo" [placeholder]="ejemploMotivo()" [value]="motivo()" (input)="motivo.set(valor($event))" />
+            @if (motivo().trim().length < minimo) {
+              <span class="text-base font-semibold" style="color: var(--kiosko-atencion)">
+                ✎ Escribe por qué (al menos {{ minimo }} letras; llevas {{ motivo().trim().length }}) para poder guardar.
+              </span>
+            }
           </label>
         }
 
@@ -69,9 +74,6 @@ export const LARGO_MINIMO_MOTIVO = 10;
           </button>
           <button type="button" class="boton-secundario" [disabled]="ocupado()" (click)="cerrar()">Cancelar</button>
         </div>
-        @if (pedirMotivo() && motivo().trim().length < minimo) {
-          <p class="text-texto-suave text-sm">Escribe el motivo (al menos {{ minimo }} letras) para poder guardar.</p>
-        }
       </form>
     </div>
   `,

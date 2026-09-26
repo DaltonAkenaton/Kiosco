@@ -199,8 +199,8 @@ export const PALABRAS_CONFIGURACION: Record<string, { nombre: string; explicacio
     seUsaEn: 'Este panel',
   },
   permitir_datos_demostracion: {
-    nombre: 'Permitir datos de demostración (1 = sí, 0 = no)',
-    explicacion: 'Con 1, en Empleados aparece el botón para generar empleados y registros FALSOS, para probar el sistema. Sirve sólo en el sistema de pruebas: en el sistema real debe quedar en 0.',
+    nombre: 'Permitir datos de demostración',
+    explicacion: 'Con "Sí", en Empleados aparece el botón para generar empleados y registros FALSOS, para probar el sistema. Sirve sólo en el sistema de pruebas: en el sistema real debe quedar en "No".',
     seUsaEn: 'Este panel',
   },
   zona_horaria: {
