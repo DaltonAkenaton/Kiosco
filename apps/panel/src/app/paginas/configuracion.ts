@@ -37,6 +37,7 @@ const GRUPOS: Record<string, string> = {
   tiempo: 'Hora y reloj',
   privacidad: 'Privacidad',
   dispositivos: 'Kioscos',
+  panel: 'Este panel',
   general: 'General',
 };
 
@@ -125,6 +126,7 @@ export class Configuracion implements OnInit {
       return;
     }
     this.editando.set(null);
+    this.sesion.aplicarAjuste(o.clave, valor);
     await this.cargar();
   }
 

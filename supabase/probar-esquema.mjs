@@ -958,6 +958,44 @@ await debeFallar('el panel no puede leer los intentos ni anotarlos',
 await bd.query('reset role');
 
 // ============================================================================
+//  0018 · DATOS DE DEMOSTRACION
+// ============================================================================
+console.log('\n--- datos de demostracion (0018) ---');
+await entrarComo(ID_ADMIN);
+await debeFallar('con el interruptor apagado (lo normal), NO se generan datos falsos',
+  `select * from generar_datos_demostracion(7, 'Probar el panel con datos')`, 'apagados');
+await bd.query(`select actualizar_configuracion('permitir_datos_demostracion', '1', 'Sistema de pruebas: permitir demostración')`);
+await entrarComo(ID_SUPERVISOR);
+await debeFallar('un supervisor NO puede generarlos',
+  `select * from generar_datos_demostracion(7, 'Probar el panel con datos')`, 'administrador');
+await entrarComo(ID_ADMIN);
+{
+  const { rows: generados } = await bd.query(`select * from generar_datos_demostracion(14, 'Probar el panel con datos')`);
+  comprobar('encendido: genera 5 empleados y da su PIN', generados.length === 5 && generados.every((g) => /^\d{4}$/.test(g.pin)));
+  const { rows: [demo] } = await bd.query(`
+    select count(distinct e.id)::int as personas, count(m.id)::int as marcas,
+           count(distinct m.dispositivo_id)::int as kioscos
+      from empleados e join marcas m on m.empleado_id = e.id
+     where e.numero_empleado like 'DEMO-%'`);
+  comprobar('marcados DEMO, con registros de 2 semanas de un solo kiosco de demostración',
+    demo.personas === 5 && demo.marcas > 40 && demo.kioscos === 1, JSON.stringify(demo));
+  const { rows: [velador] } = await bd.query(`
+    select count(*)::int n from asignaciones_turno a join turnos t on t.id = a.turno_id
+      join empleados e on e.id = a.empleado_id where e.numero_empleado like 'DEMO-%' and t.nombre = 'Nocturno'`);
+  comprobar('incluye un velador del turno nocturno', velador.n === 1);
+  const { rows: [rep] } = await bd.query(`
+    select count(*) filter (where estado = 'a_tiempo')::int a_tiempo, count(*)::int total
+      from reporte_asistencia((now() at time zone 'America/Matamoros')::date - 14,
+                              (now() at time zone 'America/Matamoros')::date - 1) r
+      join empleados e on e.id = r.empleado_id where e.numero_empleado like 'DEMO-%'`);
+  comprobar('el reporte los califica (la mayoría a tiempo)', rep.total > 30 && rep.a_tiempo > rep.total / 2, JSON.stringify(rep));
+  const { rows: otra } = await bd.query(`select * from generar_datos_demostracion(3, 'Otra tanda de prueba')`);
+  comprobar('se puede generar otra tanda sin chocar usuarios', new Set(otra.map((g) => g.usuario)).size === 5 &&
+    !otra.some((o) => generados.some((g) => g.usuario === o.usuario)));
+}
+await bd.query('reset role');
+
+// ============================================================================
 //  Resultado
 // ============================================================================
 // Todo corrio dentro de una transaccion que ahora se deshace: la base local

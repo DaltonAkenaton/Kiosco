@@ -269,6 +269,39 @@ app.whenReady().then(async () => {
     comprobar('descargar sus datos deja constancia en la bitacora', arco.n === 1);
 
     // ====================================================================
+    console.log('\n--- datos de demostracion ---');
+    await ir('/empleados');
+    comprobar('con el interruptor apagado, NO aparece el boton de demostración',
+      !(await texto()).includes('Generar datos de demostración'));
+    await bd.query(`update configuracion set valor = '1' where clave = 'permitir_datos_demostracion'`);
+    await ir('/entrar'); // volver a entrar para que lea la configuracion
+    await ir('/empleados');
+    await picar('🧪 Generar datos de demostración');
+    await escribir('panel-dialogo input[placeholder^="Ej."]', 'Probar el panel con datos (prueba)');
+    await picar('Generar');
+    let pinesDemo = 0;
+    for (let i = 0; i < 20 && !pinesDemo; i++) {
+      await esperar(500);
+      pinesDemo = await js(`document.querySelectorAll('.hoja-de-pines tbody tr').length`);
+    }
+    comprobar('genera 5 empleados DEMO y muestra sus PIN', pinesDemo === 5, String(pinesDemo));
+    await picar('Ya lo anoté, cerrar');
+    comprobar('en la lista se ven marcados DEMO', (await texto()).includes('DEMO'));
+    await capturar('7-demostracion');
+
+    // ====================================================================
+    console.log('\n--- ventanas: Esc y clic afuera ---');
+    await picar('+ Agregar empleado');
+    await js(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`);
+    await esperar(300);
+    comprobar('Esc cierra la ventana', !(await js(`!!document.querySelector('panel-dialogo')`)));
+    await picar('+ Agregar empleado');
+    await js(`(() => { const f = document.querySelector('panel-dialogo > div');
+      f.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); f.click(); })()`);
+    await esperar(300);
+    comprobar('picar afuera cierra la ventana', !(await js(`!!document.querySelector('panel-dialogo')`)));
+
+    // ====================================================================
     console.log('\n--- accesos al panel ---');
     await ir('/accesos');
     comprobar('la lista de accesos muestra al jefe', (await texto()).includes('Jefe de prueba'));
@@ -325,6 +358,12 @@ app.whenReady().then(async () => {
         await bd.query('delete from empleados where id = $1', [idCreado]);
       }
       await bd.query(`delete from codigos_enrolamiento where nombre_dispositivo = 'Kiosco de la prueba del panel'`);
+      const demo = `(select id from empleados where numero_empleado like 'DEMO-%')`;
+      await bd.query(`delete from marcas where empleado_id in ${demo}`);
+      await bd.query(`delete from asignaciones_turno where empleado_id in ${demo}`);
+      await bd.query(`delete from empleados where numero_empleado like 'DEMO-%'`);
+      await bd.query(`delete from dispositivos where nombre = 'Kiosco de demostración'`);
+      await bd.query(`update configuracion set valor = '0' where clave = 'permitir_datos_demostracion'`);
       await bd.query('delete from administradores where correo = $1', [correoAcceso]);
       await bd.query('delete from auth.users where email = $1', [correoAcceso]);
       await bd.query(`update configuracion set valor = '10' where clave = 'tolerancia_retardo_minutos'`);

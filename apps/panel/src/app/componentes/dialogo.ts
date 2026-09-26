@@ -16,9 +16,14 @@
  *
  *  `$event` es el motivo ya escrito. El contenido (lo de adentro) puede traer
  *  sus propios campos: el dialogo solo agrega el motivo y los botones.
+ *
+ *  Se cierra (como "Cancelar") con la tecla Esc o picando fuera de la
+ *  ventana, salvo mientras guarda. Picar afuera cuenta solo si el clic
+ *  EMPIEZA afuera: quien selecciona texto dentro de un campo y suelta el
+ *  raton fuera de la ventana no pierde lo que escribio.
  */
 
-import { Component, input, output, signal } from '@angular/core';
+import { Component, HostListener, input, output, signal } from '@angular/core';
 
 /** Lo minimo que pide la base (exigir_motivo, migracion 0015). */
 export const LARGO_MINIMO_MOTIVO = 10;
@@ -26,9 +31,14 @@ export const LARGO_MINIMO_MOTIVO = 10;
 @Component({
   selector: 'panel-dialogo',
   template: `
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-6" style="background-color: rgb(0 0 0 / 0.7)">
+    <div
+      class="fixed inset-0 z-50 flex items-center justify-center p-6"
+      style="background-color: rgb(0 0 0 / 0.7)"
+      (mousedown)="empezoAfuera = $event.target === $event.currentTarget"
+      (click)="clicEnElFondo($event)"
+    >
       <form
-        class="bg-superficie border-borde flex max-h-full w-full max-w-xl flex-col gap-4 overflow-y-auto rounded-3xl border-2 p-8"
+        class="ventana bg-superficie border-borde flex max-h-full w-full max-w-xl flex-col gap-4 overflow-y-auto rounded-3xl border-2 p-8"
         (submit)="$event.preventDefault(); enviar()"
       >
         <h2 class="text-2xl font-bold">{{ titulo() }}</h2>
@@ -57,7 +67,7 @@ export const LARGO_MINIMO_MOTIVO = 10;
           >
             {{ ocupado() ? 'Guardando…' : textoBoton() }}
           </button>
-          <button type="button" class="boton-secundario" [disabled]="ocupado()" (click)="cancelar.emit()">Cancelar</button>
+          <button type="button" class="boton-secundario" [disabled]="ocupado()" (click)="cerrar()">Cancelar</button>
         </div>
         @if (pedirMotivo() && motivo().trim().length < minimo) {
           <p class="text-texto-suave text-sm">Escribe el motivo (al menos {{ minimo }} letras) para poder guardar.</p>
@@ -80,6 +90,23 @@ export class Dialogo {
 
   protected readonly motivo = signal('');
   protected readonly minimo = LARGO_MINIMO_MOTIVO;
+
+  protected empezoAfuera = false;
+
+  /**
+   * OJO: esto es una funcion que NO devuelve nada, a proposito. Si en la
+   * plantilla se escribiera como expresion (`a && b && cerrar()`), en un clic
+   * DENTRO de la ventana daria `false`, y Angular trata un `false` como
+   * "cancela este clic": el boton Guardar dejaba de enviar el formulario.
+   */
+  protected clicEnElFondo(evento: MouseEvent): void {
+    if (evento.target === evento.currentTarget && this.empezoAfuera) this.cerrar();
+  }
+
+  @HostListener('document:keydown.escape')
+  protected cerrar(): void {
+    if (!this.ocupado()) this.cancelar.emit();
+  }
 
   protected enviar(): void {
     if (this.pedirMotivo() && this.motivo().trim().length < this.minimo) return;

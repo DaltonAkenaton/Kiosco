@@ -160,7 +160,7 @@ type Accion =
 
     @if (entregar(); as e) {
       <div class="fixed inset-0 z-50 flex items-center justify-center p-6" style="background-color: rgb(0 0 0 / 0.8)">
-        <div class="bg-superficie border-borde hoja-de-pines flex w-full max-w-xl flex-col gap-4 rounded-3xl border-2 p-8">
+        <div class="ventana bg-superficie border-borde hoja-de-pines flex w-full max-w-xl flex-col gap-4 rounded-3xl border-2 p-8">
           <h2 class="text-2xl font-bold">Contraseña temporal</h2>
           <p class="no-imprimir text-lg"><b>Anótala o imprímela ahora:</b> no se vuelve a mostrar. Entrégala en persona.</p>
           <p>Panel: <b>{{ direccion }}</b></p>

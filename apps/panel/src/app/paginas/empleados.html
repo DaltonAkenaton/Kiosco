@@ -7,6 +7,9 @@
     <div class="flex flex-wrap gap-3">
       <button type="button" class="boton-principal" (click)="abrir({ tipo: 'alta' })">+ Agregar empleado</button>
       <button type="button" class="boton-secundario" (click)="abrir({ tipo: 'importar' })">Importar lista de Excel</button>
+      @if (sesion.permiteDemostracion()) {
+        <button type="button" class="boton-secundario" (click)="abrir({ tipo: 'demo' })">🧪 Generar datos de demostración</button>
+      }
     </div>
   }
 </div>
@@ -39,7 +42,13 @@
   <tbody>
     @for (e of visibles(); track e.id) {
       <tr class="border-borde border-b" [class.opacity-60]="!e.activo">
-        <td class="py-2 pr-4 tabular-nums">{{ e.numero_empleado ?? '—' }}</td>
+        <td class="py-2 pr-4 tabular-nums">
+          @if (e.numero_empleado?.startsWith('DEMO-')) {
+            <span class="etiqueta" style="color: var(--kiosko-atencion)" title="Empleado inventado para probar el sistema">DEMO</span>
+          } @else {
+            {{ e.numero_empleado ?? '—' }}
+          }
+        </td>
         <td class="py-2 pr-4 font-semibold">{{ nombreCompleto(e) }}</td>
         <td class="py-2 pr-4 font-mono">{{ e.usuario }}</td>
         <td class="py-2 pr-4">
@@ -164,6 +173,28 @@
         </label>
       </panel-dialogo>
     }
+    @case ('demo') {
+      <panel-dialogo titulo="Generar datos de demostración" textoBoton="Generar"
+                     ejemploMotivo="Ej.: probar el panel con datos antes de usarlo de verdad"
+                     [ocupado]="guardando()" [error]="errorAccion()" (confirmar)="generarDemostracion($event)" (cancelar)="cerrar()">
+        <p>
+          Crea <b>5 empleados inventados</b> (marcados <span class="etiqueta" style="color: var(--kiosko-atencion)">DEMO</span>)
+          con su horario —incluido un velador del turno nocturno— y sus registros de entrada y salida:
+          la mayoría a tiempo, y a propósito algunos retardos, faltas, salidas sin registrar, fotos tapadas y horas dudosas.
+        </p>
+        <label class="flex flex-col gap-1">¿Cuántos días hacia atrás?
+          <select class="campo" (change)="diasDemo.set(+valor($event))">
+            <option value="7">1 semana</option>
+            <option value="14" selected>2 semanas</option>
+            <option value="21">3 semanas</option>
+          </select>
+        </label>
+        <p class="aviso aviso-atencion text-base">
+          Sólo para el sistema de <b>pruebas</b>. Los registros no se pueden borrar (así es el sistema, a propósito);
+          para quitar a estas personas, dalas de baja.
+        </p>
+      </panel-dialogo>
+    }
     @case ('importar') {
       <panel-dialogo titulo="Importar lista de Excel" [textoBoton]="'Dar de alta a ' + importables()" ejemploMotivo="Ej.: alta inicial del personal"
                      [ocupado]="guardando()" [error]="errorAccion()" (confirmar)="guardarImportacion($event)" (cancelar)="cerrar()">
@@ -171,7 +202,13 @@
           Elige el archivo CSV.
           <panel-ayuda titulo="¿Cómo preparo el archivo?" [texto]="AYUDA.importar" alinear="izquierda" />
         </p>
-        <input type="file" accept=".csv,text/csv" class="campo" (change)="leerArchivo($event)" />
+        <!-- El boton nativo dice "Browse... No file selected" en el idioma del
+             navegador. Se esconde y se pinta uno propio, en español. -->
+        <label class="flex flex-wrap items-center gap-3">
+          <input type="file" accept=".csv,text/csv" class="sr-only" (change)="leerArchivo($event)" />
+          <span class="boton-secundario">📄 Elegir archivo…</span>
+          <span class="text-texto-suave">{{ nombreArchivo() || 'Todavía no eliges ninguno' }}</span>
+        </label>
         @if (porImportar().length > 0) {
           <div class="max-h-64 overflow-y-auto">
             <table class="w-full text-left text-base">
@@ -197,7 +234,7 @@
 <!-- ====================== LOS PIN, UNA SOLA VEZ ====================== -->
 @if (pines().length > 0) {
   <div class="fixed inset-0 z-50 flex items-center justify-center p-6" style="background-color: rgb(0 0 0 / 0.8)">
-    <div class="bg-superficie border-borde hoja-de-pines flex max-h-full w-full max-w-2xl flex-col gap-4 overflow-y-auto rounded-3xl border-2 p-8">
+    <div class="ventana bg-superficie border-borde hoja-de-pines flex max-h-full w-full max-w-2xl flex-col gap-4 overflow-y-auto rounded-3xl border-2 p-8">
       <h2 class="text-2xl font-bold">{{ pines().length === 1 ? 'Su PIN' : 'Los PIN del personal' }}</h2>
       <p class="no-imprimir text-lg">
         <b>Anótalo o imprímelo ahora:</b> no se vuelve a mostrar. Dáselo a la persona en privado.

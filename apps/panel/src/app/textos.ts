@@ -183,6 +183,26 @@ export const PALABRAS_CONFIGURACION: Record<string, { nombre: string; explicacio
     explicacion: 'Cuánto tiempo sirve el código para dar de alta un kiosco nuevo.',
     seUsaEn: 'Este panel',
   },
+  minutos_anticipacion_entrada: {
+    nombre: 'Minutos antes de la entrada que cuentan',
+    explicacion: 'Qué tan temprano puede llegar alguien y que su registro cuente para ESE turno. Con 240 (4 horas), una entrada a las 2:30 cuenta para el turno de las 6:00. Más temprano, se ve como «fuera de horario».',
+    seUsaEn: 'Los reportes de asistencia',
+  },
+  intentos_enrolamiento_por_hora: {
+    nombre: 'Códigos equivocados permitidos por hora',
+    explicacion: 'Al dar de alta un kiosco, cuántos códigos equivocados se aceptan en una hora desde el mismo lugar antes de pedir que espere. Frena a quien intente adivinar códigos.',
+    seUsaEn: 'Los kioscos',
+  },
+  minutos_inactividad_panel: {
+    nombre: 'Minutos sin uso para cerrar la sesión',
+    explicacion: 'Si nadie usa este panel durante estos minutos, la sesión se cierra sola y hay que volver a entrar. Protege la computadora que se queda abierta (por ejemplo, toda la noche). Un minuto antes aparece un aviso.',
+    seUsaEn: 'Este panel',
+  },
+  permitir_datos_demostracion: {
+    nombre: 'Permitir datos de demostración (1 = sí, 0 = no)',
+    explicacion: 'Con 1, en Empleados aparece el botón para generar empleados y registros FALSOS, para probar el sistema. Sirve sólo en el sistema de pruebas: en el sistema real debe quedar en 0.',
+    seUsaEn: 'Este panel',
+  },
   zona_horaria: {
     nombre: 'Zona horaria',
     explicacion: 'La hora oficial del sistema. Nuevo Laredo está en "America/Matamoros", que SÍ cambia de horario en verano. No la cambies si no estás seguro.',

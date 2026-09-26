@@ -36,7 +36,7 @@ const POSICIONES = {
 @Component({
   selector: 'panel-ayuda',
   template: `
-    <span class="relative inline-block align-middle">
+    <span class="relative ml-1 inline-block align-middle">
       <button
         type="button"
         class="boton-tactil inline-flex h-6 w-6 items-center justify-center rounded-full border-2

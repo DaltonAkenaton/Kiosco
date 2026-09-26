@@ -61,6 +61,7 @@ type Accion =
   | { tipo: 'estado'; empleado: Empleado }
   | { tipo: 'datos'; empleado: Empleado }
   | { tipo: 'suprimir'; empleado: Empleado }
+  | { tipo: 'demo' }
   | { tipo: 'importar' };
 
 @Component({
@@ -81,6 +82,12 @@ export class Empleados implements OnInit {
   protected readonly guardando = signal(false);
   protected readonly errorAccion = signal<string | null>(null);
   protected readonly pines = signal<PinParaEntregar[]>([]);
+
+  /** Importar: el nombre del archivo elegido, para mostrarlo en español. */
+  protected readonly nombreArchivo = signal('');
+
+  /** Demostracion: cuantos dias de registros generar. */
+  protected readonly diasDemo = signal(14);
 
   /** Suprimir: lo que el jefe teclea para confirmar (el usuario de la persona). */
   protected readonly confirmacion = signal('');
@@ -161,6 +168,7 @@ export class Empleados implements OnInit {
       });
     } else if (accion.tipo === 'importar') {
       this.porImportar.set([]);
+      this.nombreArchivo.set('');
     } else if (accion.tipo === 'suprimir') {
       this.confirmacion.set('');
     }
@@ -263,6 +271,21 @@ export class Empleados implements OnInit {
   }
 
   // --------------------------------------------------------------------------
+  //  Datos de demostracion (migracion 0018)
+  // --------------------------------------------------------------------------
+
+  /** Genera 5 empleados inventados con sus registros, y muestra sus PIN. */
+  protected async generarDemostracion(motivo: string): Promise<void> {
+    let generados: { usuario: string; nombre: string; pin: string }[] = [];
+    await this.ejecutar(async () => {
+      const r = await this.sesion.bd.rpc('generar_datos_demostracion', { p_dias: this.diasDemo(), p_motivo: motivo });
+      generados = (r.data as typeof generados | null) ?? [];
+      return r;
+    });
+    if (generados.length > 0) this.pines.set(generados.map((g) => ({ nombre: g.nombre + ' (DEMO)', usuario: g.usuario, pin: g.pin })));
+  }
+
+  // --------------------------------------------------------------------------
   //  Derechos ARCO
   // --------------------------------------------------------------------------
 
@@ -305,6 +328,7 @@ export class Empleados implements OnInit {
   protected async leerArchivo(evento: Event): Promise<void> {
     const archivo = (evento.target as HTMLInputElement).files?.[0];
     if (!archivo) return;
+    this.nombreArchivo.set(archivo.name);
     const texto = (await archivo.text()).replace(/^﻿/, '');
     const lineas = texto.split(/\r?\n/).filter((l) => l.trim() !== '');
     if (lineas.length < 2) {

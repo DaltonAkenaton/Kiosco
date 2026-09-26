@@ -39,6 +39,16 @@
 ¿Olvidaste la contraseña? Pídele a otro administrador que te dé una nueva en
 **Accesos → Contraseña nueva**.
 
+**La sesión se cierra sola** si el panel se queda sin usar (30 minutos, se
+cambia en Configuración). Un minuto antes aparece un aviso con el botón
+**Sigo aquí**. Es para que una computadora que se queda abierta no deje el
+sistema a la mano de cualquiera.
+
+Las ventanas (por ejemplo, "Registrar a mano") se cierran con **Esc** o
+picando fuera de ellas. Las que muestran un PIN o una contraseña **una sola
+vez** no: esas sólo se cierran con su botón, para que no se pierda el dato por
+un clic accidental.
+
 ---
 
 ## 3. El día a día
@@ -118,6 +128,13 @@ kiosco y si algún kiosco o cámara está fallando.
   allá.
 
 Cada cambio te pide un **motivo** y queda en la **Bitácora**.
+
+**Datos de demostración (sólo en el sistema de pruebas):** con la opción
+"Permitir datos de demostración" en 1 (Configuración), aparece el botón
+**🧪 Generar datos de demostración**: crea 5 personas inventadas (marcadas
+**DEMO**, una de ellas velador) con 1 a 3 semanas de registros, algunos con
+retardo, falta, sin salida o foto tapada. Sirve para ver cómo se comporta el
+sistema. En el sistema real esa opción debe quedar en **0**.
 
 ### Horarios
 

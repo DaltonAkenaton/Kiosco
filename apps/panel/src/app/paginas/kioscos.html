@@ -108,7 +108,7 @@
 
 @if (codigo(); as c) {
   <div class="fixed inset-0 z-50 flex items-center justify-center p-6" style="background-color: rgb(0 0 0 / 0.8)">
-    <div class="bg-superficie border-borde flex w-full max-w-xl flex-col gap-4 rounded-3xl border-2 p-8 text-center">
+    <div class="ventana bg-superficie border-borde flex w-full max-w-xl flex-col gap-4 rounded-3xl border-2 p-8 text-center">
       <h2 class="text-2xl font-bold">Código para «{{ c.nombre }}»</h2>
       <p class="font-mono text-6xl font-bold tracking-widest">{{ c.codigo.slice(0, 4) }}-{{ c.codigo.slice(4) }}</p>
       <p class="text-lg">Sirve <b>una sola vez</b> y vence a las <b>{{ hora(c.expira, zona()) }}</b>.</p>

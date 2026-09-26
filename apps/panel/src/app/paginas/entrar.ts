@@ -28,6 +28,13 @@ import { Sesion } from '../servicios/sesion';
           <p class="text-texto-suave mt-1 text-lg">Control de Asistencia</p>
         </div>
 
+        @if (sesion.motivoSalida() === 'inactividad') {
+          <p class="aviso aviso-atencion">
+            Tu sesión se cerró sola porque el panel estuvo un rato sin usarse. Es para proteger la
+            computadora si se queda abierta. Vuelve a entrar.
+          </p>
+        }
+
         @if (!sesion.configurada) {
           <p class="rounded-xl px-4 py-3" style="background-color: rgb(234 179 8 / 0.14)">
             Este panel todavía no está conectado a la base de datos. Avisa a quien le da soporte al
