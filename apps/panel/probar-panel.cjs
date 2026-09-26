@@ -292,6 +292,18 @@ app.whenReady().then(async () => {
     // ====================================================================
     console.log('\n--- ventanas: Esc y clic afuera ---');
     await picar('+ Agregar empleado');
+    // Presionar el raton sobre una casilla o un menu de la ventana NO debe
+    // cancelarse: si se cancela, la casilla no recibe el cursor (E-021). Se
+    // prueba con un evento de raton de verdad, no escribiendo por codigo.
+    const presionCancelada = await js(`(() => {
+      const objetivos = [...document.querySelectorAll('panel-dialogo input, panel-dialogo select')];
+      return objetivos.some((el) => {
+        const e = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+        el.dispatchEvent(e);
+        return e.defaultPrevented;
+      });
+    })()`);
+    comprobar('presionar el ratón en una casilla de la ventana no se cancela', presionCancelada === false);
     await js(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`);
     await esperar(300);
     comprobar('Esc cierra la ventana', !(await js(`!!document.querySelector('panel-dialogo')`)));

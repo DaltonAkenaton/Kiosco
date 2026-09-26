@@ -34,7 +34,7 @@ export const LARGO_MINIMO_MOTIVO = 10;
     <div
       class="fixed inset-0 z-50 flex items-center justify-center p-6"
       style="background-color: rgb(0 0 0 / 0.7)"
-      (mousedown)="empezoAfuera = $event.target === $event.currentTarget"
+      (mousedown)="presionEnElFondo($event)"
       (click)="clicEnElFondo($event)"
     >
       <form
@@ -101,6 +101,14 @@ export class Dialogo {
    * DENTRO de la ventana daria `false`, y Angular trata un `false` como
    * "cancela este clic": el boton Guardar dejaba de enviar el formulario.
    */
+  protected presionEnElFondo(evento: MouseEvent): void {
+    // Igual que abajo: funcion SIN valor de regreso. Como expresion
+    // (`empezoAfuera = ...`) daba `false` al presionar DENTRO de la ventana, y
+    // Angular cancelaba el "presionar": las casillas no recibian el cursor y
+    // los menus desplegables no abrian (E-021).
+    this.empezoAfuera = evento.target === evento.currentTarget;
+  }
+
   protected clicEnElFondo(evento: MouseEvent): void {
     if (evento.target === evento.currentTarget && this.empezoAfuera) this.cerrar();
   }
