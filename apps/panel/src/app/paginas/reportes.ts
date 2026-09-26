@@ -17,6 +17,8 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { hoyEn } from '@kiosko/compartido';
 import { Ayuda } from '../componentes/ayuda';
+import { type IncidenciaSugerida, RegistrarIncidencia, TIPOS_DE_INCIDENCIA } from '../componentes/registrar-incidencia';
+import { senalRecordada } from '../servicios/recordar';
 import { Sesion } from '../servicios/sesion';
 import { NOMBRES_DE_BANDERAS, fecha, hora } from '../textos';
 
@@ -39,6 +41,8 @@ interface Fila {
   corregida: boolean;
   /** Minutos que repuso quedandose despues de su hora de salida (migracion 0019). */
   minutos_repuestos: number | null;
+  /** Las horas que cuentan: trabajadas, o las del turno si el dia se dio por bueno (0020). */
+  horas_acreditadas: number | null;
 }
 
 /** Cada estado en palabras, con su color y su explicacion (ⓘ). */
@@ -60,7 +64,12 @@ export const ESTADOS: Record<string, { texto: string; color: string; ayuda: stri
     ayuda: 'Tenía turno y no vino (terminó su turno sin registrar entrada). Si fue por enfermedad, un accidente u otra razón válida, regístralo en Ausencias como falta justificada o incapacidad: deja de contar como falta.',
   },
   pendiente: { texto: 'Todavía no llega', color: 'var(--kiosko-texto-suave)', ayuda: 'Su turno ya empezó o está por empezar y aún no registra entrada. Puede llegar tarde: si termina su turno sin llegar, será falta.' },
-  incidencia: { texto: 'Ausencia justificada', color: 'var(--kiosko-texto)', ayuda: 'Vacaciones, incapacidad, permiso...: no cuenta como falta.' },
+  incidencia: { texto: 'Ausencia justificada', color: 'var(--kiosko-texto)', ayuda: 'No vino, con razón (vacaciones, incapacidad, permiso...): no cuenta como falta, pero tampoco suma horas trabajadas.' },
+  justificado: {
+    texto: 'Justificado',
+    color: 'var(--kiosko-entrada)',
+    ayuda: 'Se dio por bueno: hubo un problema que no fue suyo (no se registró, se cayó el sistema, retardo con razón). Cuenta como día normal y completo, con las horas de su turno.',
+  },
   festivo: { texto: 'Día festivo', color: 'var(--kiosko-texto)', ayuda: 'No se esperaba a nadie ese día.' },
   sin_turno: {
     texto: 'Fuera de horario',
@@ -82,13 +91,9 @@ export const ESTADOS_DE_SALIDA: Record<string, { texto: string; ayuda: string } 
   salida_sin_entrada: { texto: 'Salida sin entrada', ayuda: 'Registró la salida, pero no la entrada de ese turno.' },
 };
 
-const INCIDENCIAS: Record<string, string | undefined> = {
-  vacaciones: 'Vacaciones',
-  incapacidad: 'Incapacidad',
-  permiso: 'Permiso',
-  comision: 'Comisión',
-  falta_justificada: 'Falta justificada',
-};
+const INCIDENCIAS: Record<string, string | undefined> = Object.fromEntries(
+  TIPOS_DE_INCIDENCIA.map((t) => [t.valor, t.texto]),
+);
 
 interface Resumen {
   empleadoId: string;
@@ -99,6 +104,8 @@ interface Resumen {
   retardosMayores: number;
   faltas: number;
   justificadas: number;
+  porBueno: number;
+  horasQueCuentan: number;
   sinSalida: number;
   fueraDeHorario: number;
   horas: number;
@@ -106,17 +113,18 @@ interface Resumen {
 
 @Component({
   selector: 'panel-reportes',
-  imports: [Ayuda],
+  imports: [Ayuda, RegistrarIncidencia],
   templateUrl: './reportes.html',
 })
 export class Reportes implements OnInit {
   protected readonly sesion = inject(Sesion);
   protected readonly zona = this.sesion.zona;
 
-  protected readonly desde = signal(this.lunesDeEstaSemana());
-  protected readonly hasta = signal(hoyEn(this.sesion.zona()));
-  protected readonly empleadoId = signal('');
-  protected readonly vista = signal<'dias' | 'resumen'>('resumen');
+  // Los filtros se recuerdan al cambiar de pantalla (servicios/recordar.ts).
+  protected readonly desde = senalRecordada('reportes.desde', this.lunesDeEstaSemana());
+  protected readonly hasta = senalRecordada('reportes.hasta', hoyEn(this.sesion.zona()));
+  protected readonly empleadoId = senalRecordada('reportes.empleado', '');
+  protected readonly vista = senalRecordada<'dias' | 'resumen'>('reportes.vista', 'resumen');
 
   protected readonly empleados = signal<Map<string, { nombre: string; numero: string | null }>>(new Map());
   protected readonly filas = signal<Fila[]>([]);
@@ -128,6 +136,10 @@ export class Reportes implements OnInit {
   protected readonly INCIDENCIAS = INCIDENCIAS;
   protected readonly fecha = fecha;
   protected readonly hora = hora;
+
+  protected readonly AYUDA_HORAS =
+    'Las horas trabajadas de verdad, MÁS las de los días que se dieron por buenos (se cuenta el turno completo). ' +
+    'Las ausencias justificadas (vacaciones, incapacidad) no suman horas.';
 
   protected readonly AYUDA_RECALCULO =
     'Este reporte se calcula en el momento. Si cambias la tolerancia en Configuración, los días pasados se ' +
@@ -141,13 +153,16 @@ export class Reportes implements OnInit {
       const r =
         porPersona.get(f.empleado_id) ??
         ({ empleadoId: f.empleado_id, nombre: this.nombre(f.empleado_id), programados: 0, aTiempo: 0, retardos: 0,
-           retardosMayores: 0, faltas: 0, justificadas: 0, sinSalida: 0, fueraDeHorario: 0, horas: 0 } satisfies Resumen);
+           retardosMayores: 0, faltas: 0, justificadas: 0, porBueno: 0, horasQueCuentan: 0, sinSalida: 0,
+           fueraDeHorario: 0, horas: 0 } satisfies Resumen);
       if (f.estado !== 'sin_turno' && f.estado !== 'festivo' && f.estado !== 'pendiente') r.programados++;
       if (f.estado === 'a_tiempo') r.aTiempo++;
       if (f.estado === 'retardo' || f.estado === 'retardo_mayor') r.retardos++;
       if (f.estado === 'retardo_mayor') r.retardosMayores++;
       if (f.estado === 'falta') r.faltas++;
       if (f.estado === 'incidencia') r.justificadas++;
+      if (f.estado === 'justificado') r.porBueno++;
+      r.horasQueCuentan += Number(f.horas_acreditadas ?? 0);
       if (f.estado === 'sin_turno') r.fueraDeHorario++;
       if (f.estado_salida === 'salida_no_registrada') r.sinSalida++;
       r.horas += Number(f.horas ?? 0);
@@ -161,6 +176,38 @@ export class Reportes implements OnInit {
     this.empleados.set(
       new Map((data ?? []).map((e) => [e.id, { nombre: [e.nombre, e.apellido_paterno, e.apellido_materno].filter(Boolean).join(' '), numero: e.numero_empleado }])),
     );
+    await this.buscar();
+  }
+
+  // --------------------------------------------------------------------------
+  //  Justificar desde el reporte (migracion 0020)
+  // --------------------------------------------------------------------------
+
+  protected readonly justificando = signal<IncidenciaSugerida | null>(null);
+  protected readonly aviso = signal<string | null>(null);
+
+  /** ¿Tiene algo que justificar ese dia? Falta, retardo o salida sin registrar. */
+  protected sePuedeJustificar(f: Fila): boolean {
+    return (
+      ['falta', 'retardo', 'retardo_mayor'].includes(f.estado) ||
+      (f.estado !== 'justificado' && f.estado !== 'incidencia' &&
+        ['salida_no_registrada', 'salida_sin_entrada'].includes(f.estado_salida ?? ''))
+    );
+  }
+
+  /** Abre la ventana con la persona, el dia y el tipo que mas probablemente sea. */
+  protected justificar(f: Fila): void {
+    const tipo =
+      f.estado === 'falta' ? 'falta_justificada'
+        : f.estado === 'retardo' || f.estado === 'retardo_mayor' ? 'retardo_justificado'
+          : 'olvido_registro';
+    this.aviso.set(null);
+    this.justificando.set({ empleadoId: f.empleado_id, fecha: f.fecha.slice(0, 10), tipo });
+  }
+
+  protected async alJustificar(mensaje: string): Promise<void> {
+    this.justificando.set(null);
+    this.aviso.set(mensaje);
     await this.buscar();
   }
 
@@ -243,10 +290,10 @@ export class Reportes implements OnInit {
 
   protected descargarResumen(): void {
     const encabezado = ['numero', 'nombre', 'dias_con_turno', 'a_tiempo', 'retardos', 'de_ellos_mayores', 'faltas', 'ausencias_justificadas',
-      'sin_registrar_salida', 'fuera_de_horario', 'horas_trabajadas'];
+      'dias_dados_por_buenos', 'sin_registrar_salida', 'fuera_de_horario', 'horas_trabajadas', 'horas_que_cuentan'];
     const renglones = this.resumen().map((r) => [
       this.numero(r.empleadoId), r.nombre, r.programados, r.aTiempo, r.retardos, r.retardosMayores, r.faltas, r.justificadas,
-      r.sinSalida, r.fueraDeHorario, r.horas.toFixed(2),
+      r.porBueno, r.sinSalida, r.fueraDeHorario, r.horas.toFixed(2), r.horasQueCuentan.toFixed(2),
     ]);
     this.descargar(`asistencia-resumen_${this.desde()}_a_${this.hasta()}.csv`, [encabezado, ...renglones]);
   }

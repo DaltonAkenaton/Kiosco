@@ -901,6 +901,33 @@ await bd.query(`select actualizar_configuracion('tolerancia_retardo_minutos', '1
     semana.some((f) => f.estado_salida === 'salida_sin_entrada'));
 }
 
+// --- 0020: incidencias que "se dan por buenas" ---
+{
+  await bd.query(`select registrar_incidencia($1, 'olvido_registro', '2026-09-17', '2026-09-17', 'La huella no lo tomó, sí vino')`, [empMatutino]);
+  await bd.query(`select registrar_incidencia($1, 'retardo_justificado', '2026-09-15', '2026-09-15', 'Se ponchó la llanta, avisó')`, [empMatutino]);
+  const semana = await reporte(empMatutino, '2026-09-10', '2026-09-17');
+  const jueves = dia(semana, '2026-09-17');
+  comprobar('"no se registró" (la huella no lo tomó): el día que era falta queda "justificado" con sus 8 horas',
+    jueves?.estado === 'justificado' && Number(jueves?.horas_acreditadas) === 8,
+    `${jueves?.estado} ${jueves?.horas_acreditadas}`);
+  const martes = dia(semana, '2026-09-15');
+  comprobar('retardo justificado: se ve a qué hora llegó, pero cuenta como día completo',
+    martes?.estado === 'justificado' && martes?.minutos_tarde === 20 && Number(martes?.horas_acreditadas) === 8);
+  comprobar('vacaciones: no es falta, pero NO suman horas',
+    dia(semana, '2026-09-10')?.estado === 'incidencia' && dia(semana, '2026-09-10')?.horas_acreditadas === null);
+  comprobar('un día normal: las horas acreditadas son las trabajadas',
+    Number(dia(semana, '2026-09-14')?.horas_acreditadas) === Number(dia(semana, '2026-09-14')?.horas));
+
+  const matutino = await idTurno('Matutino');
+  const { rows: [g] } = await bd.query(
+    `select registrar_incidencia_grupal($1, 'falla_sistema', '2026-09-21', '2026-09-21', 'Se cayó el kiosco de 6 a 8') as n`, [matutino]);
+  comprobar('"se cayó el sistema" para todo el turno matutino de una vez', g.n >= 2, String(g.n));
+  comprobar('y a cada uno le cuenta el día como justificado',
+    dia(await reporte(sabatino, '2026-09-21', '2026-09-21'), '2026-09-21')?.estado === 'justificado');
+  await debeFallar('incidencia para varios: a lo más un mes',
+    `select registrar_incidencia_grupal(null, 'falla_sistema', '2026-01-01', '2026-06-01', 'Rango demasiado largo')`, 'mes');
+}
+
 // --- Quien puede ver el reporte ---
 await entrarComo(ID_SUPERVISOR);
 comprobar('un supervisor puede ver el reporte', (await reporte(empMatutino, '2026-09-14', '2026-09-14')).length > 0);

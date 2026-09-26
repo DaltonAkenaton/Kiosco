@@ -78,7 +78,7 @@ export class Marco implements OnInit, OnDestroy {
     { ruta: '/reportes', nombre: 'Reportes' },
     { ruta: '/empleados', nombre: 'Empleados' },
     { ruta: '/horarios', nombre: 'Horarios' },
-    { ruta: '/ausencias', nombre: 'Ausencias' },
+    { ruta: '/ausencias', nombre: 'Incidencias' },
     { ruta: '/kioscos', nombre: 'Kioscos' },
     { ruta: '/configuracion', nombre: 'Configuración' },
     ...(this.sesion.esAdmin()

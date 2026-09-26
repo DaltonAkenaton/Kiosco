@@ -22,7 +22,7 @@
     <select class="campo" (change)="cambiar('empleadoId', valor($event))">
       <option value="">Todos</option>
       @for (e of empleados(); track e.id) {
-        <option [value]="e.id">{{ e.nombre }}</option>
+        <option [value]="e.id" [selected]="e.id === empleadoId()">{{ e.nombre }}</option>
       }
     </select>
   </label>
@@ -31,9 +31,9 @@
     <select class="campo" (change)="turnoFiltro.set(valor($event))">
       <option value="">Todos</option>
       @for (t of turnos(); track t) {
-        <option [value]="t">{{ t }}</option>
+        <option [value]="t" [selected]="t === turnoFiltro()">{{ t }}</option>
       }
-      <option value="(sin turno)">Sin turno asignado</option>
+      <option value="(sin turno)" [selected]="turnoFiltro() === '(sin turno)'">Sin turno asignado</option>
     </select>
   </label>
   <label class="flex flex-col gap-1">
@@ -41,7 +41,7 @@
     <select class="campo" (change)="cambiar('dispositivoId', valor($event))">
       <option value="">Todos</option>
       @for (d of dispositivos(); track d.id) {
-        <option [value]="d.id">{{ d.nombre }}</option>
+        <option [value]="d.id" [selected]="d.id === dispositivoId()">{{ d.nombre }}</option>
       }
     </select>
   </label>
@@ -52,12 +52,12 @@
     </span>
     <select class="campo" (change)="cambiar('revision', valor($event))">
       <option value="">Todos los registros</option>
-      <option value="cualquiera">Sólo los que tienen algo raro</option>
-      <option value="foto_en_kiosco">Revisar la foto en el kiosco</option>
-      <option value="foto_problema">Foto que falta o alterada</option>
-      <option value="cuarentena">En cuarentena</option>
+      <option value="cualquiera" [selected]="revision() === 'cualquiera'">Sólo los que tienen algo raro</option>
+      <option value="foto_en_kiosco" [selected]="revision() === 'foto_en_kiosco'">Revisar la foto en el kiosco</option>
+      <option value="foto_problema" [selected]="revision() === 'foto_problema'">Foto que falta o alterada</option>
+      <option value="cuarentena" [selected]="revision() === 'cuarentena'">En cuarentena</option>
       @for (b of BANDERAS; track b) {
-        <option [value]="b">Sólo: {{ NOMBRES_DE_BANDERAS[b] }}</option>
+        <option [value]="b" [selected]="revision() === b">Sólo: {{ NOMBRES_DE_BANDERAS[b] }}</option>
       }
     </select>
   </label>

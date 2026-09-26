@@ -16,7 +16,7 @@
     <select class="campo" (change)="cambiar('empleadoId', valor($event))">
       <option value="">Todos</option>
       @for (e of listaEmpleados(); track e.id) {
-        <option [value]="e.id">{{ e.nombre }}</option>
+        <option [value]="e.id" [selected]="e.id === empleadoId()">{{ e.nombre }}</option>
       }
     </select>
   </label>
@@ -33,6 +33,14 @@
     ⬇ Descargar para Excel
   </button>
 </div>
+
+@if (aviso(); as a) {
+  <p class="aviso aviso-bien mt-4">✔ {{ a }} El reporte ya se recalculó.</p>
+}
+@if (justificando(); as j) {
+  <panel-registrar-incidencia [sugerida]="j" [permitirVarios]="false"
+                              (guardado)="alJustificar($event)" (cancelar)="justificando.set(null)" />
+}
 
 @if (error(); as mensaje) {
   <p class="mt-4 font-bold" style="color: var(--kiosko-peligro)">{{ mensaje }}</p>
@@ -53,8 +61,10 @@
         <th class="py-2 pr-4 text-right" style="color: var(--kiosko-atencion)">Retardos</th>
         <th class="py-2 pr-4 text-right" style="color: var(--kiosko-peligro)">Faltas</th>
         <th class="py-2 pr-4 text-right">Ausencias justificadas</th>
+        <th class="py-2 pr-4 text-right" style="color: var(--kiosko-entrada)">Justificados</th>
         <th class="py-2 pr-4 text-right">No registró salida</th>
-        <th class="py-2 text-right">Horas trabajadas</th>
+        <th class="py-2 pr-4 text-right">Horas trabajadas</th>
+        <th class="py-2 text-right">Horas que cuentan <panel-ayuda titulo="Horas que cuentan" [texto]="AYUDA_HORAS" /></th>
       </tr>
     </thead>
     <tbody>
@@ -72,8 +82,10 @@
           <td class="py-2 pr-4 text-right tabular-nums" [class.font-bold]="r.faltas > 0"
               [style.color]="r.faltas > 0 ? 'var(--kiosko-peligro)' : null">{{ r.faltas }}</td>
           <td class="py-2 pr-4 text-right tabular-nums">{{ r.justificadas }}</td>
+          <td class="py-2 pr-4 text-right tabular-nums">{{ r.porBueno }}</td>
           <td class="py-2 pr-4 text-right tabular-nums">{{ r.sinSalida }}</td>
-          <td class="py-2 text-right tabular-nums">{{ horas(r.horas) }}</td>
+          <td class="py-2 pr-4 text-right tabular-nums">{{ horas(r.horas) }}</td>
+          <td class="py-2 text-right font-semibold tabular-nums">{{ horas(r.horasQueCuentan) }}</td>
         </tr>
       }
     </tbody>
@@ -133,6 +145,9 @@
             }
             @if (f.corregida) { <span class="text-texto-suave"> · corregido</span> }
             @if (f.en_cuarentena) { <span style="color: var(--kiosko-atencion)"> · en cuarentena</span> }
+            @if (sePuedeJustificar(f)) {
+              <button type="button" class="boton-secundario ml-2 !px-2 !py-0.5 text-sm" (click)="justificar(f)">Justificar</button>
+            }
           </td>
         </tr>
       }

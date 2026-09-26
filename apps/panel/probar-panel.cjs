@@ -220,13 +220,20 @@ app.whenReady().then(async () => {
     comprobar('su entrada de las 06:05 sale "A tiempo" en el reporte', resultadoHoy.includes('A tiempo'), resultadoHoy.trim().slice(0, 90));
     await capturar('6-reporte');
 
+    // Los filtros se recuerdan: al volver a Reportes sigue elegida la persona.
+    await ir('/asistencia');
+    await ir('/reportes');
+    comprobar('al volver a Reportes, el filtro de persona se recordó',
+      (await js(`document.querySelector('select').value`)) === idCreado);
+
     await ir('/ausencias');
-    await picar('+ Registrar ausencia');
+    await picar('+ Registrar incidencia');
+    await esperar(800); // la ventana carga la lista de personas
     await js(`(() => { const s = document.querySelector('panel-dialogo select');
       s.value = ${JSON.stringify(idCreado)}; s.dispatchEvent(new Event('change', { bubbles: true })); })()`);
     await escribir('panel-dialogo input[placeholder^="Ej."]', 'Vacaciones de la prueba del panel');
     await picar('Registrar');
-    await esperar(800);
+    await esperar(1000);
     comprobar('la ausencia aparece en la lista', (await texto()).includes('Vacaciones de la prueba del panel'));
     const { rows: [conAusencia] } = await bd.query(
       `select estado from reporte_asistencia((now() at time zone 'America/Matamoros')::date, (now() at time zone 'America/Matamoros')::date, $1)`,
@@ -245,6 +252,31 @@ app.whenReady().then(async () => {
       await js(`[...document.querySelectorAll('tbody tr')].find((t) => t.textContent.includes('Rogelio'))?.textContent.includes('Anulado') ?? false`));
     const { rows: [sigue] } = await bd.query(`select count(*)::int as n from marcas where empleado_id = $1`, [idCreado]);
     comprobar('y la marca original sigue en la base', sigue.n === 1);
+
+    // ====================================================================
+    console.log('\n--- justificar desde el reporte ---');
+    // Ayer hubo retardos en los datos de demostracion (seed.sql).
+    const ayer = (await bd.query(`select ((now() at time zone 'America/Matamoros')::date - 1)::text as d`)).rows[0].d;
+    await js(`(() => {
+      sessionStorage.setItem('panel-filtro:reportes.desde', JSON.stringify('${ayer}'));
+      sessionStorage.setItem('panel-filtro:reportes.hasta', JSON.stringify('${ayer}'));
+      sessionStorage.setItem('panel-filtro:reportes.empleado', JSON.stringify(''));
+      sessionStorage.setItem('panel-filtro:reportes.vista', JSON.stringify('dias'));
+    })()`);
+    await ir('/reportes');
+    const antes = await js(`[...document.querySelectorAll('tbody tr')].filter((t) => t.textContent.includes('Justificado')).length`);
+    const hayBoton = await js(`(() => { const b = [...document.querySelectorAll('tbody button')].find((x) => x.textContent.trim() === 'Justificar');
+      if (b) b.click(); return !!b; })()`);
+    comprobar('un retardo tiene su botón "Justificar"', hayBoton);
+    await esperar(800);
+    comprobar('la ventana sugiere "Retardo justificado"',
+      await js(`[...document.querySelectorAll('panel-dialogo select')].some((s) => s.value === 'retardo_justificado')`));
+    await escribir('panel-dialogo input[placeholder^="Ej."]', 'Avisó que se le ponchó la llanta (prueba)');
+    await picar('Registrar');
+    await esperar(1500);
+    const despues = await js(`[...document.querySelectorAll('tbody tr')].filter((t) => t.textContent.includes('Justificado')).length`);
+    comprobar('al justificar, ese día pasa a "Justificado" y el reporte se recalcula', despues === antes + 1, `${antes} -> ${despues}`);
+    await capturar('9-justificar');
 
     // ====================================================================
     console.log('\n--- bitacora y mi cuenta ---');
@@ -380,6 +412,7 @@ app.whenReady().then(async () => {
       await bd.query(`delete from empleados where numero_empleado like 'DEMO-%'`);
       await bd.query(`delete from dispositivos where nombre = 'Kiosco de demostración'`);
       await bd.query(`update configuracion set valor = '0' where clave = 'permitir_datos_demostracion'`);
+      await bd.query(`delete from incidencias where notas = 'Avisó que se le ponchó la llanta (prueba)'`);
       await bd.query('delete from administradores where correo = $1', [correoAcceso]);
       await bd.query('delete from auth.users where email = $1', [correoAcceso]);
       await bd.query(`update configuracion set valor = '10' where clave = 'tolerancia_retardo_minutos'`);

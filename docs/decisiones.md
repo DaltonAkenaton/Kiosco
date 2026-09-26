@@ -1298,6 +1298,24 @@ veces. Se hace al trabajar el kiosco (toca kiosco y nube).
 
 ---
 
+## D-043 · Incidencias: "ausencia justificada" y "se da por bueno"
+
+**Decidido (el autor, 26-09-2026):** además de las ausencias (no vino con
+razón: no es falta, no suma horas), incidencias que **dan el día por bueno**
+cuando el problema no fue del empleado: no se registró, falla del sistema,
+retardo justificado. Esos días cuentan completos, con las horas de su turno
+(`horas_acreditadas`). Se registran por persona, por turno o para todos, y
+desde el reporte con "Justificar".
+
+**Por qué:** así lo manejan en el trabajo del autor ("incidencia" = algo fuera
+de lo común). Sin esto, una caída del sistema llenaba el reporte de retardos
+que nadie tuvo.
+
+**Las marcas no se tocan** (CLAUDE.md 8): la incidencia sólo cambia la
+calificación del día.
+
+---
+
 ## Plantilla para decisiones nuevas
 
 ```markdown

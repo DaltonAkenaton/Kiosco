@@ -1,14 +1,20 @@
 /**
  * ============================================================================
- *  AUSENCIAS Y DIAS FESTIVOS  (CLAUDE.md 8 y 10)
+ *  INCIDENCIAS Y DIAS FESTIVOS  (CLAUDE.md 8 y 10, migracion 0020)
  * ============================================================================
  *
- *  Lo que evita que unas vacaciones aparezcan como una racha de faltas:
+ *  Lo que evita que un dia "raro" cuente como falta o retardo:
  *
- *    - AUSENCIAS (tabla `incidencias`): vacaciones, incapacidad, permiso,
- *      comision, falta justificada. Por persona y por rango de fechas. Las
- *      puede registrar tambien un supervisor; las notas son el motivo.
+ *    - INCIDENCIAS (tabla `incidencias`), en dos familias:
+ *        ausencia justificada  vacaciones, incapacidad, permiso, comision,
+ *                              falta justificada (no vino, con razon);
+ *        se da por bueno       no se registro, falla del sistema, retardo
+ *                              justificado (el problema no fue suyo).
+ *      Por persona o para varios a la vez (componentes/registrar-incidencia).
+ *      Las puede registrar tambien un supervisor; las notas son el motivo.
  *    - DIAS FESTIVOS: nadie tiene que venir. Solo el administrador.
+ *
+ *  (La ruta sigue siendo /ausencias para no romper enlaces guardados.)
  *
  *  El reporte las toma en cuenta al momento: registrar unas vacaciones de la
  *  semana pasada corrige el reporte de la semana pasada.
@@ -17,6 +23,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { hoyEn } from '@kiosko/compartido';
 import { Dialogo, mensajeDeError } from '../componentes/dialogo';
+import { RegistrarIncidencia, familiaDeIncidencia, textoDeIncidencia } from '../componentes/registrar-incidencia';
 import { Sesion } from '../servicios/sesion';
 
 interface Incidencia {
@@ -33,18 +40,9 @@ interface Festivo {
   descripcion: string;
 }
 
-/** Cada tipo, con ejemplos: el jefe no tiene por que saber cual elegir. */
-const TIPOS = [
-  { valor: 'vacaciones', texto: 'Vacaciones', ejemplo: 'sus días de vacaciones' },
-  { valor: 'incapacidad', texto: 'Incapacidad', ejemplo: 'enfermedad, accidente, maternidad (con incapacidad del IMSS o ISSSTE)' },
-  { valor: 'permiso', texto: 'Permiso', ejemplo: 'fallecimiento de un familiar, nacimiento de un hijo, trámites' },
-  { valor: 'comision', texto: 'Comisión', ejemplo: 'está trabajando, pero en otro lugar' },
-  { valor: 'falta_justificada', texto: 'Falta justificada', ejemplo: 'faltó por una razón válida sin papel (se enfermó ese día, un accidente)' },
-];
-
 @Component({
   selector: 'panel-ausencias',
-  imports: [Dialogo],
+  imports: [Dialogo, RegistrarIncidencia],
   templateUrl: './ausencias.html',
 })
 export class Ausencias implements OnInit {
@@ -55,9 +53,10 @@ export class Ausencias implements OnInit {
   protected readonly empleados = signal<{ id: string; nombre: string }[]>([]);
   protected readonly error = signal<string | null>(null);
 
-  protected readonly TIPOS = TIPOS;
+  protected readonly familia = familiaDeIncidencia;
 
-  protected readonly nueva = signal<{ empleadoId: string; tipo: string; inicio: string; fin: string } | null>(null);
+  protected readonly registrando = signal(false);
+  protected readonly aviso = signal<string | null>(null);
   protected readonly porBorrar = signal<Incidencia | null>(null);
   protected readonly festivoNuevo = signal<{ fecha: string; descripcion: string } | null>(null);
   protected readonly festivoPorBorrar = signal<Festivo | null>(null);
@@ -88,38 +87,25 @@ export class Ausencias implements OnInit {
   }
 
   protected tipo(valor: string): string {
-    return TIPOS.find((t) => t.valor === valor)?.texto ?? valor;
+    return textoDeIncidencia(valor);
+  }
+
+  /** "2026-09-26" -> "26/09/2026" */
+  protected dma(iso: string): string {
+    const [y, m, d] = iso.split('-');
+    return `${d}/${m}/${y}`;
+  }
+
+  protected async alGuardar(mensaje: string): Promise<void> {
+    this.registrando.set(false);
+    this.aviso.set(mensaje);
+    await this.cargar();
   }
 
   protected fechaLarga(iso: string): string {
     return new Date(`${iso}T12:00:00Z`).toLocaleDateString('es-MX', {
       weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC',
     });
-  }
-
-  protected abrirNueva(): void {
-    const hoy = hoyEn(this.sesion.zona());
-    this.errorAccion.set(null);
-    this.nueva.set({ empleadoId: '', tipo: 'vacaciones', inicio: hoy, fin: hoy });
-  }
-
-  protected cambiarNueva(campo: 'empleadoId' | 'tipo' | 'inicio' | 'fin', valor: string): void {
-    this.nueva.update((n) => (n ? { ...n, [campo]: valor } : n));
-  }
-
-  protected async guardarNueva(notas: string): Promise<void> {
-    const n = this.nueva();
-    if (!n) return;
-    if (!n.empleadoId) {
-      this.errorAccion.set('Elige a la persona.');
-      return;
-    }
-    await this.ejecutar(
-      () => this.sesion.bd.rpc('registrar_incidencia', {
-        p_empleado_id: n.empleadoId, p_tipo: n.tipo, p_inicio: n.inicio, p_fin: n.fin, p_notas: notas,
-      }),
-      () => this.nueva.set(null),
-    );
   }
 
   protected async borrar(i: Incidencia, motivo: string): Promise<void> {

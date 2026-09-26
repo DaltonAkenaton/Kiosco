@@ -23,6 +23,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { diaSiguiente, hoyEn, inicioDelDiaLocal, instanteLocal } from '@kiosko/compartido';
 import { Ayuda } from '../componentes/ayuda';
 import { Dialogo, mensajeDeError } from '../componentes/dialogo';
+import { senalRecordada } from '../servicios/recordar';
 import { Sesion } from '../servicios/sesion';
 import {
   AYUDA_BANDERAS,
@@ -72,13 +73,14 @@ export class Asistencia implements OnInit {
   protected readonly sesion = inject(Sesion);
   protected readonly zona = this.sesion.zona;
 
-  protected readonly desde = signal(hoyEn(this.sesion.zona()));
-  protected readonly hasta = signal(hoyEn(this.sesion.zona()));
-  protected readonly empleadoId = signal('');
-  protected readonly dispositivoId = signal('');
-  protected readonly revision = signal<Revision>('');
+  // Los filtros se recuerdan al cambiar de pantalla (servicios/recordar.ts).
+  protected readonly desde = senalRecordada('asistencia.desde', hoyEn(this.sesion.zona()));
+  protected readonly hasta = senalRecordada('asistencia.hasta', hoyEn(this.sesion.zona()));
+  protected readonly empleadoId = senalRecordada('asistencia.empleado', '');
+  protected readonly dispositivoId = senalRecordada('asistencia.kiosco', '');
+  protected readonly revision = senalRecordada<Revision>('asistencia.revision', '');
   /** Filtro por turno. Se aplica aqui mismo, sin volver a preguntar a la base. */
-  protected readonly turnoFiltro = signal('');
+  protected readonly turnoFiltro = senalRecordada('asistencia.turno', '');
   protected readonly asignaciones = signal<Asignacion[]>([]);
 
   /** Los nombres de turno para el filtro. */

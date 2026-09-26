@@ -55,8 +55,8 @@ un clic accidental.
 
 ### Asistencia (la pantalla principal)
 
-Lista de todos los registros. Filtra por fecha, persona, kiosco y
-**Revisión**:
+Lista de todos los registros. Filtra por fecha, persona, **turno**, kiosco y
+**Revisión** (los filtros se recuerdan mientras la pestaña esté abierta):
 
 - *Sólo los que tienen algo raro*: sin foto, foto tapada, hora dudosa,
   captura manual, cuarentena.
@@ -162,15 +162,33 @@ sistema. En el sistema real esa opción debe quedar en **0**.
   día X": los días anteriores se siguen calculando con el horario viejo.
 - Quien **no tiene horario** no tiene retardos ni faltas: sólo se ven sus registros.
 
-### Ausencias y días festivos
+### Incidencias y días festivos
 
-- **+ Registrar ausencia**, con fechas. Esos días salen como "ausencia
-  justificada":
-  - **Vacaciones**.
-  - **Incapacidad**: enfermedad, accidente, maternidad (con incapacidad del IMSS/ISSSTE).
-  - **Permiso**: fallecimiento de un familiar, nacimiento de un hijo, trámites.
-  - **Comisión**: está trabajando, pero en otro lugar.
-  - **Falta justificada**: faltó por una razón válida sin papel (se enfermó ese día).
+Una incidencia es algo fuera de lo normal. Hay dos familias, y cuentan distinto:
+
+**Ausencia justificada** (no vino, con razón): no es falta, pero no suma horas.
+- **Vacaciones**.
+- **Incapacidad**: enfermedad, accidente, maternidad (con papel del IMSS/ISSSTE).
+- **Permiso**: fallecimiento de un familiar, nacimiento de un hijo, trámites.
+- **Comisión**: está trabajando, pero en otro lugar.
+- **Falta justificada**: faltó por una razón válida sin papel (amaneció enfermo).
+
+**Se da por bueno** (el problema no fue suyo): el día cuenta **normal y
+completo**, con las horas de su turno.
+- **No se registró**: sí vino, pero olvidó checar o el kiosco no lo tomó.
+- **Falla del sistema**: se cayó el kiosco, el internet o la luz.
+- **Retardo justificado**: llegó tarde por una razón aceptada.
+
+Formas de registrarla:
+- **+ Registrar incidencia**: para **una persona**, para **todos los de un
+  turno** o para **todos los que tenían turno** esos días (por ejemplo, "se
+  cayó el sistema el martes").
+- Desde **Reportes → Día por día**: en cada falta, retardo o salida sin
+  registrar hay un botón **Justificar**, que abre la ventana ya llena con la
+  persona, el día y el tipo más probable.
+
+Los registros de entrada y salida **nunca se tocan**: la incidencia sólo cambia
+cómo se califica el día. Si te equivocas, **Quitar** la regresa a como estaba.
 - **+ Agregar día festivo**: ese día nadie tiene falta.
 
 ### Kioscos
