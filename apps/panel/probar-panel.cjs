@@ -201,11 +201,20 @@ app.whenReady().then(async () => {
 
     // ====================================================================
     console.log('\n--- registro manual ---');
+    // El dia de la prueba: hoy, o AYER si se corre de madrugada (antes de las
+    // 06:10 una entrada de hoy a las 06:05 estaria en el futuro y el panel,
+    // con razon, la rechaza).
+    const { rows: [{ dia: diaDePrueba, dmy: diaTexto }] } = await bd.query(`
+      select d::text as dia, to_char(d, 'DD/MM/YYYY') as dmy
+        from (select case when (now() at time zone 'America/Matamoros')::time >= '06:10'
+                          then (now() at time zone 'America/Matamoros')::date
+                          else (now() at time zone 'America/Matamoros')::date - 1 end as d) x`);
     await ir('/asistencia');
     await picar('+ Registrar a mano');
     await js(`(() => { const s = document.querySelector('panel-dialogo select');
       s.value = ${JSON.stringify(idCreado)}; s.dispatchEvent(new Event('change', { bubbles: true })); })()`);
     await esperar(200);
+    await escribir('panel-dialogo input[type=date]', diaDePrueba);
     await escribir('panel-dialogo input[type=time]', '06:05');
     await escribir('panel-dialogo input[placeholder^="Ej."]', 'No hubo luz en la manana (prueba)');
     await picar('Registrar');
@@ -215,6 +224,9 @@ app.whenReady().then(async () => {
          from marcas where empleado_id = $1 and origen = 'manual'`, [idCreado]);
     const errorDelDialogo = await js(`document.querySelector('panel-dialogo p.font-bold')?.textContent.trim() ?? ''`);
     comprobar('la marca manual se guarda a las 06:05 hora de Nuevo Laredo', manual?.hora === '06:05', manual?.hora ?? errorDelDialogo);
+    // De madrugada la marca es de ayer: se amplia el filtro "Desde" para verla.
+    await escribir('input[type=date]', diaDePrueba);
+    await esperar(1200);
     comprobar('y aparece en la tabla (en la columna Kiosco dice "Captura manual")',
       await js(`[...document.querySelectorAll('tbody td')].some((td) => td.textContent.trim() === 'Captura manual')`));
 
@@ -231,6 +243,7 @@ app.whenReady().then(async () => {
     await js(`[...document.querySelectorAll('panel-dialogo input[type=checkbox]')]
       .filter((c) => c.closest('label')?.classList.contains('w-36') && !c.checked).forEach((c) => c.click())`);
     await esperar(300);
+    await escribir('panel-dialogo input[type=date]', diaDePrueba);
     await escribir('panel-dialogo input[placeholder^="Ej."]', 'Horario de la prueba del panel');
     await picar('Guardar horario');
     await esperar(1000);
@@ -242,7 +255,7 @@ app.whenReady().then(async () => {
       s.value = ${JSON.stringify(idCreado)}; s.dispatchEvent(new Event('change', { bubbles: true })); })()`);
     await esperar(1500);
     await picar('Día por día');
-    const resultadoHoy = await js(`[...document.querySelectorAll('tbody tr')].at(-1)?.textContent.replace(/\\s+/g, ' ') ?? ''`);
+    const resultadoHoy = await js(`[...document.querySelectorAll('tbody tr')].find((tr) => tr.textContent.includes(${JSON.stringify(diaTexto)}))?.textContent.replace(/\\s+/g, ' ') ?? ''`);
     comprobar('su entrada de las 06:05 sale "A tiempo" en el reporte', resultadoHoy.includes('A tiempo'), resultadoHoy.trim().slice(0, 90));
     await capturar('6-reporte');
 

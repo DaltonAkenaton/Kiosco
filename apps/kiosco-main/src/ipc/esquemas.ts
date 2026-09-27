@@ -161,6 +161,15 @@ export const EsquemaRegistro = z.strictObject({
   medicionesImagen: EsquemaMediciones,
 });
 
+/**
+ * El PIN que eligio el empleado (D-042): el permiso que le dio el registro y
+ * el PIN nuevo, con el mismo largo que cualquier PIN.
+ */
+export const EsquemaElegirPin = z.strictObject({
+  tokenCambioPin: EsquemaPase,
+  pinNuevo: soloDigitos(identificacion.largoPinMinimo, identificacion.largoPinMaximo),
+});
+
 /** Aviso de la interfaz sobre el estado de la camara. */
 export const EsquemaEstadoCamara = z.strictObject({
   disponible: z.boolean(),

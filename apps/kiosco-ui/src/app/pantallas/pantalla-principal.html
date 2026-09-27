@@ -290,7 +290,7 @@
 
           De paso arregla el caso obvio: alguien probando la app con el ratón.
         -->
-        <div class="mt-2 grid grid-cols-5 gap-2">
+        <div class="mt-2 grid w-full max-w-md grid-cols-5 gap-2">
           @for (tecla of ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']; track tecla) {
             <button
               type="button"
@@ -1232,5 +1232,84 @@
     >
       {{ aviso }}
     </p>
+  </div>
+}
+
+<!--
+  ================================ PIN PROPIO =================================
+  D-042, "como en el cajero". Aparece DESPUES de guardar el registro de quien
+  entro con el PIN que le dio el jefe. Su asistencia ya esta a salvo: esto se
+  puede dejar para despues con "Ahora no" (o Esc), y se cierra solo si nadie
+  teclea. Mismo teclado en pantalla que la pausa, por si falla el fisico.
+-->
+@if (eligiendoPin(); as ventana) {
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto px-10 py-4"
+    style="background-color: rgb(15 23 42 / 0.82); backdrop-filter: blur(6px)"
+  >
+    <div class="aparecer-suave bg-superficie border-borde w-full max-w-xl overflow-hidden rounded-3xl border-2 shadow-2xl">
+      <div class="flex flex-col items-center gap-3 px-12 py-6 text-center">
+        @if (finalPinNuevo(); as final) {
+          <p class="texto-nombre-grande font-bold">{{ final.ok ? '✔ PIN guardado' : 'No se cambió' }}</p>
+          <p class="text-2xl" [style.color]="final.ok ? 'var(--kiosko-entrada)' : 'var(--kiosko-peligro)'">{{ final.texto }}</p>
+          <button type="button" class="bg-superficie border-borde hover:bg-borde boton-tactil rounded-xl border-2 px-8 py-3 text-xl font-bold"
+                  (click)="cerrarPinNuevo()">
+            Cerrar
+          </button>
+        } @else {
+          <p class="text-xl font-bold" style="color: var(--kiosko-entrada)">✔ Tu registro ya quedó guardado.</p>
+          <p class="texto-nombre-grande font-bold">{{ ventana.nombre }}, elige tu PIN</p>
+          <p class="text-texto-suave max-w-md text-xl">
+            Estás usando el PIN que te dio el jefe. Elige 4 números que <b class="text-texto">sólo tú</b> sepas.
+          </p>
+
+          <p class="texto-instruccion mt-2">
+            {{ pasoPinNuevo() === 'segundo' ? 'Escríbelo otra vez' : pasoPinNuevo() === 'guardando' ? 'Guardando…' : 'Escribe tu PIN nuevo' }}
+          </p>
+
+          <div class="flex gap-5">
+            @for (lleno of puntosPinNuevo(); track $index) {
+              <div
+                class="punto-pin rounded-full border-4 transition-colors"
+                [class.punto-llenado]="lleno"
+                [style.background-color]="lleno ? 'var(--kiosko-texto)' : 'transparent'"
+                [style.border-color]="lleno ? 'var(--kiosko-texto)' : 'var(--kiosko-borde)'"
+              ></div>
+            }
+          </div>
+
+          @if (errorPinNuevo(); as mensaje) {
+            <p class="sacudir rounded-2xl px-6 py-3 text-2xl font-bold"
+               style="background-color: rgb(239 68 68 / 0.18); color: var(--kiosko-peligro)">
+              {{ mensaje }}
+            </p>
+          }
+
+          <div class="mt-2 grid w-full max-w-md grid-cols-5 gap-2">
+            @for (tecla of ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']; track tecla) {
+              <button type="button"
+                      class="bg-superficie border-borde hover:bg-borde boton-tactil rounded-xl border-2 py-3 text-2xl font-bold tabular-nums"
+                      (click)="agregarDigitoPinNuevo(tecla)">
+                {{ tecla }}
+              </button>
+            }
+          </div>
+
+          <div class="flex gap-3">
+            <button type="button"
+                    class="bg-superficie border-borde hover:bg-borde boton-tactil text-texto-suave rounded-xl border-2 px-6 py-2 text-base"
+                    (click)="borrarDigitoPinNuevo()">
+              Borrar
+            </button>
+            <button type="button"
+                    class="bg-superficie border-borde hover:bg-borde boton-tactil rounded-xl border-2 px-6 py-2 text-base"
+                    (click)="cerrarPinNuevo()">
+              Ahora no (Esc)
+            </button>
+          </div>
+          <p class="text-texto-suave text-base">Si eliges "Ahora no", te lo volveremos a preguntar la próxima vez.</p>
+        }
+      </div>
+    </div>
   </div>
 }

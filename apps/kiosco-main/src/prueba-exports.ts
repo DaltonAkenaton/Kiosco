@@ -122,3 +122,6 @@ export { leerCredencial, rutaDeLaCredencial, olvidarCredencialEnMemoria } from '
 export { EsquemaEnrolamiento } from './ipc/esquemas';
 export { instanteLocal } from '@kiosko/compartido';
 export { contarFotosConLlaveAnterior, recuperarFotosConContrasena } from './servicios/recuperacion-fotos';
+export { crearPermisoDePin, elegirPinPropio, pinDemasiadoFacil, permisosDePinVivos } from './servicios/pin-propio';
+export { guardarPinPropio } from './datos/repositorio-empleados';
+export { EsquemaElegirPin } from './ipc/esquemas';

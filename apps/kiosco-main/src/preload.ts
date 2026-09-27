@@ -51,6 +51,7 @@ import {
   type ResultadoIdentificacion,
   type ResultadoEnrolamiento,
   type ResultadoPausa,
+  type ResultadoCambioPin,
   type ResultadoRegistro,
   type SolicitudIdentificacion,
   type SolicitudRegistro,
@@ -70,6 +71,10 @@ const api: ApiKiosco = {
 
   registrarMarca(solicitud: SolicitudRegistro): Promise<ResultadoRegistro> {
     return ipcRenderer.invoke(CANALES.registrarMarca, solicitud);
+  },
+
+  elegirPin(tokenCambioPin: string, pinNuevo: string): Promise<ResultadoCambioPin> {
+    return ipcRenderer.invoke(CANALES.elegirPin, { tokenCambioPin, pinNuevo });
   },
 
   cancelarRegistro(tokenRegistro: string): Promise<void> {

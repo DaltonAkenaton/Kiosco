@@ -22,7 +22,8 @@
 
 import { CONFIG, type EmpleadoEnCache } from '@kiosko/compartido';
 import { numeroConfigurado } from '../configuracion-vigente';
-import { baseDeDatos } from './base-de-datos';
+import { randomUUID } from 'node:crypto';
+import { baseDeDatos, enTransaccion } from './base-de-datos';
 
 /**
  * Como viene una fila de SQLite.
@@ -276,4 +277,39 @@ export function sugerenciaPara(
     return { accion: 'entrada', dudosa: true, ultimaEntradaMs: ultima.horaEstimadaMs };
   }
   return { accion: 'salida', dudosa: false, ultimaEntradaMs: ultima.horaEstimadaMs };
+}
+
+/**
+ * El empleado eligio su PIN propio en el kiosco (D-042).
+ *
+ * En UNA transaccion: se cambia aqui (para que funcione de inmediato, aun sin
+ * internet) y se deja en la bandeja de salida para la nube, que lo reparte a
+ * los demas kioscos. La nube recibe el HASH, nunca el PIN.
+ *
+ * Solo cambia si el PIN sigue siendo el temporal que se verifico
+ * (`pinAnteriorHash`): si entre medias llego otro PIN (el jefe dio uno nuevo),
+ * no se pisa. Devuelve `false` en ese caso.
+ */
+export function guardarPinPropio(empleadoId: string, pinHash: string, pinAnteriorHash: string): boolean {
+  const bd = baseDeDatos();
+  return enTransaccion(() => {
+    const cambio = bd
+      .prepare(
+        `UPDATE empleados_cache SET pin_hash = ?, pin_temporal = 0
+          WHERE id = ? AND pin_hash = ? AND pin_temporal = 1 AND activo = 1`,
+      )
+      .run(pinHash, empleadoId, pinAnteriorHash);
+    if (Number(cambio.changes) !== 1) return false;
+
+    const id = randomUUID();
+    bd.prepare(
+      `INSERT INTO outbox (id, tipo_registro, payload, intentos, creado_en)
+       VALUES (?, 'cambio_pin', ?, 0, ?)`,
+    ).run(
+      id,
+      JSON.stringify({ id, empleadoId, pinHash, pinAnteriorHash, cambiadoEn: new Date().toISOString() }),
+      new Date().toISOString(),
+    );
+    return true;
+  });
 }

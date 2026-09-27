@@ -217,6 +217,20 @@ export const SEGURIDAD_PIN = {
   segundosDeVidaDeLaIdentificacion: 60,
 
   /**
+   * PIN PROPIO (D-042): tras registrar con el PIN que dio el jefe, el kiosco
+   * ofrece elegir uno propio. Cuanto vale ese permiso para cambiarlo.
+   * Alcanza de sobra para escribirlo dos veces y equivocarse una.
+   */
+  segundosParaElegirPin: 120,
+
+  /**
+   * Si en la pantalla "Elige tu PIN" nadie teclea en estos segundos, se
+   * cierra como "Ahora no" (y se le vuelve a preguntar la proxima vez).
+   * Asi nadie deja la pantalla abierta para el siguiente.
+   */
+  segundosSinTeclearAlElegirPin: 30,
+
+  /**
    * Costo de bcrypt para el hash del PIN.
    * Numero mas alto = mas seguro pero mas lento. Cada +1 DUPLICA el tiempo.
    * 10 tarda ~60ms en una PC modesta, que es imperceptible para el empleado

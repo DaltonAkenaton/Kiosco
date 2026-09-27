@@ -41,6 +41,7 @@
 
 import type {
   EstadoKiosco,
+  ResultadoCambioPin,
   ResultadoIdentificacion,
   ResultadoRegistro,
   TipoMarca,
@@ -63,6 +64,8 @@ export const CANALES = {
   registrarMarca: 'kiosco:registrar-marca',
   /** El empleado cancelo en la confirmacion: se tira el pase sin registrar nada. */
   cancelarRegistro: 'kiosco:cancelar-registro',
+  /** Tras registrar con un PIN temporal: el empleado elige uno propio (D-042). */
+  elegirPin: 'kiosco:elegir-pin',
   /** Pide el estado actual: conexion, pendientes, camara. */
   obtenerEstado: 'kiosco:obtener-estado',
   /** Pide la configuracion vigente (la del archivo mezclada con la de la nube). */
@@ -248,6 +251,13 @@ export interface ApiKiosco {
    * mensaje se perdiera, el pase caducaria solo en un minuto.
    */
   cancelarRegistro(tokenRegistro: string): Promise<void>;
+
+  /**
+   * Guarda el PIN que eligio el empleado (D-042). El permiso para hacerlo es
+   * `tokenCambioPin`, que solo entrega `registrarMarca` a quien acaba de
+   * registrar con un PIN temporal correcto.
+   */
+  elegirPin(tokenCambioPin: string, pinNuevo: string): Promise<ResultadoCambioPin>;
   obtenerEstado(): Promise<EstadoKiosco>;
   obtenerConfiguracion(): Promise<ConfiguracionParaInterfaz>;
   obtenerEmpleadosParaLista(): Promise<EmpleadoParaLista[]>;
@@ -480,6 +490,8 @@ export interface ConfiguracionParaInterfaz {
   volumenSonidos: number;
   segundosInactividadParaLimpiar: number;
   segundosParaElegirSiHayDuda: number;
+  /** Sin teclear en "Elige tu PIN" estos segundos: se cierra como "Ahora no". */
+  segundosSinTeclearAlElegirPin: number;
   segundosMensajeExito: number;
   videoEnEspejo: boolean;
   mostrarTecladoEnPantalla: boolean;

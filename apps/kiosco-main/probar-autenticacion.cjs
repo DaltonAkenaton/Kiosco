@@ -856,6 +856,69 @@ app.whenReady().then(async () => {
       medicionesImagen: null,
     }).success === false);
 
+  // ======================================================================
+  //  PIN PROPIO (D-042): tras registrar con el PIN del jefe, elige el suyo
+  // ======================================================================
+  console.log('\n--- PIN propio ---');
+
+  comprobar('PINes faciles se rechazan (1111, 1234, 4321, 0123)',
+    ['1111', '1234', '4321', '0123', '9876'].every((p) => bd.pinDemasiadoFacil(p)));
+  comprobar('y los normales no (2580, 1357, 4071)', ['2580', '1357', '4071'].every((p) => !bd.pinDemasiadoFacil(p)));
+
+  // Dalton (el de la nube) con PIN temporal 2580, el que le dio el jefe.
+  const hashTemporal = bd.hashearPin('2580');
+  bdSql.prepare('UPDATE empleados_cache SET pin_hash = ?, pin_temporal = 1 WHERE id = ?').run(hashTemporal, idNube);
+  const permiso = bd.crearPermisoDePin(idNube, hashTemporal);
+  const facil = bd.elegirPinPropio(permiso, '1234');
+  comprobar('un PIN facil: se pide otro y el permiso sigue vivo', !facil.ok && facil.volverAEmpezar && bd.permisosDePinVivos() >= 1);
+  const igual = bd.elegirPinPropio(permiso, '2580');
+  comprobar('el mismo PIN que dio el jefe: se pide otro', !igual.ok && igual.volverAEmpezar);
+  const bien = bd.elegirPinPropio(permiso, '4071');
+  comprobar('un PIN propio valido se guarda', bien.ok === true, JSON.stringify(bien));
+  const daltonPropio = bd.buscarPorId(idNube);
+  comprobar('ya no es temporal', daltonPropio.pinTemporal === false);
+  comprobar('su PIN nuevo sirve para checar', (await bd.verificarPin(daltonPropio, '4071')).ok === true);
+  comprobar('y el del jefe ya no', (await bd.verificarPin(daltonPropio, '2580')).ok === false);
+  const otraVez = bd.elegirPinPropio(permiso, '5827');
+  comprobar('el permiso se usa UNA vez', !otraVez.ok && !otraVez.volverAEmpezar);
+
+  const cambio = bdSql.prepare(`SELECT id, payload FROM outbox WHERE tipo_registro = 'cambio_pin' ORDER BY creado_en DESC`).get();
+  comprobar('el cambio queda en la bandeja para la nube', Boolean(cambio));
+  comprobar('a la nube va el HASH, nunca el PIN', !cambio.payload.includes('4071') && JSON.parse(cambio.payload).pinAnteriorHash === hashTemporal);
+  comprobar('y sube en el lote como "cambiosDePin"',
+    bd.armarCuerpo(bd.renglonesParaSubir(1000)).cambiosDePin.some((c) => c.id === cambio.id));
+
+  // La nube todavia no lo recibe y trae el temporal: NO debe pisar el propio.
+  const filaCatalogo = (hash, temporal) => ({
+    empleados: [{
+      id: idNube, usuario: 'dgomez', numero_empleado: '1001', nombre: 'Dalton', apellido_paterno: 'Gómez',
+      apellido_materno: 'Arellano', pin_hash: hash, pin_temporal: temporal, activo: true,
+      actualizado_en: new Date().toISOString(),
+    }],
+    administradores: [], configuracion: {}, ultimasMarcas: [], cursor: null,
+  });
+  bd.aplicarCatalogo(filaCatalogo(hashTemporal, true));
+  const trasCatalogo = bd.buscarPorId(idNube);
+  comprobar('mientras no sube, el catalogo no le regresa el PIN temporal',
+    trasCatalogo.pinTemporal === false && (await bd.verificarPin(trasCatalogo, '4071')).ok === true);
+  bd.marcarEnviados([cambio.id]);
+  const hashDelJefe = bd.hashearPin('3690');
+  bd.aplicarCatalogo(filaCatalogo(hashDelJefe, true));
+  comprobar('ya enviado, manda la nube (p. ej. el jefe le dio otro PIN nuevo)',
+    bd.buscarPorId(idNube).pinTemporal === true && (await bd.verificarPin(bd.buscarPorId(idNube), '3690')).ok === true);
+
+  // Si su PIN cambio entre que se identifico y que eligio, no se pisa.
+  const permisoViejo = bd.crearPermisoDePin(idNube, hashTemporal);
+  const pisado = bd.elegirPinPropio(permisoViejo, '5827');
+  comprobar('si su PIN cambio entre medias, no se pisa', !pisado.ok && !pisado.volverAEmpezar &&
+    (await bd.verificarPin(bd.buscarPorId(idNube), '3690')).ok === true);
+
+  comprobar('el esquema de elegir PIN acepta 4 digitos',
+    bd.EsquemaElegirPin.safeParse({ tokenCambioPin: pasePrueba, pinNuevo: '4071' }).success === true);
+  comprobar('y rechaza letras o de mas',
+    bd.EsquemaElegirPin.safeParse({ tokenCambioPin: pasePrueba, pinNuevo: 'abcd' }).success === false &&
+    bd.EsquemaElegirPin.safeParse({ tokenCambioPin: pasePrueba, pinNuevo: '12345' }).success === false);
+
   console.log(fallos === 0 ? '\nTODAS LAS PRUEBAS PASARON' : `\n${fallos} PRUEBA(S) FALLARON`);
   app.exit(fallos === 0 ? 0 : 1);
 });

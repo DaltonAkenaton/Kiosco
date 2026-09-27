@@ -52,6 +52,7 @@ migración fallará y nadie sabrá por qué.
 | 0020 | `incidencias_por_bueno` | Incidencias que "se dan por buenas" (no se registró, falla del sistema, retardo justificado), horas acreditadas y registro para varios a la vez |
 | 0021 | `arreglos_del_analisis` | Arreglos del análisis "¿qué pasaría si…?": baja cierra horario, validaciones cruzadas de configuración, "sin entrada" y "programado", cámara caída desde cuándo, incidencias sin duplicados |
 | 0022 | `toques_y_tiempo_extra` | "Toque repetido" a 60 min (antes 16 h: se perdía la entrada del día siguiente si olvidó la salida), una entrada nueva cierra la anterior como "no registró salida", y `minutos_extra` en el reporte (turno doble) |
+| 0023 | `pin_propio` | El empleado elige su PIN en el kiosco (D-042): todo PIN del sistema es temporal, `cambios_pin` y `recibir_cambios_de_pin` |
 
 ---
 

@@ -5,7 +5,8 @@
  *
  *  El kiosco manda lo que tiene en su bandeja de salida, tal cual lo guardo:
  *
- *      { marcas: [...], eventos: [...], accesosFoto: [...], estadosDeFoto: [...] }
+ *      { marcas: [...], eventos: [...], accesosFoto: [...], estadosDeFoto: [...],
+ *        cambiosDePin: [...] }
  *
  *  y recibe que se acepto y que no:
  *
@@ -83,11 +84,23 @@ const EstadoDeFoto = z.object({
   estado: z.enum(['con_foto', 'obstruida', 'eliminada_por_antiguedad', 'conservada', 'faltante', 'alterada']),
 });
 
+// El empleado eligio su PIN propio en el kiosco (D-042, migracion 0023).
+// Llega el HASH bcrypt, nunca el PIN.
+const HashBcrypt = z.string().regex(/^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/);
+const CambioDePin = z.object({
+  id: z.uuid(),
+  empleadoId: z.uuid(),
+  pinHash: HashBcrypt,
+  pinAnteriorHash: HashBcrypt,
+  cambiadoEn: z.iso.datetime(),
+});
+
 const Lote = z.object({
   marcas: z.array(Marca).max(MAXIMO_POR_TIPO).default([]),
   eventos: z.array(Evento).max(MAXIMO_POR_TIPO).default([]),
   accesosFoto: z.array(AccesoFoto).max(MAXIMO_POR_TIPO).default([]),
   estadosDeFoto: z.array(EstadoDeFoto).max(MAXIMO_POR_TIPO).default([]),
+  cambiosDePin: z.array(CambioDePin).max(MAXIMO_POR_TIPO).default([]),
 });
 
 Deno.serve(
@@ -103,14 +116,28 @@ Deno.serve(
       return DATOS_INVALIDOS(problema ? `Campo invalido: ${problema.path.join('.')}` : undefined);
     }
 
+    const { cambiosDePin, ...resto } = validacion.data;
     const { data, error } = await bd.rpc('recibir_registros', {
       p_dispositivo_id: kiosco.id,
       p_revocado_en: kiosco.revocadoEn,
-      p_lote: validacion.data,
+      p_lote: resto,
     });
     if (error) throw error;
 
-    const resultado = data as { aceptados: string[]; rechazados: { id: string; motivo: string }[] };
+    type Resultado = { aceptados: string[]; rechazados: { id: string; motivo: string }[] };
+    const resultado = data as Resultado;
+
+    if (cambiosDePin.length > 0) {
+      const pines = await bd.rpc('recibir_cambios_de_pin', {
+        p_dispositivo_id: kiosco.id,
+        p_revocado_en: kiosco.revocadoEn,
+        p_cambios: cambiosDePin,
+      });
+      if (pines.error) throw pines.error;
+      const r = pines.data as Resultado;
+      resultado.aceptados.push(...r.aceptados);
+      resultado.rechazados.push(...r.rechazados);
+    }
     console.info(
       `[recibir] ${kiosco.id}: ${resultado.aceptados.length} aceptados, ${resultado.rechazados.length} rechazados`,
     );

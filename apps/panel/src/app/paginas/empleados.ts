@@ -120,8 +120,10 @@ export class Empleados implements OnInit {
       'Es lo que el empleado usaría para identificarse si el kiosco se configura en modo "usuario": la ' +
       'primera letra de su nombre y su apellido, sin acentos. El sistema lo propone solo.',
     pinTemporal:
-      'Este PIN lo dio el jefe (por ejemplo, porque la persona olvidó el suyo). Funciona igual que ' +
-      'cualquier otro.',
+      'Todavía usa el PIN que le dio el sistema (al darla de alta o con "PIN nuevo"). Funciona para ' +
+      'checar, pero como tú lo viste, no es sólo suyo. La próxima vez que registre, el kiosco le ' +
+      'pedirá elegir uno propio; puede decir "ahora no" y se le vuelve a preguntar. Cuando lo elija, ' +
+      'esta nota desaparece.',
     arco:
       'La ley de protección de datos personales le da a cada persona derecho a saber qué datos suyos ' +
       'tiene el sistema (Acceso), a corregirlos (Rectificación), a pedir que se borren (Cancelación) ' +
@@ -493,7 +495,7 @@ export class Empleados implements OnInit {
             .filter((e) => !e.anonimizado_en)
             .map((e) => [
               e.numero_empleado ?? '', e.nombre, e.apellido_paterno, e.apellido_materno, e.usuario,
-              e.activo ? 'Activo' : 'Dado de baja', e.pin_temporal ? 'Temporal (lo dio el jefe)' : 'Propio',
+              e.activo ? 'Activo' : 'Dado de baja', e.pin_temporal ? 'Temporal (todavía no elige el suyo)' : 'Propio (lo eligió en el kiosco)',
             ]),
         ],
       },

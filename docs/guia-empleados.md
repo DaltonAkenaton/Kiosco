@@ -35,6 +35,19 @@ Si se te olvidó registrar tu salida la vez pasada, el kiosco **te pregunta**
 
 Escucharás un sonido distinto para **entrada**, **salida** y **error**.
 
+## 4. La primera vez: elige tu PIN
+
+El PIN que te dio el jefe es **temporal**. La primera vez que lo uses, después
+de guardar tu registro, el kiosco te dice **"elige tu PIN"**:
+
+1. Escribe 4 números que **sólo tú** sepas.
+2. Escríbelos **otra vez**.
+3. Listo: desde ese momento usas el tuyo. El del jefe ya no sirve.
+
+No se permiten los muy fáciles (`1111`, `1234`, `4321`...) ni el mismo que te
+dio el jefe. Si tienes prisa, pica **Ahora no** (o **Esc**): tu registro ya
+quedó guardado y te lo pregunta la próxima vez.
+
 ---
 
 ## Preguntas frecuentes
@@ -48,8 +61,8 @@ esta computadora, sólo la puede ver el jefe aquí mismo y **se borra sola a los
 
 **¿Y si no hay internet?** Registra igual. Se envía después, solo.
 
-**Olvidé mi PIN.** Avísale a tu jefe: te da uno nuevo. Mientras, él registra
-tu asistencia a mano.
+**Olvidé mi PIN.** Avísale a tu jefe: te da uno nuevo (temporal) y la próxima
+vez que registres eliges otro tuyo. Mientras, él registra tu asistencia a mano.
 
 **Me equivoqué (registré dos veces, o entrada en vez de salida).** Avísale a
 tu jefe ese mismo día: él lo corrige.

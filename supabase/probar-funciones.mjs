@@ -288,6 +288,40 @@ try {
   comprobar('sin token no se recibe nada', sinToken.estado === 401);
 
   // ==========================================================================
+  //  PIN propio (D-042, 0023): el empleado lo eligio en el kiosco
+  // ==========================================================================
+  console.log('\n--- PIN propio ---');
+  const hashDe = async (pin) => (await bd.query(`select extensions.crypt($1, extensions.gen_salt('bf', 4)) as h`, [pin])).rows[0].h;
+  const { rows: [antesPin] } = await bd.query('select pin_hash, pin_temporal from empleados where id = $1', [EMPLEADO]);
+  comprobar('un empleado nuevo nace con PIN temporal', antesPin.pin_temporal === true);
+  const cambioPin = {
+    id: randomUUID(), empleadoId: EMPLEADO, pinHash: await hashDe('4071'),
+    pinAnteriorHash: antesPin.pin_hash, cambiadoEn: new Date().toISOString(),
+  };
+  const envioPin = await llamar('recibir-registros', { cambiosDePin: [cambioPin] }, TOKEN);
+  const { rows: [trasPin] } = await bd.query(
+    `select pin_temporal, pin_hash = extensions.crypt('4071', pin_hash) as sirve from empleados where id = $1`, [EMPLEADO]);
+  comprobar('el cambio de PIN se acepta y se aplica', envioPin.cuerpo?.aceptados?.includes(cambioPin.id) &&
+    trasPin.sirve && trasPin.pin_temporal === false, JSON.stringify(envioPin.cuerpo));
+  const { rows: [bitPin] } = await bd.query(
+    `select motivo, datos_despues ->> 'pin_hash' as h from bitacora_auditoria
+      where tabla = 'empleados' and registro_id = $1 order by creado_en desc limit 1`, [EMPLEADO]);
+  comprobar('queda en la bitacora, sin el hash', /PIN propio/.test(bitPin?.motivo ?? '') && bitPin.h === '[oculto]', bitPin?.motivo);
+  const repetidoPin = await llamar('recibir-registros', { cambiosDePin: [cambioPin] }, TOKEN);
+  const { rows: [{ n: nPin }] } = await bd.query('select count(*)::int as n from cambios_pin where id = $1', [cambioPin.id]);
+  comprobar('mandarlo otra vez no duplica (y cuenta como aceptado)', nPin === 1 && repetidoPin.cuerpo?.aceptados?.includes(cambioPin.id));
+
+  // El jefe le dio otro PIN antes de que llegara un segundo cambio viejo: gana el del jefe.
+  const tarde = { ...cambioPin, id: randomUUID(), pinHash: await hashDe('5827') };
+  const envioTarde = await llamar('recibir-registros', { cambiosDePin: [tarde] }, TOKEN);
+  const { rows: [resTarde] } = await bd.query('select resultado from cambios_pin where id = $1', [tarde.id]);
+  const { rows: [sigue] } = await bd.query(`select pin_hash = extensions.crypt('4071', pin_hash) as sirve from empleados where id = $1`, [EMPLEADO]);
+  comprobar('un cambio que ya no corresponde se anota "descartado" y no pisa el PIN',
+    envioTarde.cuerpo?.aceptados?.includes(tarde.id) && resTarde.resultado === 'descartado' && sigue.sirve);
+  const pinEnClaro = await llamar('recibir-registros', { cambiosDePin: [{ ...cambioPin, id: randomUUID(), pinHash: '4071' }] }, TOKEN);
+  comprobar('un PIN en claro (no hash) se rechaza', pinEnClaro.estado === 400);
+
+  // ==========================================================================
   //  Kiosco revocado  (CLAUDE.md 3.3)
   // ==========================================================================
   console.log('\n--- kiosco revocado ---');
@@ -426,6 +460,7 @@ try {
   const dispositivos = `(select id from dispositivos where enrolado_por = $1)`;
   await bd.query(`delete from accesos_foto where dispositivo_id in ${dispositivos} or admin_id = $1`, [ADMIN]);
   await bd.query(`delete from eventos_dispositivo where dispositivo_id in ${dispositivos}`, [ADMIN]);
+  await bd.query('delete from cambios_pin where empleado_id = $1', [EMPLEADO]);
   await bd.query('delete from marcas where empleado_id = $1', [EMPLEADO]);
   await bd.query('delete from codigos_enrolamiento where creado_por = $1', [ADMIN]);
   await bd.query('delete from dispositivos where enrolado_por = $1', [ADMIN]);

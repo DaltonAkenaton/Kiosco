@@ -247,8 +247,30 @@ export type MotivoRechazo =
 
 /** Resultado de guardar la marca. */
 export type ResultadoRegistro =
-  | { ok: true; marcaId: string; tipo: TipoMarca; horaLocalTexto: string; banderas: BanderaMarca[] }
+  | {
+      ok: true;
+      marcaId: string;
+      tipo: TipoMarca;
+      horaLocalTexto: string;
+      banderas: BanderaMarca[];
+      /**
+       * Si registro con el PIN que le dio el jefe (temporal): el permiso para
+       * elegir uno propio en seguida (D-042). `null` si ya tiene PIN propio.
+       */
+      tokenCambioPin: string | null;
+    }
   | { ok: false; mensaje: string };
+
+/**
+ * Resultado de elegir PIN propio.
+ *
+ * `volverAEmpezar`: el PIN no sirve (muy facil, igual al temporal) pero el
+ * permiso sigue vivo: que escriba otro. Si es `false`, ya no se puede
+ * (el permiso vencio): la pantalla se cierra y se le pedira la proxima vez.
+ */
+export type ResultadoCambioPin =
+  | { ok: true }
+  | { ok: false; mensaje: string; volverAEmpezar: boolean };
 
 // ----------------------------------------------------------------------------
 //  Estado del kiosco (lo que se pinta en la barra de estado)

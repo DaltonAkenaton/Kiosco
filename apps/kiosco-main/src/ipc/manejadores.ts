@@ -48,6 +48,7 @@ import {
   nombreCompleto,
   type ResultadoIdentificacion,
   type ResultadoEnrolamiento,
+  type ResultadoCambioPin,
   type ResultadoPausa,
   type ResultadoRegistro,
 } from '@kiosko/compartido';
@@ -72,6 +73,7 @@ import {
   nuevoIdDeMarca,
 } from '../datos/repositorio-marcas';
 import { simularVerificacion, verificarPin } from '../servicios/autenticacion';
+import { crearPermisoDePin, elegirPinPropio } from '../servicios/pin-propio';
 import {
   canjearPase,
   crearPase,
@@ -86,6 +88,7 @@ import { ES_DESARROLLO } from '../entorno';
 import {
   EsquemaCambioDeModo,
   EsquemaCancelacion,
+  EsquemaElegirPin,
   EsquemaEstadoCamara,
   EsquemaEnrolamiento,
   EsquemaPausa,
@@ -144,6 +147,7 @@ function configuracionParaInterfaz(): ConfiguracionParaInterfaz {
     volumenSonidos: CONFIG.interfaz.volumenSonidos,
     segundosInactividadParaLimpiar: CONFIG.interfaz.segundosInactividadParaLimpiar,
     segundosParaElegirSiHayDuda: CONFIG.interfaz.segundosParaElegirSiHayDuda,
+    segundosSinTeclearAlElegirPin: CONFIG.seguridadPin.segundosSinTeclearAlElegirPin,
     segundosMensajeExito: CONFIG.interfaz.segundosMensajeExito,
     videoEnEspejo: CONFIG.interfaz.videoEnEspejo,
     mostrarTecladoEnPantalla: CONFIG.interfaz.mostrarTecladoEnPantalla,
@@ -478,12 +482,15 @@ export function registrarManejadoresIpc(): void {
         sincronizarPronto();
 
         // --- 8. Responder --------------------------------------------------
+        // Si entro con el PIN que le dio el jefe, ya con su registro a salvo
+        // se le ofrece elegir uno propio (D-042).
         return {
           ok: true,
           marcaId,
           tipo,
           horaLocalTexto: horaLocalDe(reloj.horaEstimadaMs),
           banderas,
+          tokenCambioPin: empleado.pinTemporal ? crearPermisoDePin(empleado.id, empleado.pinHash) : null,
         };
       } catch (fallo) {
         // Si algo truena aqui, el empleado se queda sin registro. Se deja
@@ -496,6 +503,33 @@ export function registrarManejadoresIpc(): void {
       }
     },
   );
+
+  // ---------------------------------------------------------------------
+  //  elegirPin: el empleado cambia el PIN temporal por uno propio (D-042)
+  // ---------------------------------------------------------------------
+  ipcMain.handle(CANALES.elegirPin, async (_evento, datosCrudos): Promise<ResultadoCambioPin> => {
+    const validacion = EsquemaElegirPin.safeParse(datosCrudos);
+    if (!validacion.success) {
+      // Sin `datosCrudos` en el log: ahi va el PIN.
+      console.warn('[ipc] elegirPin: datos invalidos');
+      return { ok: false, volverAEmpezar: true, mensaje: 'Escribe 4 números.' };
+    }
+    try {
+      const resultado = elegirPinPropio(validacion.data.tokenCambioPin, validacion.data.pinNuevo);
+      if (resultado.ok) {
+        actualizarEstado({ registrosPendientes: contarPendientes() });
+        sincronizarPronto();
+      }
+      return resultado;
+    } catch (fallo) {
+      console.error('[ipc] elegirPin: error inesperado', fallo);
+      return {
+        ok: false,
+        volverAEmpezar: false,
+        mensaje: 'No se pudo cambiar tu PIN. Sigue usando el que te dio el jefe.',
+      };
+    }
+  });
 
   // ---------------------------------------------------------------------
   //  cancelarRegistro: el empleado se arrepintio en la confirmacion

@@ -83,6 +83,7 @@ const TIPOS_EN_EL_LOTE = {
   evento: 'eventos',
   acceso_foto: 'accesosFoto',
   estado_foto: 'estadosDeFoto',
+  cambio_pin: 'cambiosDePin',
 } as const;
 
 type CampoDelLote = (typeof TIPOS_EN_EL_LOTE)[keyof typeof TIPOS_EN_EL_LOTE];
@@ -129,7 +130,7 @@ export function renglonesParaSubir(limitePorTipo: number): RenglonParaSubir[] {
 
 /** Junta renglones en el cuerpo del lote: { marcas: [...], eventos: [...], ... }. */
 export function armarCuerpo(renglones: readonly RenglonParaSubir[]): CuerpoDelLote {
-  const cuerpo: CuerpoDelLote = { marcas: [], eventos: [], accesosFoto: [], estadosDeFoto: [] };
+  const cuerpo: CuerpoDelLote = { marcas: [], eventos: [], accesosFoto: [], estadosDeFoto: [], cambiosDePin: [] };
   for (const r of renglones) cuerpo[r.campo].push(r.payload);
   return cuerpo;
 }
@@ -224,6 +225,18 @@ function apartarUsuarioAjeno(tabla: 'empleados_cache' | 'administradores_cache',
 
 export const CLAVE_CURSOR_CATALOGO = 'cursor_catalogo';
 
+/**
+ * ¿Ese empleado eligio PIN aqui y todavia no sube? (D-042)
+ *
+ * Mientras tanto, la nube aun trae su PIN TEMPORAL: si el catalogo lo pisara,
+ * su PIN propio dejaria de servir en este kiosco hasta la siguiente vuelta.
+ * Se conserva el local; en cuanto la nube acepta el cambio, llega igual.
+ */
+const PIN_PROPIO_SIN_SUBIR = `EXISTS (
+  SELECT 1 FROM outbox o
+   WHERE o.tipo_registro = 'cambio_pin' AND o.sincronizado_en IS NULL AND o.rechazado_en IS NULL
+     AND json_extract(o.payload, '$.empleadoId') = excluded.id)`;
+
 /** Aplica el catalogo completo en una sola transaccion. */
 export function aplicarCatalogo(catalogo: CatalogoRecibido): void {
   const bd = baseDeDatos();
@@ -238,9 +251,10 @@ export function aplicarCatalogo(catalogo: CatalogoRecibido): void {
        ON CONFLICT (id) DO UPDATE SET
          usuario = excluded.usuario, numero_empleado = excluded.numero_empleado,
          nombre = excluded.nombre, apellido_paterno = excluded.apellido_paterno,
-         apellido_materno = excluded.apellido_materno, pin_hash = excluded.pin_hash,
-         pin_temporal = excluded.pin_temporal, activo = excluded.activo,
-         actualizado_en = excluded.actualizado_en`,
+         apellido_materno = excluded.apellido_materno,
+         pin_hash = CASE WHEN ${PIN_PROPIO_SIN_SUBIR} THEN empleados_cache.pin_hash ELSE excluded.pin_hash END,
+         pin_temporal = CASE WHEN ${PIN_PROPIO_SIN_SUBIR} THEN empleados_cache.pin_temporal ELSE excluded.pin_temporal END,
+         activo = excluded.activo, actualizado_en = excluded.actualizado_en`,
     );
     for (const e of catalogo.empleados) {
       apartarUsuarioAjeno('empleados_cache', e.usuario, e.id);

@@ -845,7 +845,9 @@ await bd.query(`select actualizar_configuracion('llegar_muy_tarde_es_falta', '0'
   await entrarComo(ID_ADMIN);
   await bd.query(`select asignar_horario($1, $2, '2026-01-01', '[{"dia":0},{"dia":1},{"dia":2},{"dia":3},{"dia":4},{"dia":5},{"dia":6}]', 'Turno en curso de prueba')`,
     [enCurso, t.id]);
-  const hoy = (await bd.query(`select (now() at time zone 'America/Matamoros')::date::text as d`)).rows[0].d;
+  // El dia en que EMPEZO el turno (hace una hora): corriendo la prueba a las
+  // 00:30, el turno empezo "ayer" a las 23:30 y su fecha laboral es ayer.
+  const hoy = (await bd.query(`select ((now() - interval '1 hour') at time zone 'America/Matamoros')::date::text as d`)).rows[0].d;
   const fila = (await reporte(enCurso, hoy, hoy))[0];
   comprobar('su turno empezo hace una hora y no ha llegado: "todavia no llega" (pendiente), no falta',
     fila?.estado === 'pendiente', fila?.estado);

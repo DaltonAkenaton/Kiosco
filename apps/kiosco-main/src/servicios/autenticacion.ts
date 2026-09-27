@@ -55,7 +55,7 @@ export function hashearPin(pin: string): string {
  * guardado y compara los resultados. Por eso NO hace falta descifrar nada:
  * un hash no se puede revertir, solo se puede repetir la operacion.
  */
-function pinCoincide(pin: string, hash: string): boolean {
+export function pinCoincide(pin: string, hash: string): boolean {
   try {
     return bcrypt.compareSync(pin, hash);
   } catch {

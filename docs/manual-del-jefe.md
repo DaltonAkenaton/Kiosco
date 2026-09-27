@@ -151,8 +151,11 @@ kiosco y si algún kiosco o cámara está fallando.
 ### Empleados
 
 - **+ Agregar empleado**: nombre y apellidos. El sistema propone el usuario y
-  **genera el PIN**. Te lo muestra **una sola vez**: imprímelo o anótalo y
-  dáselo a la persona en privado.
+  **genera un PIN temporal**. Te lo muestra **una sola vez**: imprímelo o
+  anótalo y dáselo a la persona en privado. La primera vez que cheque con él,
+  el kiosco le pide **elegir uno propio** (como en el cajero del banco); así
+  nadie más lo conoce, ni tú. Mientras no lo elija, en la lista dice
+  "Todavía no elige su PIN".
 - **Importar lista de Excel**: para muchos a la vez. En la ventana, **⬇
   Descargar plantilla**: es un Excel con las columnas listas, dos renglones de
   ejemplo y una hoja de **Instrucciones**. Borra los ejemplos, escribe un
@@ -160,7 +163,8 @@ kiosco y si algún kiosco o cámara está fallando.
   los PIN.
 - **⬇ Descargar lista (Excel)**: la lista del personal (número, nombre,
   usuario, si está activo y si ya cambió su PIN), cada dato en su columna.
-- **PIN nuevo**: si alguien lo olvidó. El viejo deja de servir.
+- **PIN nuevo**: si alguien lo olvidó. El viejo deja de servir y el nuevo es
+  temporal: al checar con él, elige otro propio.
 - **Dar de baja**: ya no puede checar y **su horario termina ese día** (ya no
   le cuentan faltas). **No se borra nada**; se puede reactivar, y entonces hay
   que asignarle su horario otra vez en Horarios.

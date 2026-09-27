@@ -60,7 +60,7 @@
           } @else {
             Activo
             @if (e.pin_temporal) {
-              <span class="text-texto-suave"> · PIN dado por el jefe <panel-ayuda titulo="PIN dado por el jefe" [texto]="AYUDA.pinTemporal" /></span>
+              <span class="text-texto-suave"> · Todavía no elige su PIN <panel-ayuda titulo="Todavía no elige su PIN" [texto]="AYUDA.pinTemporal" /></span>
             }
           }
         </td>
@@ -118,7 +118,7 @@
       <panel-dialogo titulo="Agregar empleado" textoBoton="Dar de alta" ejemploMotivo="Ej.: ingreso de personal nuevo"
                      [ocupado]="guardando()" [error]="errorAccion()" (confirmar)="guardarAlta($event)" (cancelar)="cerrar()">
         <ng-container *ngTemplateOutlet="camposDeDatos" />
-        <p class="text-texto-suave text-base">Al guardar, el sistema le da un PIN de 4 números. Te lo mostrará una sola vez para que lo anotes.</p>
+        <p class="text-texto-suave text-base">Al guardar, el sistema le da un PIN temporal de 4 números. Te lo mostrará una sola vez para que lo anotes. La primera vez que cheque, el kiosco le pedirá elegir uno propio.</p>
       </panel-dialogo>
     }
     @case ('editar') {
@@ -130,7 +130,7 @@
     @case ('pin') {
       <panel-dialogo [titulo]="'PIN nuevo para ' + nombreCompleto(a.empleado)" textoBoton="Dar PIN nuevo" ejemploMotivo="Ej.: olvidó su PIN"
                      [ocupado]="guardando()" [error]="errorAccion()" (confirmar)="darPinNuevo(a.empleado, $event)" (cancelar)="cerrar()">
-        <p>El PIN que tenía deja de servir. El sistema le da uno nuevo y te lo muestra una sola vez.</p>
+        <p>El PIN que tenía deja de servir. El sistema le da uno temporal y te lo muestra una sola vez. Al checar con él, el kiosco le pedirá elegir uno propio.</p>
         <p class="text-texto-suave">El cambio llega a los kioscos en unos minutos (cuando tengan internet).</p>
       </panel-dialogo>
     }
@@ -315,6 +315,10 @@
       <h2 class="text-2xl font-bold">{{ pines().length === 1 ? 'Su PIN' : 'Los PIN del personal' }}</h2>
       <p class="no-imprimir text-lg">
         <b>Anótalo o imprímelo ahora:</b> no se vuelve a mostrar. Dáselo a la persona en privado.
+      </p>
+      <p>
+        Es un PIN <b>temporal</b>: la primera vez que la persona registre su entrada o salida con él,
+        el kiosco le pedirá elegir uno propio de 4 números.
       </p>
       <table class="w-full text-left">
         <thead><tr class="text-texto-suave"><th class="py-1 pr-4">Nombre</th><th class="py-1 pr-4">Usuario</th><th class="py-1">PIN</th></tr></thead>

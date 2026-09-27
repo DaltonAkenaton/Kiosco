@@ -373,6 +373,7 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
     if (this.temporizadorExito !== null) clearTimeout(this.temporizadorExito);
     if (this.temporizadorMedidor !== null) clearInterval(this.temporizadorMedidor);
     if (this.temporizadorAviso !== null) clearTimeout(this.temporizadorAviso);
+    if (this.temporizadorPinNuevo !== null) clearTimeout(this.temporizadorPinNuevo);
     this.detenerCuentaRegresiva();
   }
 
@@ -443,6 +444,13 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
      */
     if (this.pidiendoCodigoDePausa()) {
       this.teclaEnPausa(evento);
+      return;
+    }
+
+    // "Elige tu PIN" tambien es una ventana modal: sus digitos son el PIN
+    // nuevo, nunca el identificador del siguiente.
+    if (this.eligiendoPin() !== null) {
+      this.teclaEnPinNuevo(evento);
       return;
     }
 
@@ -1091,7 +1099,152 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
       hora: registro.horaLocalTexto,
       banderas: registro.banderas,
     });
+
+    // Registro con el PIN que dio el jefe: ya con la asistencia guardada, se
+    // le ofrece elegir uno propio (D-042).
+    if (registro.tokenCambioPin) this.abrirPinNuevo(registro.tokenCambioPin, pendiente.nombre);
   }
+
+  // --------------------------------------------------------------------------
+  //  PIN propio  (D-042: "como en el cajero")
+  // --------------------------------------------------------------------------
+  //
+  //  Su registro YA se guardo. Esto es aparte y se puede dejar para despues
+  //  ("Ahora no"): nunca impide checar.
+
+  /** Quien esta eligiendo PIN y su permiso. `null` = ventana cerrada. */
+  protected readonly eligiendoPin = signal<{ token: string; nombre: string } | null>(null);
+  protected readonly pinNuevo = signal('');
+  protected readonly pinNuevoRepetido = signal('');
+  protected readonly pasoPinNuevo = signal<'primero' | 'segundo' | 'guardando' | 'terminado'>('primero');
+  protected readonly errorPinNuevo = signal<string | null>(null);
+  /** El mensaje final (bien o mal) antes de cerrarse sola. */
+  protected readonly finalPinNuevo = signal<{ ok: boolean; texto: string } | null>(null);
+  private temporizadorPinNuevo: ReturnType<typeof setTimeout> | null = null;
+
+  protected readonly puntosPinNuevo = computed(() => {
+    const largo = this.configuracion()?.largoPinMaximo ?? 4;
+    const escrito = this.pasoPinNuevo() === 'segundo' ? this.pinNuevoRepetido() : this.pinNuevo();
+    return Array.from({ length: largo }, (_, i) => i < escrito.length);
+  });
+
+  private abrirPinNuevo(token: string, nombre: string): void {
+    this.eligiendoPin.set({ token, nombre });
+    this.pinNuevo.set('');
+    this.pinNuevoRepetido.set('');
+    this.pasoPinNuevo.set('primero');
+    this.errorPinNuevo.set(null);
+    this.finalPinNuevo.set(null);
+    this.vigilarPinNuevo();
+  }
+
+  /** Si nadie teclea, se cierra como "Ahora no": nadie deja la ventana abierta al siguiente. */
+  private vigilarPinNuevo(segundos = this.configuracion()?.segundosSinTeclearAlElegirPin ?? 30): void {
+    if (this.temporizadorPinNuevo !== null) clearTimeout(this.temporizadorPinNuevo);
+    this.temporizadorPinNuevo = setTimeout(() => this.cerrarPinNuevo(), segundos * 1000);
+  }
+
+  /** "Ahora no" (o se acabo el tiempo). Se le vuelve a preguntar la proxima vez. */
+  protected cerrarPinNuevo(): void {
+    if (this.temporizadorPinNuevo !== null) clearTimeout(this.temporizadorPinNuevo);
+    this.temporizadorPinNuevo = null;
+    this.eligiendoPin.set(null);
+    this.pinNuevo.set('');
+    this.pinNuevoRepetido.set('');
+    this.errorPinNuevo.set(null);
+    this.finalPinNuevo.set(null);
+  }
+
+  protected agregarDigitoPinNuevo(digito: string): void {
+    const paso = this.pasoPinNuevo();
+    if (paso === 'guardando' || paso === 'terminado') return;
+    this.errorPinNuevo.set(null);
+    this.vigilarPinNuevo();
+
+    const largo = this.configuracion()?.largoPinMaximo ?? 4;
+    if (paso === 'primero') {
+      if (this.pinNuevo().length >= largo) return;
+      this.pinNuevo.update((p) => p + digito);
+      if (this.pinNuevo().length === largo) this.pasoPinNuevo.set('segundo');
+      return;
+    }
+    if (this.pinNuevoRepetido().length >= largo) return;
+    this.pinNuevoRepetido.update((p) => p + digito);
+    if (this.pinNuevoRepetido().length === largo) void this.guardarPinNuevo();
+  }
+
+  protected borrarDigitoPinNuevo(): void {
+    this.errorPinNuevo.set(null);
+    if (this.pasoPinNuevo() === 'segundo') {
+      if (this.pinNuevoRepetido() === '') {
+        // Borrar con la segunda vacia regresa a corregir la primera.
+        this.pasoPinNuevo.set('primero');
+        this.pinNuevo.update((p) => p.slice(0, -1));
+      } else {
+        this.pinNuevoRepetido.update((p) => p.slice(0, -1));
+      }
+    } else if (this.pasoPinNuevo() === 'primero') {
+      this.pinNuevo.update((p) => p.slice(0, -1));
+    }
+  }
+
+  private empezarPinNuevoOtraVez(mensaje: string): void {
+    this.sonidos.reproducir('error');
+    this.pinNuevo.set('');
+    this.pinNuevoRepetido.set('');
+    this.pasoPinNuevo.set('primero');
+    this.errorPinNuevo.set(mensaje);
+  }
+
+  private async guardarPinNuevo(): Promise<void> {
+    const ventana = this.eligiendoPin();
+    if (!ventana) return;
+    if (this.pinNuevo() !== this.pinNuevoRepetido()) {
+      this.empezarPinNuevoOtraVez('No escribiste lo mismo las dos veces. Empieza otra vez.');
+      return;
+    }
+
+    this.pasoPinNuevo.set('guardando');
+    const resultado = await this.puente.elegirPin(ventana.token, this.pinNuevo());
+    this.pinNuevo.set('');
+    this.pinNuevoRepetido.set('');
+
+    if (!resultado.ok && resultado.volverAEmpezar) {
+      this.empezarPinNuevoOtraVez(resultado.mensaje);
+      return;
+    }
+
+    this.pasoPinNuevo.set('terminado');
+    if (resultado.ok) {
+      this.sonidos.reproducir('entrada');
+      this.finalPinNuevo.set({
+        ok: true,
+        texto: 'Listo. Desde ahora tu PIN es el que elegiste. El que te dio el jefe ya no sirve.',
+      });
+    } else {
+      this.sonidos.reproducir('error');
+      this.finalPinNuevo.set({ ok: false, texto: resultado.mensaje });
+    }
+    // Se deja leer y se cierra sola.
+    this.vigilarPinNuevo(5);
+  }
+
+  private teclaEnPinNuevo(evento: KeyboardEvent): void {
+    if (evento.key === 'Escape' || (evento.key === 'Enter' && this.pasoPinNuevo() === 'terminado')) {
+      evento.preventDefault();
+      this.cerrarPinNuevo();
+      return;
+    }
+    if (evento.key === 'Backspace') {
+      evento.preventDefault();
+      this.borrarDigitoPinNuevo();
+      return;
+    }
+    if (!/^[0-9]$/.test(evento.key)) return;
+    evento.preventDefault();
+    this.agregarDigitoPinNuevo(evento.key);
+  }
+
 
   /**
    * Cambia entrada por salida (o al reves) sin registrar todavia.

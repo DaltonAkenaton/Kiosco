@@ -1290,11 +1290,27 @@ de corte; entonces se importarían como captura manual marcada "importado".
 
 ---
 
-## D-042 · El empleado elige su PIN en el kiosco (pendiente, fase del kiosco)
+## D-042 · El empleado elige su PIN en el kiosco ✅ (hecho el 27-09-2026, migración 0023)
 
 **Decidido:** como en un cajero: el jefe da un PIN temporal y, la primera vez
 que el empleado checa, el kiosco le pide inventar uno propio y escribirlo dos
-veces. Se hace al trabajar el kiosco (toca kiosco y nube).
+veces.
+
+**Cómo quedó:**
+- Todo PIN que da el sistema (alta o "PIN nuevo") es **temporal**. Al aplicar
+  la 0023, los que ya existían también pasaron a temporales.
+- La pregunta sale **después** de guardar el registro: la asistencia nunca
+  depende de elegir PIN. "Ahora no" (o 30 s sin teclear) cierra y se vuelve a
+  preguntar la próxima vez.
+- Se rechazan los fáciles (todos iguales, escaleras como 1234/4321) y el mismo
+  temporal.
+- El kiosco lo cambia al instante (funciona sin internet) y manda a la nube
+  sólo el **hash**. Mientras no sube, el catálogo no le regresa el temporal.
+- Si el jefe dio otro "PIN nuevo" antes de que el cambio llegara, gana el del
+  jefe: el cambio se anota como `descartado` en `cambios_pin`.
+
+**Descartado:** pedirlo ANTES de registrar (a las 6 AM con prisa, arriesgaría
+el registro); obligarlo sin "ahora no" (choca con la regla de oro).
 
 ---
 

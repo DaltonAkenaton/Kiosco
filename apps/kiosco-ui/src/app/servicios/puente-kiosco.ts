@@ -35,6 +35,7 @@ import type {
   EstadoCamaraReportado,
   EstadoKiosco,
   MarcaParaMostrar,
+  ResultadoCambioPin,
   ResultadoEnrolamiento,
   ResultadoIdentificacion,
   ResultadoPausa,
@@ -170,6 +171,14 @@ export class PuenteKiosco {
    * no tiene nada que esperar. Si el mensaje se perdiera, el pase caducaria
    * solo en un minuto.
    */
+  /** El empleado eligio su PIN propio (D-042). */
+  async elegirPin(tokenCambioPin: string, pinNuevo: string): Promise<ResultadoCambioPin> {
+    if (!window.kiosco) {
+      return { ok: false, volverAEmpezar: false, mensaje: 'No se pudo cambiar tu PIN. Sigue usando el que te dio el jefe.' };
+    }
+    return window.kiosco.elegirPin(tokenCambioPin, pinNuevo);
+  }
+
   async cancelarRegistro(tokenRegistro: string): Promise<void> {
     await window.kiosco?.cancelarRegistro(tokenRegistro);
   }
