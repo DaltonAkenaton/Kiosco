@@ -1,4 +1,4 @@
-# Manual técnico
+y# Manual técnico
 
 > Para quien instala, mantiene o repara el sistema. Supone saber usar Windows y
 > una terminal, no programar. Para el **por qué** de cada decisión, ver el
@@ -324,6 +324,7 @@ contraseña, el otro le da una temporal desde Accesos.
 | Muchos "Foto no guardada" | Disco lleno o Windows sin cifrado | Liberar espacio; revisar el perfil de Windows |
 | "Hora dudosa" en todos | Pila del BIOS agotada o zona horaria mal | Cambiar la pila; hora automática en Windows |
 | El panel no carga tras publicar | Variables de Netlify mal | Netlify → Deploys → leer el error; revisar variables |
+| El panel dice "This site is private" / pide cuenta de Netlify | Protección de visitantes de Netlify encendida | Netlify → Site configuration → Access & security → Visitor access → sin protección |
 | El jefe no puede entrar al modo administrador del kiosco | No ha puesto su usuario del kiosco, o el kiosco no ha sincronizado | Panel → Mi cuenta; esperar unos minutos con internet |
 | "Registros que la oficina no aceptó" | Persona inexistente en el panel, kiosco revocado | Arreglar en el panel y "Volver a enviarlos" |
 | Una corrida de Actions en rojo | Secreto vencido o mal copiado | Abrir la corrida, leer el primer error |
