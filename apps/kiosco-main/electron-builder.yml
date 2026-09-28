@@ -159,7 +159,8 @@ nsis:
 ##  Esta seccion sirve para dos cosas:
 ##    - que se genere `latest.yml`, el archivo que los kioscos leen para saber
 ##      cual es la version mas nueva;
-##    - que la Action "Instalador del kiosco" suba todo con `--publish always`.
+##    - que la Action "Instalador del kiosco" sepa que version publicar (ella
+##      misma sube los archivos con `gh release`; ver el workflow).
 ##      Esa Action reescribe `repo` segun AMBIENTE antes de armar.
 ##
 ##  A que repositorio PREGUNTA cada kiosco NO sale de aqui: lo fija

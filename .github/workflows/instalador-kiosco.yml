@@ -99,15 +99,34 @@ jobs:
           sed -i "s/^  repo: .*/  repo: ${{ steps.ambiente.outputs.repo }}/" apps/kiosco-main/electron-builder.yml
           grep -n "^  repo:" apps/kiosco-main/electron-builder.yml
 
-      - name: Armar y publicar
+      # Armar SIN publicar. electron-builder sabe publicar solo, pero sube el
+      # .exe y el .blockmap al mismo tiempo y cada uno intenta crear el
+      # Release: el segundo choca ("Published releases must have a valid
+      # tag") y nunca sube latest.yml (se vio el 28-09-2026 con v0.1.7).
+      # La seccion publish del yml igual hace que se genere latest.yml.
+      - name: Armar el instalador
+        run: npm run empaquetar --workspace=@kiosko/kiosco-main -- --publish never
+
+      # Publicar los tres archivos de una vez. Si el Release ya existe (por
+      # ejemplo, quedo a medias en un intento anterior), se completa.
+      - name: Publicar en el repositorio de versiones
         if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.TOKEN_VERSIONES }}
-        run: npm run empaquetar --workspace=@kiosko/kiosco-main -- --publish always
-
-      - name: Solo armar (si se corrio a mano, sin etiqueta)
-        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
-        run: npm run empaquetar --workspace=@kiosko/kiosco-main -- --publish never
+        run: |
+          repo="cuenta-del-sistema/${{ steps.ambiente.outputs.repo }}"
+          version=$(node -p "require('./apps/kiosco-main/package.json').version")
+          cd apps/kiosco-main/dist-instalador
+          archivos="ControlDeAsistencia-Instalador-$version.exe ControlDeAsistencia-Instalador-$version.exe.blockmap latest.yml"
+          ls -la $archivos
+          if gh release view "v$version" --repo "$repo" > /dev/null 2>&1; then
+            gh release upload "v$version" $archivos --repo "$repo" --clobber
+          else
+            gh release create "v$version" $archivos --repo "$repo" --title "$version" \
+              --notes "Version $version del kiosco. Los kioscos la descargan solos y la instalan de madrugada."
+          fi
+          gh release view "v$version" --repo "$repo"
 
       - name: Guardarlo tambien como artifact
         uses: actions/upload-artifact@v4
