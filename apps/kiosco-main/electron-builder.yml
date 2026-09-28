@@ -160,7 +160,7 @@ nsis:
 ##    - que se genere `latest.yml`, el archivo que los kioscos leen para saber
 ##      cual es la version mas nueva;
 ##    - que la Action "Instalador del kiosco" suba todo con `--publish always`.
-##      Esa Action cambia `repo` segun AMBIENTE (-c.publish.repo=...).
+##      Esa Action reescribe `repo` segun AMBIENTE antes de armar.
 ##
 ##  A que repositorio PREGUNTA cada kiosco NO sale de aqui: lo fija
 ##  actualizaciones.ts desde AMBIENTE, la misma palabra que decide la base de

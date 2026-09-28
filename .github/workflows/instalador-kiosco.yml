@@ -82,11 +82,21 @@ jobs:
       - name: Revisar tipos
         run: npm run revisar-tipos
 
+      # El repositorio se escribe en electron-builder.yml y no se pasa como
+      # `-c.publish.repo=...`: en Windows, npm parte ese parametro en dos y
+      # electron-builder lo toma como el nombre de un archivo (se vio el
+      # 28-09-2026 con v0.1.6).
+      - name: Apuntar la publicacion al repositorio del ambiente
+        shell: bash
+        run: |
+          sed -i "s/^  repo: .*/  repo: ${{ steps.ambiente.outputs.repo }}/" apps/kiosco-main/electron-builder.yml
+          grep -n "^  repo:" apps/kiosco-main/electron-builder.yml
+
       - name: Armar y publicar
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ secrets.TOKEN_VERSIONES }}
-        run: npm run empaquetar --workspace=@kiosko/kiosco-main -- --publish always -c.publish.repo=${{ steps.ambiente.outputs.repo }}
+        run: npm run empaquetar --workspace=@kiosko/kiosco-main -- --publish always
 
       - name: Solo armar (si se corrio a mano, sin etiqueta)
         if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
