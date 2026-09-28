@@ -82,6 +82,13 @@ jobs:
       - name: Revisar tipos
         run: npm run revisar-tipos
 
+      # Electron 44 ya no descarga sus archivos al hacer `npm ci`: lo hace la
+      # primera vez que se ejecuta. En esta maquina nunca se ejecuto, y
+      # electron-builder (electronDist en electron-builder.yml) no los
+      # encontraba (se vio el 28-09-2026 con v0.1.7).
+      - name: Descargar los archivos de Electron
+        run: node node_modules/electron/install.js
+
       # El repositorio se escribe en electron-builder.yml y no se pasa como
       # `-c.publish.repo=...`: en Windows, npm parte ese parametro en dos y
       # electron-builder lo toma como el nombre de un archivo (se vio el
