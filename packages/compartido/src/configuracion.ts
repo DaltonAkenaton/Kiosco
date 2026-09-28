@@ -44,6 +44,28 @@
 import { COLORES } from './tema';
 
 // ============================================================================
+//  0. AMBIENTE: ¿ESTE INSTALADOR ES DE PRUEBAS O DE PRODUCCION?
+// ============================================================================
+//
+//  UNA palabra decide las dos cosas que NUNCA deben mezclarse:
+//    - con que base de datos habla el kiosco (PROYECTOS_SUPABASE), y
+//    - de donde baja sus versiones nuevas (ACTUALIZACIONES.repositorios).
+//
+//  Si fueran dos datos sueltos, bastaria olvidar cambiar uno para que un
+//  kiosco de pruebas se "actualizara" a una version de produccion (o al
+//  reves) y empezara a hablar con la base equivocada.
+//
+//  PASAR A PRODUCCION = cambiar 'pruebas' por 'produccion', commit, y
+//  publicar la version (docs/PASOS-FINALES.md, paso 4).
+export const AMBIENTE: 'pruebas' | 'produccion' = 'pruebas';
+
+/** La "Project URL" de cada proyecto de Supabase. Son publicas: no son llaves. */
+export const PROYECTOS_SUPABASE = {
+  pruebas: 'https://ref-de-pruebas.supabase.co',
+  produccion: 'https://ref-de-produccion.supabase.co',
+} as const;
+
+// ============================================================================
 //  1. IDENTIFICACION DEL EMPLEADO  (numero de empleado + PIN)
 // ============================================================================
 export const IDENTIFICACION = {
@@ -594,9 +616,8 @@ export const SINCRONIZACION = {
    * Es publica (no es una llave). Despues: `npm run empaquetar`.
    */
   urlFuncionesDesarrollo: 'http://127.0.0.1:54321/functions/v1',
-  // FASE DE PRUEBAS: apunta a asistencia-pruebas. Al entregar, cambiar a
-  // produccion: 'https://ref-de-produccion.supabase.co' (docs/PASOS-FINALES.md).
-  urlFuncionesProduccion: 'https://ref-de-pruebas.supabase.co',
+  // Sale de AMBIENTE (arriba de este archivo): no se escribe a mano.
+  urlFuncionesProduccion: PROYECTOS_SUPABASE[AMBIENTE],
 
   /**
    * Tras guardar una marca, en cuanto intenta subirla. No es inmediato para
@@ -972,6 +993,61 @@ export const EXPORTACION = {
  * Tambien puedes importar los bloques sueltos si prefieres:
  *   import { IDENTIFICACION } from '@kiosko/compartido';
  */
+// ============================================================================
+//  ACTUALIZACIONES AUTOMATICAS DEL KIOSCO
+// ============================================================================
+//
+//  Cada kiosco pregunta de vez en cuando si hay version nueva, la descarga
+//  sola y la instala de madrugada, cuando nadie lo esta usando. Asi nadie
+//  tiene que ir PC por PC con una memoria USB.
+//
+//  LAS VERSIONES VIVEN EN REPOSITORIOS PUBLICOS APARTE, solo con instaladores
+//  (sin codigo). Publicos porque el kiosco no puede llevar una contrasena
+//  para bajar de uno privado: todo lo que va dentro del .exe es publico
+//  (CLAUDE.md 3.2). El instalador no tiene nada secreto.
+//
+//  Uno por ambiente (ver AMBIENTE arriba), para que un kiosco de pruebas
+//  jamas baje una version de produccion ni al reves.
+export const ACTUALIZACIONES = {
+  /** Apagarlas del todo (por ejemplo, si algo sale mal con una version). */
+  activas: true,
+
+  /** La cuenta de GitHub del sistema (CLAUDE.md 1.1), duena de los repositorios. */
+  propietario: 'cuenta-del-sistema',
+
+  /** Donde publica cada ambiente. Los crea el responsable: ver manual tecnico. */
+  repositorios: {
+    pruebas: 'versiones-kiosco-pruebas',
+    produccion: 'versiones-kiosco',
+  },
+
+  /**
+   * Cada cuantas horas pregunta si hay version nueva. Es una consulta chica;
+   * la descarga (~110 MB) solo ocurre cuando de verdad hay una.
+   */
+  horasEntreRevisiones: 2,
+
+  /**
+   * INSTALACION AUTOMATICA: solo dentro de esta ventana de hora local
+   * (formato 24 h) y solo si nadie ha usado el kiosco en `minutosSinUso`.
+   *
+   * ¿Por que de madrugada? Los turnos cambian a las 6, 14 y 22 h (llega o se
+   * va gente). A las 2-5 de la mañana los veladores estan a media jornada:
+   * nadie deberia estar checando. Si justo alguien llega, espera al siguiente
+   * minuto tranquilo. Instalar tarda menos de un minuto y el kiosco se abre
+   * solo al terminar.
+   *
+   * Si se quiere instalar ANTES, el jefe tiene el boton en el modo
+   * administrador del kiosco.
+   */
+  instalacionAutomatica: {
+    activa: true,
+    desdeHora: 2,
+    hastaHora: 5,
+    minutosSinUso: 5,
+  },
+} as const;
+
 export const CONFIG = {
   identificacion: IDENTIFICACION,
   seguridadPin: SEGURIDAD_PIN,
@@ -986,6 +1062,8 @@ export const CONFIG = {
   modoAdmin: MODO_ADMIN,
   exportacion: EXPORTACION,
   jornada: JORNADA,
+  actualizaciones: ACTUALIZACIONES,
+  ambiente: AMBIENTE,
 } as const;
 
 /** El tipo de CONFIG, por si necesitas escribirlo en una firma de funcion. */

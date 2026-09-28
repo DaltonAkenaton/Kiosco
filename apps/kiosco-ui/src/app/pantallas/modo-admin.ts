@@ -125,9 +125,16 @@ const AYUDA = {
     'Es como la huella digital de la foto: un código que cambia si alguien modifica la foto, aunque ' +
     'sea un poquito. Si coincide, la foto es exactamente la que se tomó al registrar.',
   recuperacion:
-    'Es la llave de emergencia de las fotos. Si esta computadora se descompone o se reinstala ' +
-    'Windows, solo con esta contraseña se pueden abrir las fotos en otra. Escríbela en la hoja de ' +
-    'credenciales y guárdala en un lugar seguro. Nadie puede recuperarla si se pierde.',
+    'Las fotos se guardan con candado, para que nadie pueda verlas fuera de este programa. ' +
+    'La llave la guarda Windows y nunca te la pide: en el día a día no haces nada.\n\n' +
+    '¿Cuándo se usa esta contraseña? Casi nunca. Solo cuando las fotos siguen en el disco pero ' +
+    'Windows perdió la llave:\n' +
+    '• la computadora se descompone y su disco se pasa a otra;\n' +
+    '• se reinstala Windows sin borrar el disco, o se cambia el usuario de Windows;\n' +
+    '• antes de formatear, alguien copió la carpeta de las fotos para rescatarlas.\n\n' +
+    'Ojo: si se formatea borrando todo el disco, las fotos se borran también y esta contraseña ' +
+    'ya no ayuda. Por eso, antes de formatear, guarda las fotos en una memoria USB.\n\n' +
+    'Se define una vez y se anota en la hoja de credenciales. Si se olvida, nadie puede recuperarla.',
   inactividad:
     'Si nadie toca la computadora durante unos minutos, el modo administrador se cierra solo. Así, ' +
     'si te levantas y lo dejas abierto, nadie más puede ver las fotos.',

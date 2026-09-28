@@ -153,15 +153,25 @@ nsis:
 ##  PUBLICACION  (actualizaciones automaticas)
 ## ============================================================================
 ##
-##  Mientras esta seccion no exista, electron-updater se queda quieto a
-##  proposito: sin ella no hay a donde preguntar, y preguntar igual solo
-##  llenaria el registro de errores en cada arranque. Ver `actualizaciones.ts`.
+##  Encendida el 28-09-2026. Las versiones van a un repositorio PUBLICO por
+##  ambiente, solo con instaladores (ver ACTUALIZACIONES en configuracion.ts).
 ##
-##  Para encenderlo hace falta primero decidir DONDE se publican las versiones
-##  (lo natural es GitHub Releases, en el repositorio de la cuenta del sistema
-##  de la que habla CLAUDE.md 1.1). Es trabajo del bloque 10.
+##  Esta seccion sirve para dos cosas:
+##    - que se genere `latest.yml`, el archivo que los kioscos leen para saber
+##      cual es la version mas nueva;
+##    - que la Action "Instalador del kiosco" suba todo con `--publish always`.
+##      Esa Action cambia `repo` segun AMBIENTE (-c.publish.repo=...).
 ##
-# publish:
-#   provider: github
-#   owner: <la cuenta del sistema>
-#   repo: <el repositorio>
+##  A que repositorio PREGUNTA cada kiosco NO sale de aqui: lo fija
+##  actualizaciones.ts desde AMBIENTE, la misma palabra que decide la base de
+##  datos. Asi un kiosco de pruebas nunca baja una version de produccion.
+##
+##  `releaseType: release`: sin esto se publica como BORRADOR, y los kioscos
+##  no ven los borradores.
+##
+##  Armar el instalador en tu PC (`npm run empaquetar`) NO publica nada.
+publish:
+  provider: github
+  owner: cuenta-del-sistema
+  repo: versiones-kiosco-pruebas
+  releaseType: release

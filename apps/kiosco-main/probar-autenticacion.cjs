@@ -102,6 +102,14 @@ app.whenReady().then(async () => {
   comprobar('si en la nube ya esta dado de baja, no entra', bajaEnNube.ok === false);
   await bd.verificarPin(rmunoz, PIN_DE_LA_SEMILLA); // limpia sus fallos
 
+  // --- 8d. Instalacion automatica de versiones: solo de madrugada y sin nadie ---
+  // 09:00 UTC = 03:00 en Matamoros (horario de verano, septiembre).
+  const madrugada = new Date('2026-09-28T09:00:00Z');
+  const mediodia = new Date('2026-09-28T18:00:00Z');
+  comprobar('actualizar: de madrugada y sin uso, si se instala', bd.esBuenMomentoParaInstalar(madrugada, 30) === true);
+  comprobar('actualizar: de madrugada pero alguien lo acaba de usar, no', bd.esBuenMomentoParaInstalar(madrugada, 1) === false);
+  comprobar('actualizar: a mediodia, aunque nadie lo use, no', bd.esBuenMomentoParaInstalar(mediodia, 30) === false);
+
   // --- 9. Apellidos con acentos y compuestos ---
   comprobar('"De la Cruz" generó jdelacruz', bd.buscarPorUsuario('jdelacruz') !== null);
   comprobar('"Munoz" generó rmunoz', bd.buscarPorUsuario('rmunoz') !== null);

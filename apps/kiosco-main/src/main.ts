@@ -39,6 +39,7 @@ import { iniciarSincronizacion } from './servicios/sincronizacion';
 import { alCerrarseSesionAdmin } from './servicios/sesion-admin';
 import { aplicarPoliticasDeSesion } from './seguridad';
 import { crearVentanaPrincipal } from './ventana';
+import { anotarUso } from './servicios/actividad';
 
 /**
  * ----------------------------------------------------------------------------
@@ -155,6 +156,10 @@ if (!esLaPrimeraCopia) {
 
     // 7. La ventana.
     ventanaPrincipal = crearVentanaPrincipal();
+
+    // Cualquier tecla cuenta como "alguien esta usando el kiosco": la
+    // instalacion automatica de versiones nuevas espera a que no haya nadie.
+    ventanaPrincipal.webContents.on('before-input-event', () => anotarUso());
 
     /**
      * 8. Que se quede prendida.

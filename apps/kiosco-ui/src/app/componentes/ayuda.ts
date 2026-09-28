@@ -76,7 +76,8 @@ const MARGEN_PANTALLA_PX = 12;
       (click)="$event.stopPropagation()"
     >
       <b class="text-lg leading-tight">{{ titulo() }}</b>
-      <span class="leading-snug">{{ texto() }}</span>
+      <!-- pre-line: respeta los saltos de renglon del texto (listas cortas). -->
+      <span class="whitespace-pre-line leading-snug">{{ texto() }}</span>
       <button type="button" class="boton-tactil boton-primario self-end rounded-xl px-4 py-1.5 text-base font-bold"
               (click)="cerrar()">
         Entendido

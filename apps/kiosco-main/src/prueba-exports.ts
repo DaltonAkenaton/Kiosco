@@ -133,3 +133,4 @@ export { EsquemaElegirPin } from './ipc/esquemas';
 export { registrarManejadoresIpc } from './ipc/manejadores';
 export { registrarManejadoresAdmin } from './ipc/manejadores-admin';
 export { aplicarPoliticasDeSesion } from './seguridad';
+export { esBuenMomentoParaInstalar } from './actualizaciones';

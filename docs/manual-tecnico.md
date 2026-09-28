@@ -203,15 +203,55 @@ Si una corrida sale en rojo: casi siempre el secreto `SUPABASE_DB_URL` cambió
    del proyecto nuevo).
 5. El proyecto nuevo tiene **otra dirección**: actualizar Netlify
    (`SUPABASE_URL`, `SUPABASE_LLAVE_PUBLICA`) y el kiosco
-   (`urlFuncionesProduccion`, generar versión nueva). Los kioscos conservan su
+   (`PROYECTOS_SUPABASE` en `configuracion.ts`, publicar versión nueva). Los kioscos conservan su
    gafete: la tabla `dispositivos` se restauró con sus huellas.
 
 ---
 
 ## Publicar una versión nueva del kiosco
 
-El repositorio es **privado**, así que los kioscos no se actualizan solos: una
-versión nueva se instala a mano, encima de la anterior. No se pierde ningún dato.
+Los kioscos **se actualizan solos**: cada 2 horas preguntan si hay versión
+nueva, la descargan en silencio y la instalan **de madrugada (2:00–5:00)** si
+nadie los ha usado en 5 minutos. Tarda menos de un minuto y el kiosco vuelve a
+abrirse solo. No se pierde ningún dato. Para instalarla en el momento:
+**⚙ Administrador → Instalar la versión nueva** (el botón aparece cuando ya hay
+una descargada).
+
+### Dónde viven las versiones
+
+En **repositorios públicos aparte, sólo con instaladores** (sin código), en la
+cuenta del sistema. Uno por ambiente, para que un kiosco de pruebas nunca baje
+una versión de producción:
+
+| Ambiente | Repositorio |
+|---|---|
+| pruebas | `cuenta-del-sistema/versiones-kiosco-pruebas` |
+| producción | `cuenta-del-sistema/versiones-kiosco` |
+
+Públicos porque un kiosco no puede llevar una contraseña para descargar de uno
+privado (todo lo que va dentro del `.exe` es público). El código sigue en el
+repositorio privado. Qué ambiente es cada instalador lo decide `AMBIENTE` en
+`packages/compartido/src/configuracion.ts`: la misma palabra decide la base de
+datos y el repositorio de versiones.
+
+### Prepararlo (una sola vez)
+
+1. En GitHub, con la cuenta del sistema: **New repository** →
+   `versiones-kiosco-pruebas`, **Public**, sin nada más. Lo mismo
+   con `versiones-kiosco`.
+2. Un token para que la Action pueda publicar ahí: foto de perfil → Settings →
+   Developer settings → **Personal access tokens → Fine-grained tokens →
+   Generate new token**.
+   - Nombre: `publicar-versiones-kiosco`. Vencimiento: el más largo posible
+     (y anotar la fecha en la hoja de credenciales: al vencer, las
+     publicaciones fallan hasta generar otro).
+   - **Repository access → Only select repositories** → los dos de versiones.
+   - **Permissions → Contents: Read and write**. Nada más.
+3. En el repositorio del código (`codigo-del-sistema`): Settings → Secrets and
+   variables → Actions → **New repository secret** → nombre `TOKEN_VERSIONES`,
+   valor: el token.
+
+### Publicar
 
 1. Cambiar `"version"` en `apps/kiosco-main/package.json` (ej. `0.2.0`).
 2. ```
@@ -219,19 +259,20 @@ versión nueva se instala a mano, encima de la anterior. No se pierde ningún da
    git tag v0.2.0
    git push && git push --tags
    ```
-3. GitHub arma el instalador (Actions → "Instalador del kiosco", ~10 min) y lo
-   deja en **Releases**. (Sin internet: `npm run empaquetar` en la PC de
-   desarrollo hace lo mismo.)
-4. Descargar el `.exe` de Releases (con la sesión de GitHub), copiarlo a cada
-   kiosco con una USB e instalarlo, cuando nadie esté checando.
+3. GitHub arma el instalador y lo publica en el repositorio del ambiente
+   (Actions → "Instalador del kiosco", ~10 min).
+4. Listo: en las siguientes horas cada kiosco lo baja, y lo instala esa
+   madrugada. En el panel, **Kioscos** muestra la versión de cada uno.
 
-**Si algún día el repositorio se vuelve público**, se pueden encender las
-actualizaciones automáticas: en `.github/workflows/instalador-kiosco.yml`,
-cambiar `--publish never` por
-`--publish always -c.publish.provider=github -c.publish.releaseType=release`.
-Cada kiosco descargará solo las versiones nuevas y el jefe las instalará desde
-**⚙ Administrador → Instalar la versión nueva** (el botón ya existe; aparece
-sólo cuando hay una versión descargada). Ver D-037.
+**La primera vez** un kiosco necesita tener instalada una versión que ya sepa
+actualizarse (0.1.6 o posterior): esa se instala a mano, como siempre. De ahí
+en adelante, solas.
+
+**Si una versión sale mal:** publicar otra con número mayor que corrija (los
+kioscos no bajan a una versión menor). Para detener todo mientras tanto, poner
+`ACTUALIZACIONES.activas: false` sólo sirve en versiones nuevas; lo más rápido
+es borrar la versión mala en Releases del repositorio de versiones antes de que
+los kioscos la bajen.
 
 ---
 

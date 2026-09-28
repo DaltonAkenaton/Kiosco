@@ -1,28 +1,34 @@
 # ============================================================================
-#  ARMAR EL INSTALADOR DEL KIOSCO
+#  PUBLICAR UNA VERSION NUEVA DEL KIOSCO
 # ============================================================================
 #
 #  Al subir una etiqueta de version (por ejemplo `v0.2.0`), GitHub arma el
-#  instalador en una maquina Windows y lo deja en "Releases" del repositorio.
+#  instalador en una maquina Windows y lo publica en el repositorio PUBLICO de
+#  versiones de su ambiente. Los kioscos de ese ambiente lo descargan solos y
+#  lo instalan de madrugada (ver apps/kiosco-main/src/actualizaciones.ts).
 #
-#  EL REPOSITORIO ES PRIVADO (decision del 25-09-2026). Por eso los kioscos NO
-#  se actualizan solos: no pueden descargar de un repositorio privado sin una
-#  contrasena, y una contrasena dentro del .exe dejaria de ser secreta
-#  (CLAUDE.md 3.2). La actualizacion se hace a mano:
+#  ¿A QUE REPOSITORIO? Lo decide AMBIENTE en packages/compartido/src/
+#  configuracion.ts, la misma palabra que decide la base de datos:
+#     'pruebas'    -> cuenta-del-sistema/versiones-kiosco-pruebas
+#     'produccion' -> cuenta-del-sistema/versiones-kiosco
+#  Nadie elige a mano, asi que no se puede equivocar.
 #
-#    1. GitHub -> Releases -> la version -> descargar el .exe (con tu sesion).
-#    2. Copiarlo a cada kiosco (USB) e instalarlo encima. No se pierde nada.
+#  ¿POR QUE OTRO REPOSITORIO Y PUBLICO? Este (el del codigo) es privado, y un
+#  kiosco no puede descargar de uno privado sin una contraseña dentro del .exe,
+#  que dejaria de ser secreta (CLAUDE.md 3.2). El de versiones solo tiene
+#  instaladores, que no llevan nada secreto.
 #
-#  Si algun dia el repositorio se vuelve publico, se pueden encender las
-#  actualizaciones automaticas: ver docs/manual-tecnico.md, "Publicar una
-#  version nueva del kiosco".
+#  Necesita UN secreto: TOKEN_VERSIONES, un token de GitHub con permiso de
+#  escribir en los dos repositorios de versiones. Como crearlo: manual tecnico,
+#  "Publicar una version nueva del kiosco".
 #
 #  Como sacar una version nueva:
 #    1. Cambiar "version" en apps/kiosco-main/package.json (ej. 0.2.0).
 #    2. git commit -am "Version 0.2.0"  &&  git tag v0.2.0  &&  git push --tags
 #    3. Esperar ~10 minutos: Actions -> "Instalador del kiosco".
-#
-#  No necesita secretos: usa el GITHUB_TOKEN que GitHub da a cada corrida.
+#    4. Los kioscos la bajan en las siguientes horas y la instalan de
+#       madrugada. Para instalarla YA en uno: modo administrador -> "Instalar
+#       la version nueva".
 
 name: Instalador del kiosco
 
@@ -33,7 +39,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   instalador:
@@ -57,31 +63,40 @@ jobs:
             exit 1
           fi
 
+      - name: Ambiente y repositorio de versiones
+        id: ambiente
+        shell: bash
+        run: |
+          ambiente=$(sed -n "s/^export const AMBIENTE: .* = '\(pruebas\|produccion\)';.*/\1/p" packages/compartido/src/configuracion.ts)
+          case "$ambiente" in
+            pruebas)    repo=versiones-kiosco-pruebas ;;
+            produccion) repo=versiones-kiosco ;;
+            *) echo "::error::No se pudo leer AMBIENTE en configuracion.ts"; exit 1 ;;
+          esac
+          echo "Ambiente: $ambiente -> cuenta-del-sistema/$repo"
+          echo "repo=$repo" >> "$GITHUB_OUTPUT"
+
       - name: Instalar dependencias
         run: npm ci
 
       - name: Revisar tipos
         run: npm run revisar-tipos
 
-      - name: Armar el instalador
-        # Sin publicar: electron-builder no escribe la configuracion de
-        # actualizaciones, asi que el kiosco no intenta buscar versiones
-        # (ver actualizaciones.ts: "sin servidor configurado").
+      - name: Armar y publicar
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.TOKEN_VERSIONES }}
+        run: npm run empaquetar --workspace=@kiosko/kiosco-main -- --publish always -c.publish.repo=${{ steps.ambiente.outputs.repo }}
+
+      - name: Solo armar (si se corrio a mano, sin etiqueta)
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
         run: npm run empaquetar --workspace=@kiosko/kiosco-main -- --publish never
 
-      - name: Dejarlo en Releases
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: apps/kiosco-main/dist-instalador/*.exe
-          body: |
-            Instalador del kiosco. Descargar el .exe, copiarlo a cada kiosco e
-            instalarlo encima de la version anterior: no se pierde ningun dato.
-
-      - name: Guardarlo como artifact (si se corrio a mano, sin etiqueta)
-        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+      - name: Guardarlo tambien como artifact
         uses: actions/upload-artifact@v4
         with:
           name: instalador-kiosco
-          path: apps/kiosco-main/dist-instalador/*.exe
+          path: |
+            apps/kiosco-main/dist-instalador/*.exe
+            apps/kiosco-main/dist-instalador/latest.yml
           retention-days: 30

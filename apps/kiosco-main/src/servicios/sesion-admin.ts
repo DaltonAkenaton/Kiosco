@@ -153,6 +153,11 @@ export async function entrarModoAdmin(usuario: string, contrasena: string): Prom
   return { ok: true, sesion: { token, adminId, nombre, rol } };
 }
 
+/** ¿Hay alguien en el modo administrador ahora? (Para no actualizar encima de el.) */
+export function haySesionAdminAbierta(): boolean {
+  return sesion !== null && Date.now() <= sesion.venceEnMs;
+}
+
 /** Empuja el vencimiento: la sesion dura N minutos desde la ULTIMA actividad. */
 function renovar(): void {
   if (!sesion) return;

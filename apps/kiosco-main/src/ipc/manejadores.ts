@@ -84,6 +84,7 @@ import { estadoDePausa, pausar } from '../servicios/pausa';
 import { enrolar, esperarBajadaEnCamino, ponerseAlDia, sincronizarPronto } from '../servicios/sincronizacion';
 import { detectarAnomaliasDeReloj, leerReloj } from '../servicios/reloj';
 import { ES_DESARROLLO } from '../entorno';
+import { anotarUso } from '../servicios/actividad';
 import {
   EsquemaCambioDeModo,
   EsquemaCancelacion,
@@ -271,6 +272,7 @@ export function registrarManejadoresIpc(): void {
   ipcMain.handle(
     CANALES.identificar,
     async (_evento, datosCrudos): Promise<ResultadoIdentificacion> => {
+      anotarUso();
       // El esquema se arma AHORA, no al cargar el archivo: asi respeta el modo
       // de identificacion vigente. Ver esquemas.ts y configuracion-vigente.ts.
       //
@@ -413,6 +415,7 @@ export function registrarManejadoresIpc(): void {
   ipcMain.handle(
     CANALES.registrarMarca,
     async (_evento, datosCrudos): Promise<ResultadoRegistro> => {
+      anotarUso();
       const validacion = EsquemaRegistro.safeParse(datosCrudos);
 
       if (!validacion.success) {
@@ -584,6 +587,7 @@ export function registrarManejadoresIpc(): void {
   //  Tiene su propio limite de frecuencia (ponerseAlDia), asi que llamarlo
   //  de mas no genera trafico de mas.
   ipcMain.handle(CANALES.prepararRegistro, async (): Promise<void> => {
+    anotarUso();
     void ponerseAlDia();
   });
 

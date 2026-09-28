@@ -300,6 +300,33 @@ Lo que también puedes ver ahí:
 - **Fotos guardadas con un candado anterior**: pasa si se reinstaló Windows.
   Escribe la **contraseña de recuperación** (hoja de credenciales).
 
+### La contraseña de recuperación, en palabras simples
+
+- Las fotos se guardan **con candado**: aunque alguien copie los archivos, no
+  puede verlas.
+- La **llave** la guarda Windows, escondida. Nunca te la pide: en el día a
+  día **no haces nada**.
+- Hay casos en que **las fotos siguen en el disco pero Windows pierde la
+  llave**: la computadora se descompone y su disco se pasa a otra; se
+  reinstala Windows sin borrar el disco; o alguien copió la carpeta de las
+  fotos antes de formatear.
+- La **contraseña de recuperación** es una **copia de la llave** que tú
+  apuntas en papel. En esos casos, con ella se vuelven a abrir.
+
+**Cuándo se usa:** casi nunca. Se define **una vez** en cada kiosco (el aviso
+amarillo del modo administrador), se anota en la hoja de credenciales y se
+guarda. Si se olvida, nadie puede recuperarla.
+
+**Lo que NO hace:**
+- Si se **formatea borrando todo el disco**, las fotos se borran también: la
+  contraseña ya no ayuda. Por eso, **antes de formatear o retirar una PC,
+  guarda las fotos en una memoria USB** (💾 en el modo administrador).
+- Si la computadora se destruye por completo, las fotos de ese kiosco se
+  pierden.
+
+En los dos casos los registros de asistencia **no** se pierden: ya están en el
+panel.
+
 ---
 
 ## 6. Cuando algo pasa

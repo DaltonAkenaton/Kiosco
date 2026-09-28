@@ -168,6 +168,13 @@ app.whenReady().then(async () => {
     await picar('Entrar');
     await esperar(2500);
     await capturar('admin-lista');
+
+    // La ayuda de la contrasena de recuperacion (el aviso amarillo).
+    await js(`document.querySelector('.aviso-atencion .ayuda-boton')?.click()`);
+    await esperar(600);
+    await capturar('admin-ayuda-recuperacion');
+    await oprimir('Escape');
+    await esperar(300);
     await js(`document.querySelector('tbody tr, [role=row], li')?.click()`);
     await esperar(1500);
     await capturar('admin-foto');
