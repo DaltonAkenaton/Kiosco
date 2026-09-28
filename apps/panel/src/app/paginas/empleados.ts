@@ -24,7 +24,10 @@ import { NgTemplateOutlet } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { desempatarUsuario, generarUsuario } from '@kiosko/compartido';
 import { Ayuda } from '../componentes/ayuda';
+import { CargandoTabla, RENGLONES_CARGANDO } from '../componentes/cargando-tabla';
 import { Dialogo, mensajeDeError } from '../componentes/dialogo';
+import { textoDeIncidencia } from '../componentes/registrar-incidencia';
+import { Avisos } from '../servicios/avisos';
 import { descargarExcel } from '../servicios/escribir-excel';
 import { leerHojaDeExcel } from '../servicios/leer-excel';
 import { Sesion } from '../servicios/sesion';
@@ -81,13 +84,16 @@ type Accion =
 
 @Component({
   selector: 'panel-empleados',
-  imports: [Ayuda, Dialogo, NgTemplateOutlet],
+  imports: [Ayuda, CargandoTabla, Dialogo, NgTemplateOutlet],
   templateUrl: './empleados.html',
 })
 export class Empleados implements OnInit {
   protected readonly sesion = inject(Sesion);
+  private readonly avisos = inject(Avisos);
 
   protected readonly empleados = signal<Empleado[]>([]);
+  protected readonly cargando = signal(true);
+  protected readonly RENGLONES_CARGANDO = RENGLONES_CARGANDO;
   protected readonly buscar = signal('');
   protected readonly verBajas = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -155,6 +161,7 @@ export class Empleados implements OnInit {
       .select('id, usuario, numero_empleado, nombre, apellido_paterno, apellido_materno, pin_temporal, activo, anonimizado_en')
       .order('nombre')
       .order('apellido_paterno');
+    this.cargando.set(false);
     if (error) {
       this.error.set('No se pudo traer la lista. Revisa el internet y vuelve a intentar.');
       return;
@@ -259,7 +266,7 @@ export class Empleados implements OnInit {
   protected async guardarEdicion(empleado: Empleado, motivo: string): Promise<void> {
     if (!this.datosCompletos()) return;
     const d = this.datos();
-    await this.ejecutar(() =>
+    const ok = await this.ejecutar(() =>
       Promise.resolve(
         this.sesion.bd.rpc('editar_empleado', {
           p_id: empleado.id, p_nombre: d.nombre, p_paterno: d.paterno, p_materno: d.materno,
@@ -267,6 +274,7 @@ export class Empleados implements OnInit {
         }),
       ),
     );
+    if (ok) this.avisos.exito(`Datos de ${this.nombreCompleto(d)} corregidos. Los kioscos los reciben en unos minutos.`);
   }
 
   protected async darPinNuevo(empleado: Empleado, motivo: string): Promise<void> {
@@ -280,11 +288,18 @@ export class Empleados implements OnInit {
   }
 
   protected async cambiarEstado(empleado: Empleado, motivo: string): Promise<void> {
-    await this.ejecutar(() =>
+    const ok = await this.ejecutar(() =>
       Promise.resolve(
         this.sesion.bd.rpc('cambiar_estado_empleado', { p_id: empleado.id, p_activo: !empleado.activo, p_motivo: motivo }),
       ),
     );
+    if (ok) {
+      this.avisos.exito(
+        empleado.activo
+          ? `${this.nombreCompleto(empleado)} quedó dado de baja. Los kioscos dejan de aceptarlo en unos minutos.`
+          : `${this.nombreCompleto(empleado)} está activo otra vez.`,
+      );
+    }
   }
 
   // --------------------------------------------------------------------------
@@ -331,7 +346,8 @@ export class Empleados implements OnInit {
     enlace.href = URL.createObjectURL(archivo);
     enlace.download = `datos-${c.empleado.usuario}-${new Date().toISOString().slice(0, 10)}.json`;
     enlace.click();
-    URL.revokeObjectURL(enlace.href);
+    // Soltarlo en el acto a veces cancela la descarga (Firefox, Safari).
+    setTimeout(() => URL.revokeObjectURL(enlace.href), 60_000);
   }
 
   protected imprimirConstancia(): void {
@@ -345,13 +361,8 @@ export class Empleados implements OnInit {
     return `${d}/${m}/${a}`;
   }
 
-  protected palabraDeAusencia(tipo: string): string {
-    const palabras: Record<string, string> = {
-      vacaciones: 'Vacaciones', incapacidad: 'Incapacidad', permiso: 'Permiso', comision: 'Comisión',
-      falta_justificada: 'Falta justificada',
-    };
-    return palabras[tipo] ?? tipo;
-  }
+  /** Todas las incidencias, tambien las que "se dan por buenas" (antes salian como "olvido_registro"). */
+  protected readonly palabraDeIncidencia = textoDeIncidencia;
 
   protected palabraDeFoto(estado: string): string {
     const palabras: Record<string, string> = {
@@ -367,13 +378,14 @@ export class Empleados implements OnInit {
       this.errorAccion.set(`Para confirmar, escribe exactamente su usuario: ${empleado.usuario}`);
       return;
     }
-    await this.ejecutar(() =>
+    const ok = await this.ejecutar(() =>
       Promise.resolve(
         this.sesion.bd.rpc('anonimizar_empleado', {
           p_id: empleado.id, p_confirmar_usuario: this.confirmacion(), p_motivo: motivo,
         }),
       ),
     );
+    if (ok) this.avisos.exito('Datos suprimidos. Sus registros se conservan, ya sin su nombre.');
   }
 
   // --------------------------------------------------------------------------
@@ -511,6 +523,7 @@ export class Empleados implements OnInit {
     this.errorAccion.set(null);
     const entregados: PinParaEntregar[] = [];
     const fallidos: string[] = [];
+    const yaEntraron = new Set<string>();
     for (const d of this.porImportar().filter((f) => !f.problema)) {
       const r = await this.sesion.bd.rpc('alta_empleado', {
         p_nombre: d.nombre, p_paterno: d.paterno, p_materno: d.materno,
@@ -518,8 +531,12 @@ export class Empleados implements OnInit {
       });
       const pin = (r.data as { pin: string }[] | null)?.[0]?.pin;
       if (r.error || !pin) fallidos.push(`${this.nombreCompleto(d)}: ${mensajeDeError(r.error)}`);
-      else entregados.push({ nombre: this.nombreCompleto(d), usuario: d.usuario, pin });
+      else {
+        entregados.push({ nombre: this.nombreCompleto(d), usuario: d.usuario, pin });
+        yaEntraron.add(d.usuario);
+      }
     }
+    this.porImportar.update((filas) => filas.filter((f) => !yaEntraron.has(f.usuario)));
     this.guardando.set(false);
     await this.cargar();
     if (fallidos.length > 0) {

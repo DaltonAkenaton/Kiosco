@@ -172,6 +172,13 @@ input[type='date'].campo {
   padding: 1.25rem;
 }
 
+/* En pantallas angostas (tablet, celular) una tabla ancha se desplaza de lado
+   ELLA SOLA, en vez de empujar toda la pagina fuera de la pantalla. */
+.tabla-desplazable {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
 /* Todas las tablas del panel: con marco, encabezado distinto, renglones que
    se resaltan al pasar el raton (para no perderse en un renglon largo). */
 main table {
@@ -274,6 +281,56 @@ panel-dialogo table,
   font-size: 1.05rem;
 }
 
+/* Los avisos breves de "listo" (servicios/avisos.ts): abajo a la derecha,
+   uno sobre otro, y se van solos. Arriba del aviso de inactividad no: ese
+   va al centro y es mas importante. */
+.avisos-breves {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  z-index: 55;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: min(28rem, calc(100% - 2rem));
+}
+.aviso-breve {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.9rem 1rem;
+  border-radius: 1rem;
+  background-color: var(--kiosko-superficie);
+  border: 2px solid var(--kiosko-entrada);
+  box-shadow: 0 10px 40px rgb(0 0 0 / 0.45);
+  font-weight: 600;
+  animation: aparecer 160ms ease-out;
+}
+.aviso-breve > span {
+  color: var(--kiosko-entrada);
+}
+
+/* "Cargando": renglones grises que laten, del tamaño de lo que va a llegar.
+   Asi no se ve "No hay nadie" por medio segundo antes de que lleguen los datos. */
+@keyframes latir {
+  50% {
+    opacity: 0.45;
+  }
+}
+.esqueleto {
+  display: block;
+  height: 1.1rem;
+  border-radius: 0.4rem;
+  background-color: var(--kiosko-borde);
+  animation: latir 1.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .esqueleto,
+  .aviso-breve {
+    animation: none;
+  }
+}
+
 /* Etiqueta chica ("DEMO", estados). */
 .etiqueta {
   display: inline-block;
@@ -348,6 +405,9 @@ panel-dialogo table,
   }
   .solo-impresion {
     display: block !important;
+  }
+  .tabla-desplazable {
+    overflow: visible !important;
   }
   main table {
     font-size: 10pt;

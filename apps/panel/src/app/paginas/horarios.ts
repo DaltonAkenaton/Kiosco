@@ -18,7 +18,9 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { hoyEn } from '@kiosko/compartido';
 import { Ayuda } from '../componentes/ayuda';
+import { CargandoTabla, RENGLONES_CARGANDO } from '../componentes/cargando-tabla';
 import { Dialogo, mensajeDeError } from '../componentes/dialogo';
+import { Avisos } from '../servicios/avisos';
 import { Sesion } from '../servicios/sesion';
 
 interface Turno {
@@ -65,11 +67,18 @@ interface DiaElegido {
 
 @Component({
   selector: 'panel-horarios',
-  imports: [Ayuda, Dialogo],
+  imports: [Ayuda, CargandoTabla, Dialogo],
   templateUrl: './horarios.html',
 })
 export class Horarios implements OnInit {
   protected readonly sesion = inject(Sesion);
+  private readonly avisos = inject(Avisos);
+  protected readonly cargando = signal(true);
+  protected readonly RENGLONES_CARGANDO = RENGLONES_CARGANDO;
+  /** A una persona solo se le asigna un turno activo (la base tampoco acepta otro). */
+  protected readonly turnosActivos = computed(() => this.turnos().filter((t) => t.activo !== false));
+  /** Las de Configuracion: las que usa un turno que deja sus minutos vacios. */
+  private reglasGenerales = { tolerancia: 10, falta: 30 };
 
   protected readonly turnos = signal<Turno[]>([]);
   protected readonly horarios = signal<Horario[]>([]);
@@ -124,14 +133,20 @@ export class Horarios implements OnInit {
 
   private async cargar(): Promise<void> {
     const hoy = hoyEn(this.sesion.zona());
-    const [turnos, horarios, empleados] = await Promise.all([
+    const [turnos, horarios, empleados, config] = await Promise.all([
       this.sesion.bd.from('turnos').select('id, nombre, hora_inicio, hora_fin, tolerancia_minutos, minutos_para_falta, activo').order('hora_inicio'),
       this.sesion.bd
         .from('asignaciones_turno')
         .select('id, empleado_id, vigente_desde, turno:turnos(nombre, hora_inicio, hora_fin), dias_laborales(dia_semana, hora_inicio, hora_fin)')
         .or(`vigente_hasta.is.null,vigente_hasta.gt.${hoy}`),
       this.sesion.bd.from('empleados').select('id, nombre, apellido_paterno, apellido_materno, numero_empleado').eq('activo', true).order('nombre'),
+      this.sesion.bd.from('configuracion').select('clave, valor').in('clave', ['tolerancia_retardo_minutos', 'minutos_para_falta']),
     ]);
+    this.cargando.set(false);
+    for (const c of config.data ?? []) {
+      if (c.clave === 'tolerancia_retardo_minutos') this.reglasGenerales.tolerancia = Number(c.valor);
+      if (c.clave === 'minutos_para_falta') this.reglasGenerales.falta = Number(c.valor);
+    }
     if (turnos.error || horarios.error || empleados.error) {
       this.error.set('No se pudieron traer los horarios. Revisa el internet.');
       return;
@@ -145,6 +160,12 @@ export class Horarios implements OnInit {
         numero: e.numero_empleado,
       })),
     );
+  }
+
+  /** "2026-09-27" -> "27/09/2026" */
+  protected dma(iso: string): string {
+    const [a, m, d] = iso.slice(0, 10).split('-');
+    return `${d}/${m}/${a}`;
   }
 
   protected hhmm(t: string | null): string {
@@ -202,6 +223,17 @@ export class Horarios implements OnInit {
       this.errorAccion.set('Los minutos deben ser números enteros, o quedar vacíos para usar los de Configuración.');
       return;
     }
+    // La base revisa tolerancia < "retardo mayor" solo si el turno trae los
+    // DOS. Con uno propio y el otro de Configuracion, se revisa aqui: si no,
+    // habria llegadas que brincan de "a tiempo" a "retardo mayor".
+    const tolQueCuenta = tol ?? this.reglasGenerales.tolerancia;
+    const faltaQueCuenta = falta ?? this.reglasGenerales.falta;
+    if (tolQueCuenta >= faltaQueCuenta) {
+      this.errorAccion.set(
+        `La tolerancia (${tolQueCuenta}${tol === null ? ', la de Configuración' : ''}) debe ser menor que los minutos para "retardo mayor" (${faltaQueCuenta}${falta === null ? ', los de Configuración' : ''}).`,
+      );
+      return;
+    }
     await this.ejecutar(() =>
       this.sesion.bd.rpc('guardar_turno', {
         p_id: t.id, p_nombre: t.nombre, p_inicio: t.inicio, p_fin: t.fin,
@@ -209,7 +241,10 @@ export class Horarios implements OnInit {
         // Sin cambio de horas, no hay "a partir de": se corrige tal cual.
         p_desde: this.cambianLasHoras(t) ? t.aPartirDe || null : null,
       }),
-      () => this.turnoEditado.set(null),
+      () => {
+        this.turnoEditado.set(null);
+        this.avisos.exito('Turno guardado. Los reportes ya lo toman en cuenta.');
+      },
     );
   }
 
@@ -219,7 +254,7 @@ export class Horarios implements OnInit {
 
   protected abrirHorario(empleado: { id: string; nombre: string }): void {
     const actual = this.horarioActual().get(empleado.id);
-    const turno = this.turnos().find((t) => t.nombre === actual?.turno?.nombre) ?? this.turnos()[0];
+    const turno = this.turnosActivos().find((t) => t.nombre === actual?.turno?.nombre) ?? this.turnosActivos()[0];
     const elegidos: Record<number, DiaElegido> = {};
     for (const d of DIAS) {
       const dl = actual?.dias_laborales.find((x) => x.dia_semana === d.n);
@@ -248,8 +283,25 @@ export class Horarios implements OnInit {
       const e = this.diasElegidos()[d.n]!;
       return e.propio ? { dia: d.n, inicio: e.inicio, fin: e.fin } : { dia: d.n };
     });
+    if (!this.turnoElegido()) {
+      this.errorAccion.set('Todavía no hay turnos. Cierra esta ventana y crea uno con "+ Nuevo turno".');
+      return;
+    }
     if (dias.length === 0) {
       this.errorAccion.set('Elige al menos un día de la semana.');
+      return;
+    }
+    // "Otra hora" con una casilla vacia, o entrada igual a salida (un turno de cero horas).
+    const malo = DIAS.find((d) => {
+      const e = this.diasElegidos()[d.n];
+      return e?.activo && e.propio && (!e.inicio || !e.fin || e.inicio === e.fin);
+    });
+    if (malo) {
+      this.errorAccion.set(`El ${malo.largo.toLowerCase()} tiene "otra hora", pero falta la hora o la entrada es igual a la salida.`);
+      return;
+    }
+    if (!this.desde()) {
+      this.errorAccion.set('Escribe a partir de qué día vale el horario.');
       return;
     }
     await this.ejecutar(() =>
@@ -257,7 +309,10 @@ export class Horarios implements OnInit {
         p_empleado_id: empleado.id, p_turno_id: this.turnoElegido(), p_desde: this.desde(),
         p_dias: dias, p_motivo: motivo,
       }),
-      () => this.horarioDe.set(null),
+      () => {
+        this.horarioDe.set(null);
+        this.avisos.exito(`Horario de ${empleado.nombre} guardado.`);
+      },
     );
   }
 

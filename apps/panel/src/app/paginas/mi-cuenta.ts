@@ -154,12 +154,19 @@ export class MiCuenta implements OnInit {
     this.guardando.set(false);
     this.contrasenaPanel.set('');
     this.contrasenaPanel2.set('');
-    if (!error) await this.sesion.contrasenaCambiada();
-    this.mensajePanel.set(
-      error
-        ? { ok: false, texto: 'No se pudo cambiar. Intenta con otra contraseña, más larga.' }
-        : { ok: true, texto: '✔ Listo. La próxima vez entra con la nueva.' },
-    );
+    if (error) {
+      this.mensajePanel.set({
+        ok: false,
+        texto: error.code === 'same_password'
+          ? 'Es la misma contraseña que ya tienes. Escribe una distinta.'
+          : error.code === 'weak_password'
+            ? 'Esa contraseña es muy fácil de adivinar. Escribe una más larga, con letras y números.'
+            : 'No se pudo cambiar. Revisa el internet y vuelve a intentar.',
+      });
+      return;
+    }
+    await this.sesion.contrasenaCambiada();
+    this.mensajePanel.set({ ok: true, texto: '✔ Listo. La próxima vez entra con la nueva.' });
   }
 
   protected valor(evento: Event): string {

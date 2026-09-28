@@ -53,13 +53,21 @@
      Generado el {{ fechaImpresion() }} Sistema de Control de Asistencia.</p>
 </div>
 @if (cargando()) {
-  <p class="text-texto-suave mt-6">Calculando…</p>
+  <div class="mt-4 flex flex-col gap-3" aria-busy="true">
+    <p class="text-texto-suave">Calculando el reporte…</p>
+    @for (i of [0, 1, 2, 3, 4]; track i) {
+      <span class="esqueleto" [style.width.%]="[95, 88, 92, 80, 90][i]"></span>
+    }
+  </div>
+} @else if (error()) {
+  <!-- el error ya se dijo arriba -->
 } @else if (filas().length === 0) {
   <p class="text-texto-suave mt-12 text-center text-xl">
     No hay nadie con turno en esas fechas. Revisa las fechas, o asigna horarios en la sección Horarios.
   </p>
 } @else if (vista() === 'resumen') {
-  <table class="mt-4 w-full border-collapse text-left">
+  <div class="tabla-desplazable mt-4">
+  <table class="w-full border-collapse text-left">
     <thead>
       <tr class="text-texto-suave border-borde border-b text-sm uppercase tracking-wide">
         <th class="py-2 pr-4">Quién</th>
@@ -97,11 +105,13 @@
       }
     </tbody>
   </table>
+  </div>
   <p class="text-texto-suave mt-2 text-sm">
     Las horas sólo cuentan jornadas con entrada y salida. Si alguien no registró su salida, esas horas no se suman (el sistema no las inventa).
   </p>
 } @else {
-  <table class="mt-4 w-full border-collapse text-left">
+  <div class="tabla-desplazable mt-4">
+  <table class="w-full border-collapse text-left">
     <thead>
       <tr class="text-texto-suave border-borde border-b text-sm uppercase tracking-wide">
         <th class="py-2 pr-4">Día</th>
@@ -163,5 +173,6 @@
       }
     </tbody>
   </table>
+  </div>
 }
 </div>

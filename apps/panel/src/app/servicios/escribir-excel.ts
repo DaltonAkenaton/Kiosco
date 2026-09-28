@@ -42,7 +42,8 @@ export function descargarExcel(nombreArchivo: string, hojas: Hoja[]): void {
   );
   enlace.download = nombreArchivo;
   enlace.click();
-  URL.revokeObjectURL(enlace.href);
+  // Soltarlo en el acto a veces cancela la descarga (Firefox, Safari).
+  setTimeout(() => URL.revokeObjectURL(enlace.href), 60_000);
 }
 
 /** El archivo completo, como bytes. Separado para poder probarlo. */

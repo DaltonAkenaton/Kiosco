@@ -64,7 +64,7 @@ export const ESTADOS: Record<string, { texto: string; color: string; ayuda: stri
   falta: {
     texto: 'Falta',
     color: 'var(--kiosko-peligro)',
-    ayuda: 'Tenía turno y no vino (terminó su turno sin registrar entrada). Si fue por enfermedad, un accidente u otra razón válida, regístralo en Ausencias como falta justificada o incapacidad: deja de contar como falta.',
+    ayuda: 'Tenía turno y no vino (terminó su turno sin registrar entrada). Si fue por enfermedad, un accidente u otra razón válida, regístralo en Incidencias (o con el botón "Justificar") como falta justificada o incapacidad: deja de contar como falta.',
   },
   sin_entrada: {
     texto: 'Sin entrada',
@@ -139,6 +139,7 @@ export class Reportes implements OnInit {
   protected readonly filas = signal<Fila[]>([]);
   protected readonly cargando = signal(false);
   protected readonly error = signal<string | null>(null);
+  private busqueda = 0;
 
   protected readonly ESTADOS = ESTADOS;
   protected readonly ESTADOS_DE_SALIDA = ESTADOS_DE_SALIDA;
@@ -226,15 +227,20 @@ export class Reportes implements OnInit {
     if (this.desde() > this.hasta()) {
       this.filas.set([]);
       this.error.set('La fecha "Desde" es después de "Hasta". Revisa las fechas.');
+      this.busqueda++; // la que venia en camino ya no cuenta
+      this.cargando.set(false);
       return;
     }
     this.cargando.set(true);
     this.error.set(null);
+    // Una busqueda vieja que llega tarde no pisa a la nueva (filtros cambiados de prisa).
+    const esta = ++this.busqueda;
     const { data, error } = await this.sesion.bd.rpc('reporte_asistencia', {
       p_desde: this.desde(),
       p_hasta: this.hasta(),
       p_empleado_id: this.empleadoId() || null,
     });
+    if (esta !== this.busqueda) return;
     this.cargando.set(false);
     if (error) {
       this.error.set('No se pudo calcular el reporte. Revisa el internet y vuelve a intentar.');

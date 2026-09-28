@@ -496,7 +496,7 @@ const { rows: sinPermiso } = await bd.query('select * from marcas');
 comprobar('sin ser admin no se ve ninguna marca', sinPermiso.length === 0,
   `${sinPermiso.length} filas`);
 
-const { rows: empSinPermiso } = await bd.query('select * from empleados');
+const { rows: empSinPermiso } = await bd.query('select id, nombre from empleados');
 comprobar('sin ser admin no se ve ningun empleado', empSinPermiso.length === 0,
   `${empSinPermiso.length} filas`);
 
@@ -613,10 +613,24 @@ const { rows: [alta] } = await bd.query(
 comprobar('alta_empleado devuelve el id y un PIN de 4 digitos', !!alta.id && /^[0-9]{4}$/.test(alta.pin), alta.pin);
 comprobar('el PIN no es de los faciles de adivinar', !['0000', '1111', '1234', '4321'].includes(alta.pin));
 {
+  // El hash ya no lo puede leer el panel (0024): se revisa como el dueno de la base.
+  await bd.query('reset role');
   const { rows: [ok] } = await bd.query(
     `select pin_hash = extensions.crypt($1, pin_hash) as cuadra from empleados where id = $2`, [alta.pin, alta.id]);
+  await entrarComo(ID_ADMIN);
   comprobar('y ese PIN es el que quedo guardado (como hash)', ok.cuadra === true);
 }
+
+// 0024: RLS dice que renglones, no que columnas. Con el hash de un PIN de 4
+// digitos, cualquiera del panel sacaria el PIN de todos en segundos.
+await debeFallar('el panel NO puede leer el hash de los PIN (ni un administrador)',
+  `select pin_hash from empleados limit 1`, 'permission denied');
+await debeFallar('ni la contrasena del modo administrador del kiosco',
+  `select contrasena_kiosco_hash from administradores limit 1`, 'permission denied');
+await debeFallar('ni pidiendo todas las columnas con *',
+  `select * from empleados limit 1`, 'permission denied');
+comprobar('pero si todo lo que el panel usa',
+  (await bd.query(`select id, usuario, nombre, pin_temporal, activo, anonimizado_en from empleados where id = $1`, [alta.id])).rows.length === 1);
 
 await debeFallar('sin motivo no hay alta',
   `select * from alta_empleado('Otra', 'Persona', '', '', 'opersona', '')`, 'motivo');
@@ -625,8 +639,10 @@ await debeFallar('un usuario repetido se rechaza con mensaje claro',
 
 const pinNuevo = (await bd.query(`select restablecer_pin($1, 'Olvido su PIN en la prueba') as pin`, [alta.id])).rows[0].pin;
 {
+  await bd.query('reset role');
   const { rows: [e] } = await bd.query(
     `select pin_temporal, pin_hash = extensions.crypt($1, pin_hash) as cuadra from empleados where id = $2`, [pinNuevo, alta.id]);
+  await entrarComo(ID_ADMIN);
   comprobar('restablecer_pin da un PIN nuevo que funciona, marcado como temporal', e.cuadra && e.pin_temporal);
 }
 

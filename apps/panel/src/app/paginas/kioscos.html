@@ -23,7 +23,17 @@
   <p class="mt-4 font-bold" style="color: var(--kiosko-peligro)">{{ mensaje }}</p>
 }
 
-@if (kioscos().length === 0 && !error()) {
+@if (cargando()) {
+  <div class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-busy="true">
+    @for (i of [0, 1, 2]; track i) {
+      <div class="bg-superficie border-borde flex flex-col gap-3 rounded-2xl border-2 p-5">
+        <span class="esqueleto" style="width: 50%; height: 1.5rem"></span>
+        <span class="esqueleto" style="width: 80%"></span>
+        <span class="esqueleto" style="width: 65%"></span>
+      </div>
+    }
+  </div>
+} @else if (kioscos().length === 0 && !error()) {
   <p class="text-texto-suave mt-12 text-center text-xl">
     Todavía no hay ningún kiosco dado de alta.
   </p>
@@ -39,15 +49,15 @@
             }
           </div>
           @if (!k.activo) {
-            <span class="rounded-lg px-2 py-1 text-sm font-bold" style="background-color: rgb(239 68 68 / 0.18); color: var(--kiosko-peligro)">
+            <span class="shrink-0 whitespace-nowrap rounded-lg px-2 py-1 text-sm font-bold" style="background-color: rgb(239 68 68 / 0.18); color: var(--kiosko-peligro)">
               Dado de baja
             </span>
           } @else if (sinReportarse(k)) {
-            <span class="rounded-lg px-2 py-1 text-sm font-bold" style="background-color: rgb(234 179 8 / 0.18); color: var(--kiosko-atencion)">
+            <span class="shrink-0 whitespace-nowrap rounded-lg px-2 py-1 text-sm font-bold" style="background-color: rgb(234 179 8 / 0.18); color: var(--kiosko-atencion)">
               Sin reportarse
             </span>
           } @else {
-            <span class="rounded-lg px-2 py-1 text-sm font-bold" style="background-color: rgb(16 185 129 / 0.18); color: var(--kiosko-entrada)">
+            <span class="shrink-0 whitespace-nowrap rounded-lg px-2 py-1 text-sm font-bold" style="background-color: rgb(16 185 129 / 0.18); color: var(--kiosko-entrada)">
               Funcionando
             </span>
           }

@@ -95,10 +95,10 @@
   <p>Del {{ fecha(desde() + 'T12:00:00Z', 'UTC') }} al {{ fecha(hasta() + 'T12:00:00Z', 'UTC') }}{{ turnoFiltro() ? ' · turno ' + turnoFiltro() : '' }}.
      {{ visibles().length }} registro(s). Generado el {{ fechaImpresion() }}</p>
 </div>
-@if (visibles().length === 0 && !cargando()) {
+@if (visibles().length === 0 && !cargando() && !error()) {
   <p class="text-texto-suave mt-12 text-center text-xl">No hay registros con estos filtros. Prueba con otras fechas.</p>
 } @else {
-  <div class="mt-4 overflow-x-auto">
+  <div class="tabla-desplazable mt-4">
     <table class="w-full border-collapse text-left">
       <thead>
         <tr class="text-texto-suave border-borde border-b text-sm uppercase tracking-wide">
@@ -193,8 +193,8 @@
     <label class="flex flex-col gap-1">Quién
       <select class="campo" (change)="cambiarManual('empleadoId', valor($event))">
         <option value="">Elige a la persona</option>
-        @for (e of empleados(); track e.id) {
-          <option [value]="e.id" [selected]="e.id === m.empleadoId">{{ e.nombre }}</option>
+        @for (e of empleadosParaCaptura(); track e.id) {
+          <option [value]="e.id" [selected]="e.id === m.empleadoId">{{ e.nombre }}{{ e.activo ? '' : ' (dado de baja)' }}</option>
         }
       </select>
     </label>

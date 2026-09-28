@@ -14,8 +14,9 @@
  *  antes y cierra la sesion al vencer.
  */
 
-import { Component, OnDestroy, OnInit, computed, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, effect, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Avisos } from '../servicios/avisos';
 import { Inactividad } from '../servicios/inactividad';
 import { Sesion } from '../servicios/sesion';
 
@@ -64,13 +65,33 @@ import { Sesion } from '../servicios/sesion';
       <main class="contenedor flex-1 py-6">
         <router-outlet />
       </main>
+
+      <!-- Avisos breves de "listo" (servicios/avisos.ts). Los errores no van aqui. -->
+      <div class="avisos-breves no-imprimir" aria-live="polite">
+        @for (a of avisos.lista(); track a.id) {
+          <div class="aviso-breve" role="status">
+            <span aria-hidden="true" class="text-2xl leading-none">✔</span>
+            <p class="flex-1">{{ a.texto }}</p>
+            <button type="button" class="boton-secundario !px-3 !py-1 text-sm" (click)="avisos.quitar(a.id)">Cerrar</button>
+          </div>
+        }
+      </div>
     </div>
   `,
 })
 export class Marco implements OnInit, OnDestroy {
   protected readonly sesion = inject(Sesion);
   protected readonly inactividad = inject(Inactividad);
+  protected readonly avisos = inject(Avisos);
   private readonly router = inject(Router);
+
+  constructor() {
+    // La sesion se cerro por fuera (otra pestaña, o Supabase ya no la
+    // renueva): a la pantalla de entrada, en vez de quedarse con tablas vacias.
+    effect(() => {
+      if (!this.sesion.admin()) void this.router.navigateByUrl('/entrar');
+    });
+  }
 
   /** Accesos y Bitacora solo para el rol admin: la base tampoco se los deja a un supervisor. */
   protected readonly secciones = computed(() => [

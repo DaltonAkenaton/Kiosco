@@ -18,7 +18,9 @@
 
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { Ayuda } from '../componentes/ayuda';
+import { CargandoTabla, RENGLONES_CARGANDO } from '../componentes/cargando-tabla';
 import { Dialogo, mensajeDeError } from '../componentes/dialogo';
+import { Avisos } from '../servicios/avisos';
 import { Sesion } from '../servicios/sesion';
 
 interface Acceso {
@@ -39,7 +41,7 @@ type Accion =
 
 @Component({
   selector: 'panel-accesos',
-  imports: [Ayuda, Dialogo],
+  imports: [Ayuda, CargandoTabla, Dialogo],
   template: `
     <div class="flex flex-wrap items-end justify-between gap-4">
       <div>
@@ -56,7 +58,8 @@ type Accion =
       <p class="mt-4 font-bold" style="color: var(--kiosko-peligro)">{{ mensaje }}</p>
     }
 
-    <table class="mt-4 w-full border-collapse text-left">
+    <div class="tabla-desplazable mt-4">
+    <table class="w-full border-collapse text-left">
       <thead>
         <tr class="text-texto-suave border-borde border-b text-sm uppercase tracking-wide">
           <th class="py-2 pr-4">Nombre</th>
@@ -68,6 +71,11 @@ type Accion =
         </tr>
       </thead>
       <tbody>
+        @if (cargando()) {
+          @for (r of RENGLONES_CARGANDO; track r) {
+            <tr panel-cargando-tabla [columnas]="6"></tr>
+          }
+        }
         @for (a of accesos(); track a.user_id) {
           <tr class="border-borde border-b" [class.opacity-60]="!a.activo">
             <td class="py-2 pr-4 font-semibold">{{ a.nombre }} @if (a.user_id === sesion.admin()?.userId) { <span class="text-texto-suave">(tú)</span> }</td>
@@ -104,6 +112,7 @@ type Accion =
         }
       </tbody>
     </table>
+    </div>
 
     @if (accion(); as ac) {
       @switch (ac.tipo) {
@@ -182,6 +191,9 @@ export class Accesos implements OnInit {
   protected readonly accesos = signal<Acceso[]>([]);
   protected readonly error = signal<string | null>(null);
   protected readonly accion = signal<Accion | null>(null);
+  private readonly avisos = inject(Avisos);
+  protected readonly cargando = signal(true);
+  protected readonly RENGLONES_CARGANDO = RENGLONES_CARGANDO;
   protected readonly guardando = signal(false);
   protected readonly errorAccion = signal<string | null>(null);
   protected readonly entregar = signal<{ correo: string; contrasena: string } | null>(null);
@@ -212,6 +224,7 @@ export class Accesos implements OnInit {
       .select('user_id, nombre, correo, rol, activo, usuario_kiosco, debe_cambiar_contrasena')
       .order('activo', { ascending: false })
       .order('nombre');
+    this.cargando.set(false);
     if (error) {
       this.error.set('No se pudo traer la lista. Revisa el internet y vuelve a intentar.');
       return;
@@ -292,6 +305,11 @@ export class Accesos implements OnInit {
       return;
     }
     this.accion.set(null);
+    this.avisos.exito(
+      !activo ? `${acceso.nombre} ya no puede entrar al panel.`
+        : !acceso.activo ? `${acceso.nombre} puede volver a entrar.`
+          : `${acceso.nombre} ahora es ${rol === 'admin' ? 'administrador' : 'supervisor'}.`,
+    );
     await this.cargar();
   }
 

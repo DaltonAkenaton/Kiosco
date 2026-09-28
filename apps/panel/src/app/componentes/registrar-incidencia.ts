@@ -169,7 +169,7 @@ export class RegistrarIncidencia implements OnInit {
 
     const [emp, tur] = await Promise.all([
       this.sesion.bd.from('empleados').select('id, nombre, apellido_paterno, apellido_materno').eq('activo', true).order('nombre'),
-      this.sesion.bd.from('turnos').select('id, nombre').order('hora_inicio'),
+      this.sesion.bd.from('turnos').select('id, nombre').eq('activo', true).order('hora_inicio'),
     ]);
     this.empleados.set(
       (emp.data ?? []).map((e) => ({ id: e.id, nombre: [e.nombre, e.apellido_paterno, e.apellido_materno].filter(Boolean).join(' ') })),

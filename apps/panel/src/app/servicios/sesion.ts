@@ -61,11 +61,28 @@ export class Sesion {
   /** Por que se salio la ultima vez, para explicarlo en la pantalla de entrada. */
   readonly motivoSalida = signal<'inactividad' | null>(null);
 
+  /** Dias que se guardan las fotos en el kiosco (Configuracion), para decirlo en los textos. */
+  private readonly _diasRetencionFotos = signal(30);
+  readonly diasRetencionFotos = this._diasRetencionFotos.asReadonly();
+
   /** La zona para mostrar horas. Baja de la tabla `configuracion` al entrar. */
   private readonly _zona = signal('America/Matamoros');
   readonly zona = this._zona.asReadonly();
 
   private iniciada: Promise<void> | null = null;
+
+  constructor() {
+    // La sesion se puede cerrar sin que esta pestaña haga nada: "Salir" en
+    // otra pestaña, el cierre por inactividad de otra, o que Supabase ya no
+    // acepte renovarla. Sin esto, la pagina seguia "abierta" mostrando tablas
+    // vacias (RLS ya no entrega nada) y el jefe no sabia por que.
+    // El marco lo ve y manda a la pantalla de entrada.
+    if (this.configurada) {
+      this.bd.auth.onAuthStateChange((evento) => {
+        if (evento === 'SIGNED_OUT') this._admin.set(null);
+      });
+    }
+  }
 
   /** Revisa si ya habia una sesion abierta (por ejemplo, tras recargar la pagina). */
   iniciar(): Promise<void> {
@@ -178,6 +195,7 @@ export class Sesion {
     if (clave === 'zona_horaria' && typeof valor === 'string') this._zona.set(valor);
     if (clave === 'minutos_inactividad_panel') Inactividad.fijarMinutos(Number(valor));
     if (clave === 'permitir_datos_demostracion') this._permiteDemostracion.set(Number(valor) === 1);
+    if (clave === 'dias_retencion_fotos' && Number(valor) >= 1) this._diasRetencionFotos.set(Number(valor));
   }
 
   async salir(motivo: 'inactividad' | null = null): Promise<void> {
@@ -211,12 +229,8 @@ export class Sesion {
     const { data: ajustes } = await this.bd
       .from('configuracion')
       .select('clave, valor')
-      .in('clave', ['zona_horaria', 'minutos_inactividad_panel', 'permitir_datos_demostracion']);
-    for (const { clave, valor } of ajustes ?? []) {
-      if (clave === 'zona_horaria' && typeof valor === 'string') this._zona.set(valor);
-      if (clave === 'minutos_inactividad_panel') Inactividad.fijarMinutos(Number(valor));
-      if (clave === 'permitir_datos_demostracion') this._permiteDemostracion.set(Number(valor) === 1);
-    }
+      .in('clave', ['zona_horaria', 'minutos_inactividad_panel', 'permitir_datos_demostracion', 'dias_retencion_fotos']);
+    for (const { clave, valor } of ajustes ?? []) this.aplicarAjuste(clave, valor);
     return null;
   }
 }

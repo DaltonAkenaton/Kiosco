@@ -16,6 +16,14 @@
     }
   </div>
   <div class="mt-3 grid gap-3 md:grid-cols-3">
+    @if (cargando()) {
+      @for (i of [0, 1, 2]; track i) {
+        <div class="bg-superficie border-borde flex flex-col gap-3 rounded-2xl border-2 p-4" aria-busy="true">
+          <span class="esqueleto" style="width: 45%"></span>
+          <span class="esqueleto" style="width: 60%; height: 1.6rem"></span>
+        </div>
+      }
+    }
     @for (t of turnos(); track t.id) {
       <article class="bg-superficie border-borde rounded-2xl border-2 p-4">
         <div class="flex items-start justify-between gap-2">
@@ -27,7 +35,7 @@
             }
             <p class="text-texto-suave text-sm">
               Tolerancia: {{ t.tolerancia_minutos ?? 'la de Configuración' }}{{ t.tolerancia_minutos !== null ? ' min' : '' }} ·
-              Falta: {{ t.minutos_para_falta ?? 'la de Configuración' }}{{ t.minutos_para_falta !== null ? ' min' : '' }}
+              Retardo mayor: {{ t.minutos_para_falta ?? 'el de Configuración' }}{{ t.minutos_para_falta !== null ? ' min' : '' }}
             </p>
           </div>
           @if (sesion.esAdmin()) {
@@ -35,6 +43,13 @@
           }
         </div>
       </article>
+    } @empty {
+      @if (!cargando()) {
+        <p class="text-texto-suave md:col-span-3">
+          Todavía no hay turnos. Crea al menos uno con <b>+ Nuevo turno</b> (por ejemplo "Matutino, 06:00 a 14:00")
+          para poder asignar horarios.
+        </p>
+      }
     }
   </div>
 </section>
@@ -42,7 +57,8 @@
 <!-- ====================== HORARIO DE CADA PERSONA ====================== -->
 <section class="mt-8">
   <h2 class="text-xl font-bold">Horario de cada persona</h2>
-  <table class="mt-3 w-full border-collapse text-left">
+  <div class="tabla-desplazable mt-3">
+  <table class="w-full border-collapse text-left">
     <thead>
       <tr class="text-texto-suave border-borde border-b text-sm uppercase tracking-wide">
         <th class="py-2 pr-4">Quién</th>
@@ -53,6 +69,11 @@
       </tr>
     </thead>
     <tbody>
+      @if (cargando()) {
+        @for (i of RENGLONES_CARGANDO; track i) {
+          <tr panel-cargando-tabla [columnas]="sesion.esAdmin() ? 5 : 4"></tr>
+        }
+      }
       @for (e of empleados(); track e.id) {
         @let h = horarioActual().get(e.id);
         <tr class="border-borde border-b">
@@ -62,7 +83,7 @@
           @if (h) {
             <td class="py-2 pr-4">{{ h.turno?.nombre }}</td>
             <td class="py-2 pr-4 tabular-nums">{{ resumenDeDias(h) }}</td>
-            <td class="py-2 pr-4 tabular-nums">{{ h.vigente_desde }}</td>
+            <td class="py-2 pr-4 tabular-nums">{{ dma(h.vigente_desde) }}</td>
           } @else {
             <td class="py-2 pr-4" colspan="3" style="color: var(--kiosko-atencion)">Sin horario: no se le calculan retardos ni faltas.</td>
           }
@@ -70,9 +91,14 @@
             <td class="py-2"><button type="button" class="boton-secundario !px-3 !py-1" (click)="abrirHorario(e)">{{ h ? 'Cambiar horario' : 'Poner horario' }}</button></td>
           }
         </tr>
+      } @empty {
+        @if (!cargando()) {
+          <tr><td colspan="5" class="text-texto-suave py-8 text-center">No hay empleados activos. Dalos de alta en Empleados.</td></tr>
+        }
       }
     </tbody>
   </table>
+  </div>
 </section>
 
 <!-- ====================== DIALOGOS ====================== -->
@@ -118,7 +144,7 @@
     <div class="flex flex-wrap gap-3">
       <label class="flex flex-col gap-1">Turno
         <select class="campo" (change)="turnoElegido.set(valor($event))">
-          @for (t of turnos(); track t.id) {
+          @for (t of turnosActivos(); track t.id) {
             <option [value]="t.id" [selected]="t.id === turnoElegido()">{{ t.nombre }} ({{ hhmm(t.hora_inicio) }}–{{ hhmm(t.hora_fin) }})</option>
           }
         </select>

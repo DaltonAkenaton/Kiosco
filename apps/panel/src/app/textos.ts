@@ -44,8 +44,8 @@ export const ESTADOS_DE_FOTO: Record<string, { texto: string; color: string; ayu
     texto: 'En el kiosco · Conservada',
     color: 'var(--kiosko-texto)',
     ayuda:
-      'Un administrador la marcó para que NO se borre a los 30 días (por ejemplo, por una queja). Está en ' +
-      'el kiosco.',
+      'Un administrador la marcó para que NO se borre sola al cumplir el plazo de Configuración (por ' +
+      'ejemplo, por una queja). Está en el kiosco.',
   },
   obstruida: {
     texto: 'Foto tapada',
@@ -58,9 +58,11 @@ export const ESTADOS_DE_FOTO: Record<string, { texto: string; color: string; ayu
     ayuda: 'Cuando se registró, la cámara no funcionaba. El registro sí cuenta.',
   },
   eliminada_por_antiguedad: {
-    texto: 'Borrada (30 días)',
+    texto: 'Borrada por antigüedad',
     color: 'var(--kiosko-texto-suave)',
-    ayuda: 'La foto se borró sola al cumplir el plazo, para cuidar la privacidad. El registro no se borra.',
+    ayuda:
+      'La foto se borró sola al cumplir los días que dice Configuración ("Días que se guardan las fotos"), ' +
+      'para cuidar la privacidad. El registro no se borra.',
   },
   faltante: {
     texto: 'Falta en el kiosco',
@@ -86,16 +88,28 @@ export const AYUDA_CUARENTENA =
 //  Horas y fechas, siempre en la zona del sistema
 // ----------------------------------------------------------------------------
 
+// Armar un Intl.DateTimeFormat es caro (carga las reglas de la zona); usarlo
+// no. Las tablas llaman fecha() y hora() varias veces por renglon, con 500
+// renglones: se arma uno por zona y se reutiliza.
+const formatosDeFecha = new Map<string, Intl.DateTimeFormat>();
+const formatosDeHora = new Map<string, Intl.DateTimeFormat>();
+
 export function fecha(iso: string, zona: string): string {
-  return new Intl.DateTimeFormat('es-MX', { timeZone: zona, day: '2-digit', month: '2-digit', year: 'numeric' }).format(
-    new Date(iso),
-  );
+  let formato = formatosDeFecha.get(zona);
+  if (!formato) {
+    formato = new Intl.DateTimeFormat('es-MX', { timeZone: zona, day: '2-digit', month: '2-digit', year: 'numeric' });
+    formatosDeFecha.set(zona, formato);
+  }
+  return formato.format(new Date(iso));
 }
 
 export function hora(iso: string, zona: string): string {
-  return new Intl.DateTimeFormat('es-MX', { timeZone: zona, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(
-    new Date(iso),
-  );
+  let formato = formatosDeHora.get(zona);
+  if (!formato) {
+    formato = new Intl.DateTimeFormat('es-MX', { timeZone: zona, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+    formatosDeHora.set(zona, formato);
+  }
+  return formato.format(new Date(iso));
 }
 
 /** "hace 3 minutos", "hace 2 horas", "hace 5 días". */

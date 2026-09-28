@@ -23,6 +23,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { diaSiguiente, hoyEn, inicioDelDiaLocal, instanteLocal } from '@kiosko/compartido';
 import { Ayuda } from '../componentes/ayuda';
 import { Dialogo, mensajeDeError } from '../componentes/dialogo';
+import { Avisos } from '../servicios/avisos';
 import { descargarExcel } from '../servicios/escribir-excel';
 import { senalRecordada } from '../servicios/recordar';
 import { Sesion } from '../servicios/sesion';
@@ -72,6 +73,7 @@ const MAXIMO = 500;
 })
 export class Asistencia implements OnInit {
   protected readonly sesion = inject(Sesion);
+  private readonly avisos = inject(Avisos);
   protected readonly zona = this.sesion.zona;
 
   // Los filtros se recuerdan al cambiar de pantalla (servicios/recordar.ts).
@@ -95,11 +97,23 @@ export class Asistencia implements OnInit {
     return filtro ? this.marcas().filter((m) => this.turnoDe(m) === filtro) : this.marcas();
   });
 
-  protected readonly empleados = signal<{ id: string; nombre: string }[]>([]);
+  protected readonly empleados = signal<{ id: string; nombre: string; activo: boolean; anonimizado: boolean }[]>([]);
+
+  /**
+   * A quien se le puede capturar a mano: los activos primero, y tambien los
+   * dados de baja (su ultimo dia pudo quedar sin registro). Nunca alguien con
+   * sus datos suprimidos (ARCO): ya no es identificable.
+   */
+  protected readonly empleadosParaCaptura = computed(() =>
+    this.empleados()
+      .filter((e) => !e.anonimizado)
+      .sort((a, b) => Number(b.activo) - Number(a.activo)),
+  );
   protected readonly dispositivos = signal<{ id: string; nombre: string }[]>([]);
   protected readonly marcas = signal<Marca[]>([]);
-  protected readonly cargando = signal(false);
+  protected readonly cargando = signal(true);
   protected readonly error = signal<string | null>(null);
+  private busqueda = 0;
 
   protected readonly ESTADOS_DE_FOTO = ESTADOS_DE_FOTO;
   protected readonly NOMBRES_DE_BANDERAS = NOMBRES_DE_BANDERAS as Record<string, string | undefined>;
@@ -128,7 +142,7 @@ export class Asistencia implements OnInit {
 
   async ngOnInit(): Promise<void> {
     const [emp, disp, asig] = await Promise.all([
-      this.sesion.bd.from('empleados').select('id, nombre, apellido_paterno, numero_empleado').order('nombre'),
+      this.sesion.bd.from('empleados').select('id, nombre, apellido_paterno, numero_empleado, activo, anonimizado_en').order('nombre'),
       this.sesion.bd.from('dispositivos').select('id, nombre').order('nombre'),
       this.sesion.bd
         .from('asignaciones_turno')
@@ -139,6 +153,8 @@ export class Asistencia implements OnInit {
       (emp.data ?? []).map((e) => ({
         id: e.id,
         nombre: `${e.numero_empleado ? '#' + e.numero_empleado + ' · ' : ''}${e.nombre} ${e.apellido_paterno}`,
+        activo: e.activo as boolean,
+        anonimizado: e.anonimizado_en !== null,
       })),
     );
     this.dispositivos.set(disp.data ?? []);
@@ -154,11 +170,16 @@ export class Asistencia implements OnInit {
     if (this.desde() && this.hasta() && this.desde() > this.hasta()) {
       this.marcas.set([]);
       this.error.set('La fecha "Desde" es después de "Hasta". Revisa las fechas.');
+      this.busqueda++; // la que venia en camino ya no cuenta
+      this.cargando.set(false);
       return;
     }
     this.cargando.set(true);
     this.error.set(null);
     const zona = this.sesion.zona();
+    // Si se cambia un filtro mientras llega la busqueda anterior, la vieja
+    // (que puede llegar DESPUES) no debe pisar a la nueva.
+    const esta = ++this.busqueda;
 
     let consulta = this.sesion.bd
       .from('marcas')
@@ -194,6 +215,7 @@ export class Asistencia implements OnInit {
     }
 
     const { data, error } = await consulta;
+    if (esta !== this.busqueda) return;
     this.cargando.set(false);
     if (error) {
       this.error.set('No se pudieron traer los registros. Revisa el internet y vuelve a intentar.');
@@ -209,9 +231,15 @@ export class Asistencia implements OnInit {
    */
   protected turnoDe(m: Marca): string {
     const zona = this.sesion.zona();
-    const partes = new Intl.DateTimeFormat('en-CA', {
-      timeZone: zona, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
-    }).formatToParts(new Date(m.hora_estimada));
+    if (this.formatoTurno?.zona !== zona) {
+      this.formatoTurno = {
+        zona,
+        formato: new Intl.DateTimeFormat('en-CA', {
+          timeZone: zona, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+        }),
+      };
+    }
+    const partes = this.formatoTurno.formato.formatToParts(new Date(m.hora_estimada));
     const p = (t: string): string => partes.find((x) => x.type === t)?.value ?? '';
     const dia = `${p('year')}-${p('month')}-${p('day')}`;
     const horaLocal = `${p('hour')}:${p('minute')}`;
@@ -231,6 +259,9 @@ export class Asistencia implements OnInit {
     }
     return asignada?.turno?.nombre ?? SIN_TURNO;
   }
+
+  /** Armar el formato es caro y turnoDe() corre por cada renglon: uno por zona. */
+  private formatoTurno: { zona: string; formato: Intl.DateTimeFormat } | null = null;
 
   /** "martes 22 de septiembre de 2026", para el renglon que separa los dias. */
   protected diaLargo(iso: string): string {
@@ -321,6 +352,7 @@ export class Asistencia implements OnInit {
       return;
     }
     this.corrigiendo.set(null);
+    this.avisos.exito(this.accionCorreccion() === 'anular' ? 'Registro anulado. Ya no cuenta en los reportes.' : 'Registro corregido.');
     await this.buscar();
   }
 
@@ -372,6 +404,7 @@ export class Asistencia implements OnInit {
       return;
     }
     this.registrandoAMano.set(false);
+    this.avisos.exito('Registro guardado como «Captura manual».');
     await this.buscar();
   }
 }

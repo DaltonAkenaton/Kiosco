@@ -123,6 +123,9 @@ app.whenReady().then(async () => {
   try {
     // ====================================================================
     console.log('\n--- entrar ---');
+    // Empezar sin sesion: si una corrida anterior la dejo abierta, /entrar
+    // (con razon) manda directo adentro y no habria donde escribir.
+    await w.webContents.session.clearStorageData();
     await ir('/entrar');
     await escribir('input[type=email]', 'jefe@prueba.local');
     await escribir('input[autocomplete=current-password]', 'equivocada');
@@ -192,11 +195,19 @@ app.whenReady().then(async () => {
     await escribir('panel-dialogo input[placeholder^="Ej."]', 'Prueba de un valor fuera de rango');
     await picar('Guardar');
     comprobar('un valor fuera de rango se rechaza con el rango', (await texto()).includes('Debe estar entre 0 y 120'));
+    // Con Number('') a secas, un campo vacio se guardaba como 0 (auditoria 27-09).
+    await escribir('panel-dialogo input.text-xl', '');
+    await picar('Guardar');
+    comprobar('un campo vacío NO se guarda como 0', (await texto()).includes('Escribe un número entero'));
+    await escribir('panel-dialogo input.text-xl', '10');
+    await picar('Guardar');
+    comprobar('el mismo valor que ya tiene no se guarda (no ensucia la bitácora)', (await texto()).includes('Es el mismo valor'));
     await escribir('panel-dialogo input.text-xl', '12');
     await picar('Guardar');
     await esperar(800);
     const { rows: [tol] } = await bd.query(`select valor from configuracion where clave = 'tolerancia_retardo_minutos'`);
     comprobar('un valor valido se guarda', tol.valor === 12, JSON.stringify(tol.valor));
+    comprobar('y avisa que se guardó', (await texto()).includes('Guardado. Ya cuenta desde ahora'));
     await capturar('4-configuracion');
 
     // ====================================================================
@@ -347,6 +358,16 @@ app.whenReady().then(async () => {
     comprobar('la bitacora muestra los cambios con su motivo',
       bitacora.includes(motivoAlta) && bitacora.includes('No hubo luz en la manana (prueba)'));
     comprobar('y nunca un hash de PIN', !/\$2[aby]\$/.test(bitacora));
+    comprobar('ni fechas en formato de maquina (2026-09-27T06:39...)', !/\d{4}-\d{2}-\d{2}T\d{2}:/.test(bitacora));
+    // Lo normal: solo lo que hicieron personas. La marca manual SI (la hizo el jefe).
+    const { rows: [{ n: deKioscos }] } = await bd.query(
+      `select count(*)::int n from bitacora_auditoria where tabla = 'marcas' and actor is null`);
+    comprobar('de inicio no se llena con los registros de los kioscos', !bitacora.includes('(a mano)') || deKioscos === 0 ||
+      !(await js(`[...document.querySelectorAll('tbody tr')].some((tr) => tr.textContent.includes('El sistema (un kiosco)'))`)));
+    await js(`(() => { const s = document.querySelector('select.campo'); s.value = 'todo'; s.dispatchEvent(new Event('change')); })()`);
+    await esperar(1500);
+    comprobar('con "Todo" sí aparecen', deKioscos === 0 ||
+      (await js(`[...document.querySelectorAll('tbody tr')].some((tr) => tr.textContent.includes('El sistema (un kiosco)'))`)));
     await capturar('5-bitacora');
     await ir('/mi-cuenta');
     comprobar('Mi cuenta muestra el usuario del kiosco', (await texto()).includes('jefe'));

@@ -33,8 +33,16 @@ const soloAdmin: CanActivateFn = () => {
   return sesion.esAdmin() ? true : router.parseUrl('/asistencia');
 };
 
+/** Si ya hay sesion (por ejemplo, un marcador guardado de /entrar), directo adentro. */
+const sinSesion: CanActivateFn = async () => {
+  const sesion = inject(Sesion);
+  const router = inject(Router);
+  await sesion.iniciar();
+  return sesion.admin() ? router.parseUrl('/asistencia') : true;
+};
+
 export const RUTAS: Routes = [
-  { path: 'entrar', loadComponent: () => import('./paginas/entrar').then((m) => m.Entrar) },
+  { path: 'entrar', canActivate: [sinSesion], loadComponent: () => import('./paginas/entrar').then((m) => m.Entrar) },
   // El enlace del correo "¿Olvidaste tu contraseña?". Sin guardia: la sesion
   // la abre el propio enlace.
   { path: 'nueva-contrasena', loadComponent: () => import('./paginas/nueva-contrasena').then((m) => m.NuevaContrasena) },
@@ -53,7 +61,7 @@ export const RUTAS: Routes = [
       { path: 'kioscos', loadComponent: () => import('./paginas/kioscos').then((m) => m.Kioscos) },
       { path: 'configuracion', loadComponent: () => import('./paginas/configuracion').then((m) => m.Configuracion) },
       { path: 'accesos', canActivate: [soloAdmin], loadComponent: () => import('./paginas/accesos').then((m) => m.Accesos) },
-      { path: 'bitacora', loadComponent: () => import('./paginas/bitacora').then((m) => m.Bitacora) },
+      { path: 'bitacora', canActivate: [soloAdmin], loadComponent: () => import('./paginas/bitacora').then((m) => m.Bitacora) },
       { path: 'mi-cuenta', loadComponent: () => import('./paginas/mi-cuenta').then((m) => m.MiCuenta) },
     ],
   },

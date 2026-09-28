@@ -28,7 +28,8 @@
   <p class="mt-4 font-bold" style="color: var(--kiosko-peligro)">{{ mensaje }}</p>
 }
 
-<table class="mt-4 w-full border-collapse text-left">
+<div class="tabla-desplazable mt-4">
+<table class="w-full border-collapse text-left">
   <thead>
     <tr class="text-texto-suave border-borde border-b text-sm uppercase tracking-wide">
       <th class="py-2 pr-4">Número</th>
@@ -41,6 +42,11 @@
     </tr>
   </thead>
   <tbody>
+    @if (cargando()) {
+      @for (i of RENGLONES_CARGANDO; track i) {
+        <tr panel-cargando-tabla [columnas]="sesion.esAdmin() ? 5 : 4"></tr>
+      }
+    } @else {
     @for (e of visibles(); track e.id) {
       <tr class="border-borde border-b" [class.opacity-60]="!e.activo">
         <td class="py-2 pr-4 tabular-nums">
@@ -85,10 +91,21 @@
         }
       </tr>
     } @empty {
-      <tr><td colspan="5" class="text-texto-suave py-10 text-center text-lg">Nadie coincide con la búsqueda.</td></tr>
+      <tr><td colspan="5" class="text-texto-suave py-10 text-center text-lg">
+        @if (empleados().length === 0) {
+          Todavía no hay nadie dado de alta.
+          @if (sesion.esAdmin()) {
+            Pica <b>+ Agregar empleado</b>, o <b>Importar lista de Excel</b> para darlos de alta a todos juntos.
+          }
+        } @else {
+          Nadie coincide con la búsqueda.
+        }
+      </td></tr>
+    }
     }
   </tbody>
 </table>
+</div>
 
 <!-- ====================== VENTANAS DE ACCION ====================== -->
 <ng-template #camposDeDatos>
@@ -289,9 +306,9 @@
         <p>{{ h.turno }}: desde el {{ dma(h.desde) }}{{ h.hasta ? ' hasta el ' + dma(h.hasta) : ' (vigente)' }}</p>
       } @empty { <p>Ninguno.</p> }
 
-      <h3 class="text-lg font-bold">Ausencias registradas</h3>
+      <h3 class="text-lg font-bold">Incidencias registradas</h3>
       @for (a of c.datos.ausencias; track $index) {
-        <p>{{ palabraDeAusencia(a.tipo) }}: del {{ dma(a.desde) }} al {{ dma(a.hasta) }}{{ a.notas ? ' — ' + a.notas : '' }}</p>
+        <p>{{ palabraDeIncidencia(a.tipo) }}: del {{ dma(a.desde) }} al {{ dma(a.hasta) }}{{ a.notas ? ' — ' + a.notas : '' }}</p>
       } @empty { <p>Ninguna.</p> }
 
       <h3 class="text-lg font-bold">Correcciones a sus registros</h3>
@@ -302,7 +319,7 @@
       <h3 class="text-lg font-bold">Consultas de sus fotografías</h3>
       <p>
         {{ c.datos.consultas_de_sus_fotos.length }} consulta(s) o exportación(es) registradas por personal autorizado.
-        Las fotografías no se incluyen aquí: sólo existen, cifradas, en el kiosco, y se borran solas a los 30 días.
+        Las fotografías no se incluyen aquí: sólo existen, cifradas, en el kiosco, y se borran solas a los {{ sesion.diasRetencionFotos() }} días.
       </p>
     </div>
   </div>

@@ -15,6 +15,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Ayuda } from '../componentes/ayuda';
 import { Dialogo, mensajeDeError } from '../componentes/dialogo';
+import { Avisos } from '../servicios/avisos';
 import { Sesion } from '../servicios/sesion';
 import { PALABRAS_CONFIGURACION as PALABRAS, fecha, hora } from '../textos';
 
@@ -28,6 +29,24 @@ interface Opcion {
   maximo: number | null;
   unidad: string;
   actualizado_en: string;
+}
+
+/**
+ * Las que usa el KIOSCO (bajan con la sincronizacion). Las demas las usa la
+ * base al calcular (reportes) o este panel, y valen desde el momento en que
+ * se guardan. Sirve para decirle al jefe CUANDO se nota su cambio.
+ */
+const LAS_USA_EL_KIOSCO = new Set([
+  'intentos_pin_maximos', 'segundos_bloqueo_pin', 'minutos_olvidar_intentos', 'umbral_brillo_minimo',
+  'umbral_varianza_minima', 'umbral_desfase_reloj_ms', 'dias_retencion_fotos', 'zona_horaria',
+  'horas_para_cierre_automatico',
+]);
+
+/** Un turno con su propia tolerancia o sus propios minutos (Horarios). */
+interface TurnoConReglaPropia {
+  nombre: string;
+  tolerancia_minutos: number | null;
+  minutos_para_falta: number | null;
 }
 
 const GRUPOS: Record<string, string> = {
@@ -48,8 +67,11 @@ const GRUPOS: Record<string, string> = {
 })
 export class Configuracion implements OnInit {
   protected readonly sesion = inject(Sesion);
+  private readonly avisos = inject(Avisos);
   protected readonly opciones = signal<Opcion[]>([]);
+  protected readonly cargando = signal(true);
   protected readonly error = signal<string | null>(null);
+  private turnos: TurnoConReglaPropia[] = [];
 
   protected readonly editando = signal<Opcion | null>(null);
   protected readonly nuevoValor = signal('');
@@ -70,11 +92,16 @@ export class Configuracion implements OnInit {
   }
 
   private async cargar(): Promise<void> {
-    const { data, error } = await this.sesion.bd
-      .from('configuracion')
-      .select('clave, valor, descripcion, grupo, tipo, minimo, maximo, unidad, actualizado_en')
-      .order('grupo')
-      .order('clave');
+    const [{ data, error }, turnos] = await Promise.all([
+      this.sesion.bd
+        .from('configuracion')
+        .select('clave, valor, descripcion, grupo, tipo, minimo, maximo, unidad, actualizado_en')
+        .order('grupo')
+        .order('clave'),
+      this.sesion.bd.from('turnos').select('nombre, tolerancia_minutos, minutos_para_falta').eq('activo', true),
+    ]);
+    this.cargando.set(false);
+    this.turnos = (turnos.data ?? []) as TurnoConReglaPropia[];
     if (error) {
       this.error.set('No se pudo traer la configuración. Revisa el internet.');
       return;
@@ -104,18 +131,34 @@ export class Configuracion implements OnInit {
   protected async guardar(o: Opcion, motivo: string): Promise<void> {
     let valor: unknown;
     if (o.tipo === 'entero') {
-      const numero = Number(this.nuevoValor().trim());
-      if (!Number.isInteger(numero)) {
+      const texto = this.nuevoValor().trim();
+      // Con Number() a secas, un campo VACIO valia 0 ("tolerancia: 0") y
+      // "1e2" valia 100. Solo digitos.
+      if (!/^-?[0-9]+$/.test(texto)) {
         this.errorAccion.set('Escribe un número entero, sin decimales ni letras.');
         return;
       }
+      const numero = Number(texto);
       if (o.minimo !== null && o.maximo !== null && (numero < o.minimo || numero > o.maximo)) {
         this.errorAccion.set(`Debe estar entre ${o.minimo} y ${o.maximo}.`);
+        return;
+      }
+      const choque = this.chocaConUnTurno(o.clave, numero);
+      if (choque) {
+        this.errorAccion.set(choque);
         return;
       }
       valor = numero;
     } else {
       valor = this.nuevoValor().trim();
+      if (valor === '') {
+        this.errorAccion.set('Escribe un valor.');
+        return;
+      }
+    }
+    if (String(valor) === String(o.valor)) {
+      this.errorAccion.set('Es el mismo valor que ya tiene. Escribe otro, o pica Cancelar.');
+      return;
     }
 
     this.guardando.set(true);
@@ -132,7 +175,36 @@ export class Configuracion implements OnInit {
     }
     this.editando.set(null);
     this.sesion.aplicarAjuste(o.clave, valor);
+    this.avisos.exito(
+      LAS_USA_EL_KIOSCO.has(o.clave)
+        ? 'Guardado. Los kioscos lo reciben en unos minutos (en cuanto tengan internet).'
+        : 'Guardado. Ya cuenta desde ahora.',
+    );
     await this.cargar();
+  }
+
+  /**
+   * Un turno puede tener SU tolerancia o SUS minutos de "retardo mayor"
+   * (Horarios); el que deja vacio usa el de aqui. La base revisa que los dos
+   * de aqui no se contradigan, pero no la mezcla: con un turno de tolerancia
+   * propia de 20 y "retardo mayor" de aqui bajado a 15, llegar 18 minutos
+   * tarde seria "a tiempo" y 21, "retardo mayor", sin pasar nunca por
+   * "retardo". Devuelve el mensaje si choca, o nada (null).
+   */
+  private chocaConUnTurno(clave: string, numero: number): string | null {
+    for (const t of this.turnos) {
+      if (clave === 'minutos_para_falta' && t.minutos_para_falta === null && t.tolerancia_minutos !== null &&
+          numero <= t.tolerancia_minutos) {
+        return `El turno "${t.nombre}" tiene su propia tolerancia de ${t.tolerancia_minutos} minutos: esto debe ser más. ` +
+          'Cambia primero esa tolerancia en Horarios, o pon aquí un número mayor.';
+      }
+      if (clave === 'tolerancia_retardo_minutos' && t.tolerancia_minutos === null && t.minutos_para_falta !== null &&
+          numero >= t.minutos_para_falta) {
+        return `El turno "${t.nombre}" tiene sus propios minutos para "retardo mayor" (${t.minutos_para_falta}): la tolerancia debe ser menor. ` +
+          'Cámbialos primero en Horarios, o pon aquí un número menor.';
+      }
+    }
+    return null;
   }
 
   protected valor(evento: Event): string {

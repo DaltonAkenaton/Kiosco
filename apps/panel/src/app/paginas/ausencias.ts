@@ -22,8 +22,10 @@
 
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { hoyEn } from '@kiosko/compartido';
+import { CargandoTabla, RENGLONES_CARGANDO } from '../componentes/cargando-tabla';
 import { Dialogo, mensajeDeError } from '../componentes/dialogo';
 import { RegistrarIncidencia, familiaDeIncidencia, textoDeIncidencia } from '../componentes/registrar-incidencia';
+import { Avisos } from '../servicios/avisos';
 import { Sesion } from '../servicios/sesion';
 
 interface Incidencia {
@@ -42,11 +44,14 @@ interface Festivo {
 
 @Component({
   selector: 'panel-ausencias',
-  imports: [Dialogo, RegistrarIncidencia],
+  imports: [CargandoTabla, Dialogo, RegistrarIncidencia],
   templateUrl: './ausencias.html',
 })
 export class Ausencias implements OnInit {
   protected readonly sesion = inject(Sesion);
+  private readonly avisos = inject(Avisos);
+  protected readonly cargando = signal(true);
+  protected readonly RENGLONES_CARGANDO = RENGLONES_CARGANDO;
 
   protected readonly incidencias = signal<Incidencia[]>([]);
   protected readonly festivos = signal<Festivo[]>([]);
@@ -56,7 +61,6 @@ export class Ausencias implements OnInit {
   protected readonly familia = familiaDeIncidencia;
 
   protected readonly registrando = signal(false);
-  protected readonly aviso = signal<string | null>(null);
   protected readonly porBorrar = signal<Incidencia | null>(null);
   protected readonly festivoNuevo = signal<{ fecha: string; descripcion: string } | null>(null);
   protected readonly festivoPorBorrar = signal<Festivo | null>(null);
@@ -73,6 +77,7 @@ export class Ausencias implements OnInit {
       this.sesion.bd.from('dias_festivos').select('fecha, descripcion').order('fecha'),
       this.sesion.bd.from('empleados').select('id, nombre, apellido_paterno, apellido_materno').order('nombre'),
     ]);
+    this.cargando.set(false);
     if (inc.error || fes.error || emp.error) {
       this.error.set('No se pudo traer la información. Revisa el internet.');
       return;
@@ -98,18 +103,23 @@ export class Ausencias implements OnInit {
 
   protected async alGuardar(mensaje: string): Promise<void> {
     this.registrando.set(false);
-    this.aviso.set(mensaje);
+    this.avisos.exito(mensaje);
     await this.cargar();
   }
 
+  /** "Miércoles, 16 de septiembre de 2026" (con la clase `capitalize` salia "16 De Septiembre De 2026"). */
   protected fechaLarga(iso: string): string {
-    return new Date(`${iso}T12:00:00Z`).toLocaleDateString('es-MX', {
+    const texto = new Date(`${iso}T12:00:00Z`).toLocaleDateString('es-MX', {
       weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC',
     });
+    return texto.charAt(0).toUpperCase() + texto.slice(1);
   }
 
   protected async borrar(i: Incidencia, motivo: string): Promise<void> {
-    await this.ejecutar(() => this.sesion.bd.rpc('borrar_incidencia', { p_id: i.id, p_motivo: motivo }), () => this.porBorrar.set(null));
+    await this.ejecutar(() => this.sesion.bd.rpc('borrar_incidencia', { p_id: i.id, p_motivo: motivo }), () => {
+      this.porBorrar.set(null);
+      this.avisos.exito('Incidencia quitada. El reporte de esos días se recalcula solo.');
+    });
   }
 
   protected abrirFestivo(): void {
@@ -122,14 +132,20 @@ export class Ausencias implements OnInit {
     if (!f) return;
     await this.ejecutar(
       () => this.sesion.bd.rpc('guardar_dia_festivo', { p_fecha: f.fecha, p_descripcion: f.descripcion }),
-      () => this.festivoNuevo.set(null),
+      () => {
+        this.festivoNuevo.set(null);
+        this.avisos.exito('Día festivo agregado. Ese día nadie cuenta como falta.');
+      },
     );
   }
 
   protected async borrarFestivo(f: Festivo, motivo: string): Promise<void> {
     await this.ejecutar(
       () => this.sesion.bd.rpc('borrar_dia_festivo', { p_fecha: f.fecha, p_motivo: motivo }),
-      () => this.festivoPorBorrar.set(null),
+      () => {
+        this.festivoPorBorrar.set(null);
+        this.avisos.exito('Día festivo quitado.');
+      },
     );
   }
 

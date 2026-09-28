@@ -15,6 +15,7 @@
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { Ayuda } from '../componentes/ayuda';
 import { Dialogo, mensajeDeError } from '../componentes/dialogo';
+import { Avisos } from '../servicios/avisos';
 import { Sesion } from '../servicios/sesion';
 import { fecha, haceCuanto, hora } from '../textos';
 
@@ -43,7 +44,9 @@ const SEGUNDOS_PARA_REFRESCAR = 60;
 })
 export class Kioscos implements OnInit, OnDestroy {
   protected readonly sesion = inject(Sesion);
+  private readonly avisos = inject(Avisos);
   protected readonly zona = this.sesion.zona;
+  protected readonly cargando = signal(true);
 
   protected readonly kioscos = signal<Kiosco[]>([]);
   protected readonly fotosPorRevisar = signal<Map<string, number>>(new Map());
@@ -108,7 +111,10 @@ export class Kioscos implements OnInit, OnDestroy {
 
   async ngOnInit(): Promise<void> {
     await this.cargar();
-    this.temporizador = setInterval(() => void this.cargar(), SEGUNDOS_PARA_REFRESCAR * 1000);
+    // Con la pestaña escondida (otra pestaña al frente) no se pregunta: nadie esta viendo.
+    this.temporizador = setInterval(() => {
+      if (!document.hidden) void this.cargar();
+    }, SEGUNDOS_PARA_REFRESCAR * 1000);
   }
 
   ngOnDestroy(): void {
@@ -130,6 +136,7 @@ export class Kioscos implements OnInit, OnDestroy {
         .select('clave, valor')
         .in('clave', ['minutos_kiosco_sin_conexion_alerta', 'minutos_camara_caida_alerta']),
     ]);
+    this.cargando.set(false);
     if (kioscos.error) {
       this.error.set('No se pudo traer la lista de kioscos. Revisa el internet.');
       return;
@@ -193,6 +200,7 @@ export class Kioscos implements OnInit, OnDestroy {
       return;
     }
     this.porRevocar.set(null);
+    this.avisos.exito(`${k.nombre} quedó dado de baja. Lo que mande de aquí en adelante llega apartado, en cuarentena.`);
     await this.cargar();
   }
 
