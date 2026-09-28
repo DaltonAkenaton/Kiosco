@@ -616,6 +616,24 @@ export const SINCRONIZACION = {
   /** Cada cuanto baja el catalogo de empleados, PINes y configuracion. */
   intervaloPullMs: 5 * 60 * 1000,
 
+  /**
+   * PIN incorrecto con internet: antes de contarlo como fallo, el kiosco
+   * pregunta a la nube si el jefe acaba de cambiarlo (sin esperar la vuelta
+   * de `intervaloPullMs`). Asi quien recibe un PIN temporal puede usarlo en
+   * seguida, en vez de fallar 5 veces y quedar bloqueado.
+   *
+   * La consulta tiene su propio limite, corto: la persona esta frente a la
+   * pantalla viendo "Revisando tu PIN...". Si la red tarda mas, se queda
+   * como PIN incorrecto y la vuelta normal lo trae despues.
+   */
+  segundosLimiteConsultaPorPin: 3,
+
+  /**
+   * Como mucho una consulta de esas cada tantos segundos. Sin esto, alguien
+   * probando PINes haria una llamada a la nube por cada intento.
+   */
+  segundosEntreConsultasPorPin: 10,
+
   /** Cada cuanto reporta "sigo vivo" al panel (heartbeat). */
   intervaloHeartbeatMs: 60_000,
 

@@ -305,11 +305,28 @@ app.whenReady().then(async () => {
 
     // ====================================================================
     console.log('\n--- justificar desde el reporte ---');
-    // Ayer hubo retardos en los datos de demostracion (seed.sql).
-    const ayer = (await bd.query(`select ((now() at time zone 'America/Matamoros')::date - 1)::text as d`)).rows[0].d;
+    // El dia mas reciente con un retardo. Antes se suponia "ayer", pero las
+    // marcas de demostracion cubren los dias previos a cuando se CARGO la
+    // semilla (seed.sql), no a hoy; y en lunes, "ayer" es domingo.
+    const { rows: [dias] } = await bd.query(
+      `select (now() at time zone 'America/Matamoros')::date::text as hoy,
+              (select max(r.fecha)::text
+                 from reporte_asistencia((now() at time zone 'America/Matamoros')::date - 30,
+                                         (now() at time zone 'America/Matamoros')::date - 1) r
+                where r.estado in ('retardo', 'retardo_mayor')) as ayer`);
+    const ayer = dias.ayer;
+    comprobar('hay un retardo reciente en los datos de prueba (si no: npm run supabase:aplicar)', ayer !== null);
+
+    // Las fechas se recuerdan solo el mismo dia: guardadas "otro dia", el
+    // filtro vuelve a "hasta hoy" (la pestaña que se quedo abierta del 26 al 28).
+    await js(`sessionStorage.setItem('panel-filtro:reportes.hasta', JSON.stringify({ dia: '${ayer}', valor: '${ayer}' }))`);
+    await ir('/reportes');
+    comprobar('un "Hasta" guardado otro día vuelve a hoy',
+      await js(`[...document.querySelectorAll('input[type=date]')][1]?.value`) === dias.hoy);
+
     await js(`(() => {
-      sessionStorage.setItem('panel-filtro:reportes.desde', JSON.stringify('${ayer}'));
-      sessionStorage.setItem('panel-filtro:reportes.hasta', JSON.stringify('${ayer}'));
+      sessionStorage.setItem('panel-filtro:reportes.desde', JSON.stringify({ dia: '${dias.hoy}', valor: '${ayer}' }));
+      sessionStorage.setItem('panel-filtro:reportes.hasta', JSON.stringify({ dia: '${dias.hoy}', valor: '${ayer}' }));
       sessionStorage.setItem('panel-filtro:reportes.empleado', JSON.stringify(''));
       sessionStorage.setItem('panel-filtro:reportes.vista', JSON.stringify('dias'));
     })()`);

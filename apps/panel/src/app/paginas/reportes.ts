@@ -130,8 +130,8 @@ export class Reportes implements OnInit {
   protected readonly zona = this.sesion.zona;
 
   // Los filtros se recuerdan al cambiar de pantalla (servicios/recordar.ts).
-  protected readonly desde = senalRecordada('reportes.desde', this.lunesDeEstaSemana());
-  protected readonly hasta = senalRecordada('reportes.hasta', hoyEn(this.sesion.zona()));
+  protected readonly desde = senalRecordada('reportes.desde', this.lunesDeEstaSemana(), { delDia: hoyEn(this.sesion.zona()) });
+  protected readonly hasta = senalRecordada('reportes.hasta', hoyEn(this.sesion.zona()), { delDia: hoyEn(this.sesion.zona()) });
   protected readonly empleadoId = senalRecordada('reportes.empleado', '');
   protected readonly vista = senalRecordada<'dias' | 'resumen'>('reportes.vista', 'resumen');
 

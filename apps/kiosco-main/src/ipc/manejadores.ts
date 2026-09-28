@@ -45,7 +45,6 @@ import {
   type EmpleadoEnCache,
   type EstadoKiosco,
   INSTITUCION,
-  nombreCompleto,
   type ResultadoIdentificacion,
   type ResultadoEnrolamiento,
   type ResultadoCambioPin,
@@ -82,7 +81,7 @@ import {
 import { type FotoGuardada, guardarFoto, pareceObstruida } from '../servicios/fotos';
 import { registrarEvento } from '../datos/repositorio-eventos';
 import { estadoDePausa, pausar } from '../servicios/pausa';
-import { enrolar, sincronizarPronto } from '../servicios/sincronizacion';
+import { consultarCambiosDePin, enrolar, sincronizarPronto } from '../servicios/sincronizacion';
 import { detectarAnomaliasDeReloj, leerReloj } from '../servicios/reloj';
 import { ES_DESARROLLO } from '../entorno';
 import {
@@ -212,6 +211,23 @@ function fechaYHoraLocalDe(milisegundos: number): string {
  * TypeScript avisa si se olvida un caso.
  */
 /**
+ * "Dalton G.": lo unico que se muestra en la pantalla del kiosco, en la
+ * lista y tambien al confirmar (CLAUDE.md 3.4: nombre e inicial, nunca el
+ * nombre completo). Antes la confirmacion decia "Hola, Dalton Akenaton Gomez
+ * Arellano": a la vista de la fila entera, y partido en dos renglones.
+ */
+function nombreCorto(empleado: { nombre: string; apellidoPaterno: string }): string {
+  return `${empleado.nombre.split(' ')[0]} ${empleado.apellidoPaterno[0] ?? ''}.`;
+}
+
+/** "5 minutos" se entiende mejor que "300 segundos" frente al kiosco. */
+function tiempoDeEspera(segundos: number): string {
+  if (segundos < 60) return `${segundos} segundos`;
+  const minutos = Math.ceil(segundos / 60);
+  return minutos === 1 ? '1 minuto' : `${minutos} minutos`;
+}
+
+/**
  * "Usuario o PIN incorrecto", nombrando lo que el empleado tecleo en el
  * modo vigente. Sirve igual para "no existe" y para "PIN malo": el mensaje
  * NO dice cual de los dos fallo (eso regalaria la lista de empleados), pero
@@ -303,7 +319,9 @@ export function registrarManejadoresIpc(): void {
         }
 
         // --- 2. Verificar el PIN ------------------------------------------
-        const verificacion = await verificarPin(empleado, pin);
+        const verificacion = await verificarPin(empleado, pin, async () =>
+          (await consultarCambiosDePin()) ? buscarPorId(empleado.id) : null,
+        );
 
         if (!verificacion.ok) {
           if (verificacion.motivo === 'empleado_bloqueado') {
@@ -311,7 +329,7 @@ export function registrarManejadoresIpc(): void {
               ok: false,
               motivo: 'empleado_bloqueado',
               mensaje:
-                `Demasiados intentos. Espera ${verificacion.segundosRestantes} segundos ` +
+                `Demasiados intentos. Espera ${tiempoDeEspera(verificacion.segundosRestantes)} ` +
                 `o pide a tu jefe que registre tu asistencia.`,
               segundosRestantesDeBloqueo: verificacion.segundosRestantes,
             };
@@ -323,6 +341,10 @@ export function registrarManejadoresIpc(): void {
             mensaje: mensajeDeDatosIncorrectos(),
           };
         }
+
+        // Si el PIN se reviso contra la nube (el jefe lo acababa de cambiar),
+        // este es el registro recien bajado: trae el `pinTemporal` de ahora.
+        const alDia = verificacion.empleado;
 
         // --- 3. LEER EL RELOJ AHORA ---------------------------------------
         //
@@ -338,18 +360,18 @@ export function registrarManejadoresIpc(): void {
         // `identificar()` en pantalla-principal.ts.)
         const reloj = leerReloj();
 
-        const sugerencia = sugerenciaPara(empleado.id, reloj.horaEstimadaMs);
+        const sugerencia = sugerenciaPara(alDia.id, reloj.horaEstimadaMs);
         const accionSugerida = sugerencia.accion;
         const duda =
           sugerencia.dudosa && sugerencia.ultimaEntradaMs !== null
             ? `Tu última ENTRADA fue el ${fechaYHoraLocalDe(sugerencia.ultimaEntradaMs)} y no registraste salida. ¿Vienes llegando (ENTRADA) o te vas (SALIDA)?`
             : null;
-        const nombreParaMostrar = nombreCompleto(empleado);
+        const nombreParaMostrar = nombreCorto(alDia);
 
         // --- 4. Guardar el pase y entregar solo el numerito ----------------
         const tokenRegistro = crearPase({
-          empleadoId: empleado.id,
-          usuario: empleado.usuario,
+          empleadoId: alDia.id,
+          usuario: alDia.usuario,
           nombreParaMostrar,
           accionSugerida,
           reloj,
@@ -361,7 +383,7 @@ export function registrarManejadoresIpc(): void {
           nombreParaMostrar,
           accionSugerida,
           horaLocalTexto: horaLocalDe(reloj.horaEstimadaMs),
-          pinTemporal: empleado.pinTemporal,
+          pinTemporal: alDia.pinTemporal,
           duda,
         };
       } catch (fallo) {
@@ -619,7 +641,7 @@ export function registrarManejadoresIpc(): void {
 
       return {
         id: empleado.id,
-        nombreParaMostrar: `${empleado.nombre.split(' ')[0]} ${empleado.apellidoPaterno[0]}.`,
+        nombreParaMostrar: nombreCorto(empleado),
         estado,
         horaUltimaMarca: reciente ? horaLocalDe(empleado.ultimaHoraMs!) : null,
         // Sin marca reciente -> entrada. Si esta adentro -> salida.

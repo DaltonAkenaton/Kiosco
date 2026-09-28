@@ -77,8 +77,8 @@ export class Asistencia implements OnInit {
   protected readonly zona = this.sesion.zona;
 
   // Los filtros se recuerdan al cambiar de pantalla (servicios/recordar.ts).
-  protected readonly desde = senalRecordada('asistencia.desde', hoyEn(this.sesion.zona()));
-  protected readonly hasta = senalRecordada('asistencia.hasta', hoyEn(this.sesion.zona()));
+  protected readonly desde = senalRecordada('asistencia.desde', hoyEn(this.sesion.zona()), { delDia: hoyEn(this.sesion.zona()) });
+  protected readonly hasta = senalRecordada('asistencia.hasta', hoyEn(this.sesion.zona()), { delDia: hoyEn(this.sesion.zona()) });
   protected readonly empleadoId = senalRecordada('asistencia.empleado', '');
   protected readonly dispositivoId = senalRecordada('asistencia.kiosco', '');
   protected readonly revision = senalRecordada<Revision>('asistencia.revision', '');

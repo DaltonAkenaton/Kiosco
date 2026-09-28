@@ -240,8 +240,8 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
         // Con dos cifras hay que DECIRLO: en la primera prueba real se
         // tecleo "1" + Enter esperando elegir al 01, y no paso nada.
         return this.digitosDeLista() > 1
-          ? 'Teclea el número que está junto a tu nombre (ejemplo: 0 y 7 para el 07)'
-          : 'Teclea el número que está junto a tu nombre';
+          ? 'Teclea el número junto a tu nombre' // el ejemplo va en el renglon de abajo
+          : 'Teclea el número junto a tu nombre';
       case 'numero':
         return 'Escribe tu número de empleado';
     }
@@ -597,6 +597,19 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
    * pudiera poner "1 digito" con 20 empleados solo serviria para romperlo.
    */
   protected readonly digitosDeLista = computed(() => String(this.empleados().length).length);
+
+  /**
+   * Columnas de la lista: hasta 8 personas, dos (casillas anchas y grandes);
+   * hasta 24, tres (las ~20 confirmadas caben en 7 filas aun a 1366x768);
+   * mas, cuatro. Las filas se reparten el alto disponible (ver el HTML).
+   */
+  protected readonly columnasLista = computed(() => {
+    const total = this.empleados().length;
+    return total <= 8 ? 2 : total <= 24 ? 3 : 4;
+  });
+  protected readonly filasLista = computed(() =>
+    Math.max(1, Math.ceil(this.empleados().length / this.columnasLista())),
+  );
 
   /** Lo que lleva tecleado de un numero de dos digitos ("1" esperando el "2"). */
   protected readonly seleccionEnCurso = signal('');
@@ -1101,8 +1114,16 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
     });
 
     // Registro con el PIN que dio el jefe: ya con la asistencia guardada, se
-    // le ofrece elegir uno propio (D-042).
-    if (registro.tokenCambioPin) this.abrirPinNuevo(registro.tokenCambioPin, pendiente.nombre);
+    // le ofrece elegir uno propio (D-042). La tarjeta de exito se quita (el
+    // sonido ya sono): quedaban dos ventanas encimadas. Lo que se registro no
+    // se pierde, lo dice la ventana del PIN en su primer renglon.
+    if (registro.tokenCambioPin) {
+      this.descartarExito();
+      this.abrirPinNuevo(registro.tokenCambioPin, pendiente.nombre, {
+        tipo: registro.tipo,
+        hora: registro.horaLocalTexto,
+      });
+    }
   }
 
   // --------------------------------------------------------------------------
@@ -1113,7 +1134,11 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
   //  ("Ahora no"): nunca impide checar.
 
   /** Quien esta eligiendo PIN y su permiso. `null` = ventana cerrada. */
-  protected readonly eligiendoPin = signal<{ token: string; nombre: string } | null>(null);
+  protected readonly eligiendoPin = signal<{
+    token: string;
+    nombre: string;
+    registrado: { tipo: 'entrada' | 'salida'; hora: string };
+  } | null>(null);
   protected readonly pinNuevo = signal('');
   protected readonly pinNuevoRepetido = signal('');
   protected readonly pasoPinNuevo = signal<'primero' | 'segundo' | 'guardando' | 'terminado'>('primero');
@@ -1128,8 +1153,12 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
     return Array.from({ length: largo }, (_, i) => i < escrito.length);
   });
 
-  private abrirPinNuevo(token: string, nombre: string): void {
-    this.eligiendoPin.set({ token, nombre });
+  private abrirPinNuevo(
+    token: string,
+    nombre: string,
+    registrado: { tipo: 'entrada' | 'salida'; hora: string },
+  ): void {
+    this.eligiendoPin.set({ token, nombre, registrado });
     this.pinNuevo.set('');
     this.pinNuevoRepetido.set('');
     this.pasoPinNuevo.set('primero');

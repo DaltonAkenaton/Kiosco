@@ -138,7 +138,12 @@ interface Respuesta {
  * Llama a una Edge Function. Lanza `SinConexion` si no hubo respuesta util
  * (sin red, tiempo agotado, servidor caido con 5xx).
  */
-async function llamar(funcion: string, cuerpo: unknown, token: string | null): Promise<Respuesta> {
+async function llamar(
+  funcion: string,
+  cuerpo: unknown,
+  token: string | null,
+  segundosLimite: number = S.segundosTiempoLimitePeticion,
+): Promise<Respuesta> {
   const salida = Date.now();
   let respuesta: Response;
   try {
@@ -149,7 +154,7 @@ async function llamar(funcion: string, cuerpo: unknown, token: string | null): P
         ...(token ? { 'x-kiosco-token': token } : {}),
       },
       body: JSON.stringify(cuerpo),
-      signal: AbortSignal.timeout(S.segundosTiempoLimitePeticion * 1000),
+      signal: AbortSignal.timeout(segundosLimite * 1000),
     });
   } catch (fallo) {
     throw new SinConexion((fallo as Error).message);
@@ -316,8 +321,13 @@ const EsquemaCatalogo = z.object({
   cursor: z.string().nullable(),
 });
 
-async function bajar(credencial: CredencialKiosco): Promise<void> {
-  const r = await llamar('catalogo', { desde: leerEstadoLocal(CLAVE_CURSOR_CATALOGO) }, credencial.token);
+async function bajar(credencial: CredencialKiosco, segundosLimite?: number): Promise<void> {
+  const r = await llamar(
+    'catalogo',
+    { desde: leerEstadoLocal(CLAVE_CURSOR_CATALOGO) },
+    credencial.token,
+    segundosLimite,
+  );
   if (r.estado === 401) return cambiarNube('no_reconocido');
   if (r.estado === 403) return cambiarNube('revocado');
 
@@ -335,6 +345,64 @@ async function bajar(credencial: CredencialKiosco): Promise<void> {
   }
   // La pantalla recarga la lista de empleados cuando cambia esta fecha.
   cambiarNube('en_linea', { ultimaSincronizacion: new Date().toISOString() });
+}
+
+/**
+ * Baja el catalogo sin encimarse: si ya hay una bajada en camino (la vuelta
+ * normal o una consulta por PIN), se espera esa en vez de lanzar otra. Dos a
+ * la vez leerian el mismo cursor y aplicarian el mismo catalogo dos veces.
+ */
+let bajadaEnCamino: Promise<void> | null = null;
+function bajarSinEncimar(credencial: CredencialKiosco, segundosLimite?: number): Promise<void> {
+  bajadaEnCamino ??= bajar(credencial, segundosLimite).finally(() => {
+    bajadaEnCamino = null;
+  });
+  return bajadaEnCamino;
+}
+
+let ultimaConsultaPorPinMs = 0;
+
+/**
+ * Un PIN salio incorrecto: ¿lo acaba de cambiar el jefe?
+ *
+ * El catalogo baja cada `intervaloPullMs` (5 min). Sin esta consulta, quien
+ * recibe un PIN temporal y va directo al kiosco falla, reintenta y queda
+ * bloqueado, aunque su PIN sea correcto. Eso es impedir que alguien registre
+ * (CLAUDE.md 1: la regla de oro).
+ *
+ * Devuelve `true` si el catalogo se bajo. Nunca lanza, y sin internet ni
+ * siquiera intenta: ahi el kiosco sigue exactamente como antes.
+ */
+export async function consultarCambiosDePin(): Promise<boolean> {
+  if (!sincronizacionDisponible() || nube !== 'en_linea') return false;
+  const credencial = leerCredencial();
+  if (!credencial) return false;
+
+  const ahora = Date.now();
+  if (ahora - ultimaConsultaPorPinMs < S.segundosEntreConsultasPorPin * 1000) return false;
+  ultimaConsultaPorPinMs = ahora;
+
+  // Si ya iba una bajada normal (con su limite largo), tampoco se le espera
+  // mas de lo que se esperaria a una propia.
+  let temporizadorLimite: NodeJS.Timeout | undefined;
+  const limite = new Promise<never>((_, rechazar) => {
+    temporizadorLimite = setTimeout(
+      () => rechazar(new SinConexion('consulta por PIN: tiempo agotado')),
+      S.segundosLimiteConsultaPorPin * 1000,
+    );
+  });
+
+  try {
+    await Promise.race([bajarSinEncimar(credencial, S.segundosLimiteConsultaPorPin), limite]);
+    ultimoPullMs = Date.now();
+    return !sinPermisoDeLaNube();
+  } catch {
+    // Red lenta o caida: se queda como PIN incorrecto. La vuelta normal
+    // (que si sabe reintentar) se encarga del resto.
+    return false;
+  } finally {
+    clearTimeout(temporizadorLimite);
+  }
 }
 
 // ============================================================================
@@ -398,7 +466,7 @@ export async function ciclo(): Promise<void> {
     const ahora = Date.now();
     if (!sinPermisoDeLaNube()) {
       if (ahora - ultimoPullMs >= S.intervaloPullMs) {
-        await bajar(credencial);
+        await bajarSinEncimar(credencial);
         ultimoPullMs = ahora;
       }
       if (ahora - ultimoLatidoMs >= S.intervaloHeartbeatMs) {
@@ -542,4 +610,6 @@ export function reiniciarSincronizacionParaPrueba(): void {
   ultimoLatidoMs = 0;
   ultimaMedicionMs = 0;
   desfaseConocidoMs = null;
+  bajadaEnCamino = null;
+  ultimaConsultaPorPinMs = 0;
 }

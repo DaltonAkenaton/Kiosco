@@ -114,6 +114,7 @@ export {
   calcularDesfase,
   enrolar,
   ciclo,
+  consultarCambiosDePin,
   iniciarSincronizacion,
   estadoDeLaNube,
   reiniciarSincronizacionParaPrueba,
@@ -125,3 +126,8 @@ export { contarFotosConLlaveAnterior, recuperarFotosConContrasena } from './serv
 export { crearPermisoDePin, elegirPinPropio, pinDemasiadoFacil, permisosDePinVivos } from './servicios/pin-propio';
 export { guardarPinPropio } from './datos/repositorio-empleados';
 export { EsquemaElegirPin } from './ipc/esquemas';
+
+// Para capturar-kiosco.cjs: el kiosco real en una ventana oculta.
+export { registrarManejadoresIpc } from './ipc/manejadores';
+export { registrarManejadoresAdmin } from './ipc/manejadores-admin';
+export { aplicarPoliticasDeSesion } from './seguridad';

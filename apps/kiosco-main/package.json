@@ -1,6 +1,6 @@
 {
   "name": "@kiosko/kiosco-main",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "private": true,
   "description": "Proceso principal de Electron del kiosco de asistencia",
   "main": "dist/main.js",
@@ -9,6 +9,7 @@
     "dev": "node construir.mjs --dev && electron .",
     "revisar-tipos": "tsc --noEmit -p tsconfig.json",
     "probar": "node construir-pruebas.mjs && electron probar-autenticacion.cjs",
+    "capturar": "node construir-pruebas.mjs && electron capturar-kiosco.cjs",
     "probar:sincronizacion": "node construir-pruebas.mjs && electron probar-sincronizacion.cjs",
     "empaquetar": "node construir.mjs && npm run ui:compilar --prefix ../.. && electron-builder --win",
     "empaquetar:solo-carpeta": "node construir.mjs && npm run ui:compilar --prefix ../.. && electron-builder --win --dir",

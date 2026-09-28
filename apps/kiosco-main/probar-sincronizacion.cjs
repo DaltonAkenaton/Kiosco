@@ -135,6 +135,15 @@ app.whenReady().then(async () => {
       (await bd.verificarPin(bd.buscarPorUsuario('dgomez'), '5555')).ok === true);
     comprobar('una baja en el panel desactiva al empleado en el kiosco', bd.buscarPorUsuario('fortiz')?.activo === false);
 
+    // El jefe da un PIN y la persona va directo al kiosco: no hay que esperar
+    // la vuelta de 5 minutos, el kiosco pregunta al ver el PIN "incorrecto".
+    await nube.query(`update empleados set pin_hash = extensions.crypt('7302', extensions.gen_salt('bf', 4)) where id = $1`, [DGOMEZ_NUBE]);
+    const antesDeConsultar = bd.buscarPorUsuario('dgomez');
+    const alMomento = await bd.verificarPin(antesDeConsultar, '7302', async () =>
+      (await bd.consultarCambiosDePin()) ? bd.buscarPorId(DGOMEZ_NUBE) : null);
+    comprobar('un PIN recien dado en el panel vale al primer intento', alMomento.ok === true);
+    comprobar('otra consulta en seguida ya no llama a la nube', (await bd.consultarCambiosDePin()) === false);
+
     // ======================================================================
     console.log('\n--- el reloj se movio sin internet (CLAUDE.md 6) ---');
     // Se simula: la ultima vez que hablo con la nube, Windows iba 10 minutos

@@ -186,32 +186,32 @@ body {
 
 /* Botones de la lista de empleados */
 .texto-lista {
-  font-size: clamp(1.1rem, 3vh, 2rem);
+  font-size: clamp(1rem, 2.6vh, 1.9rem);
 }
 
 .numero-lista {
-  font-size: clamp(1rem, 2.8vh, 1.8rem);
-  width: clamp(2.2rem, 6vh, 3.5rem);
-  height: clamp(2.2rem, 6vh, 3.5rem);
+  font-size: clamp(0.95rem, 2.4vh, 1.7rem);
+  width: clamp(2rem, 5vh, 3.3rem);
+  height: clamp(2rem, 5vh, 3.3rem);
 }
 
 /*
-  Lista con muchas personas (13 o mas): tres columnas y todo un poco mas
-  chico, para que las 20 quepan sin desplazarse. Sigue siendo legible desde
-  un paso de distancia, que es lo que importa a las 6 AM.
+  La lista reparte el alto disponible entre sus filas (pantalla-principal.html).
+  Este es el tope de cada fila: con pocas personas y pantalla grande, las
+  casillas no crecen hasta parecer ladrillos.
 */
-.lista-compacta .boton-lista {
-  padding-top: 0.5rem;
-  padding-bottom: 0.5rem;
-  gap: 0.75rem;
+.lista-empleados {
+  --alto-maximo-fila: clamp(3.5rem, 10vh, 6rem);
 }
-.lista-compacta .texto-lista {
-  font-size: clamp(1rem, 2.4vh, 1.5rem);
+
+/* "✓ Entró 10:46" / "Salió 14:02", bajo el nombre, en un solo renglon. */
+.texto-estado-lista {
+  font-size: clamp(0.75rem, 1.7vh, 1.1rem);
 }
-.lista-compacta .numero-lista {
-  font-size: clamp(0.9rem, 2.2vh, 1.4rem);
-  width: clamp(2rem, 4.8vh, 2.8rem);
-  height: clamp(2rem, 4.8vh, 2.8rem);
+
+/* El renglon de ayuda bajo la instruccion ("Son dos cifras: ..."). */
+.texto-pista {
+  font-size: clamp(0.9rem, 2vh, 1.25rem);
 }
 
 /* Confirmacion del registro */

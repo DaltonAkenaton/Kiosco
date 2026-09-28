@@ -216,10 +216,16 @@ export type ResultadoVerificacion =
  *
  * Es `async` por el retardo creciente: hay que poder esperar sin congelar el
  * proceso principal (si lo congelara, la ventana entera se quedaria tiesa).
+ *
+ * `releerDeLaNube` (opcional): si el PIN no coincide, antes de contarlo como
+ * fallo se pide el registro al dia, por si el jefe lo acaba de cambiar. Se
+ * recibe como funcion para que este archivo no dependa de la sincronizacion.
+ * Devuelve `null` si no pudo (sin internet, o consulto hace poco).
  */
 export async function verificarPin(
   empleado: EmpleadoEnCache,
   pin: string,
+  releerDeLaNube?: () => Promise<EmpleadoEnCache | null>,
 ): Promise<ResultadoVerificacion> {
   // --- 1. ¿Esta bloqueado? ------------------------------------------------
   const bloqueo = estadoDeBloqueo(empleado.id);
@@ -237,7 +243,18 @@ export async function verificarPin(
     return { ok: true, empleado };
   }
 
-  // --- 3. Fallo: registrar, esperar y responder ---------------------------
+  // --- 3. ¿Se lo acaban de cambiar? ---------------------------------------
+  // Solo cuenta si de verdad llego un PIN distinto: asi repetir el viejo no
+  // se salva del conteo de fallos.
+  if (releerDeLaNube) {
+    const alDia = await releerDeLaNube();
+    if (alDia && alDia.activo && alDia.pinHash !== empleado.pinHash && pinCoincide(pin, alDia.pinHash)) {
+      limpiarFallos(alDia.id);
+      return { ok: true, empleado: alDia };
+    }
+  }
+
+  // --- 4. Fallo: registrar, esperar y responder ---------------------------
   const estado = registrarFallo(empleado.id);
   await aplicarRetardo(estado.fallidos);
 

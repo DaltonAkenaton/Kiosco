@@ -234,7 +234,7 @@
 -->
 @if (pidiendoCodigoDePausa()) {
   <div
-    class="fixed inset-0 z-50 flex items-center justify-center px-10"
+    class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto px-10 py-4"
     style="background-color: rgb(15 23 42 / 0.82); backdrop-filter: blur(6px)"
     (click)="cerrarPausa()"
   >
@@ -247,8 +247,9 @@
              rounded-3xl border-2 shadow-2xl"
       (click)="$event.stopPropagation()"
     >
-      <div class="flex flex-col items-center gap-5 px-12 py-10 text-center">
-        <p class="texto-nombre-grande font-bold">Usar esta computadora</p>
+      <!-- Espacios medidos para caber completo a 1366x768 (antes se cortaba). -->
+      <div class="flex flex-col items-center gap-3 px-12 py-6 text-center">
+        <p class="texto-nombre-grande font-bold">Usar esta PC</p>
 
         <p class="text-texto-suave text-xl">
           El checador se va a esconder y volverá solo en
@@ -265,7 +266,7 @@
           anotado para que el jefe pueda explicarlo.
         </p>
 
-        <p class="text-texto-suave texto-instruccion mt-2">Escribe el código</p>
+        <p class="text-texto-suave texto-instruccion">Escribe el código</p>
 
         <!-- Los mismos puntos del PIN: cuántos llevas, nunca cuáles. -->
         <div class="flex gap-5">
@@ -290,12 +291,12 @@
 
           De paso arregla el caso obvio: alguien probando la app con el ratón.
         -->
-        <div class="mt-2 grid w-full max-w-md grid-cols-5 gap-2">
+        <div class="grid w-full max-w-md grid-cols-5 gap-2">
           @for (tecla of ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']; track tecla) {
             <button
               type="button"
               class="bg-superficie border-borde hover:bg-borde boton-tactil rounded-xl border-2
-                     py-4 text-2xl font-bold tabular-nums"
+                     py-3 text-2xl font-bold tabular-nums"
               (click)="agregarDigitoDePausa(tecla)"
             >
               {{ tecla }}
@@ -710,7 +711,7 @@
     <!-- ================= Columna izquierda: la camara ================= -->
     <section class="flex justify-center">
       <div
-        class="border-borde relative aspect-4/3 max-h-[60vh] w-full max-w-lg overflow-hidden rounded-3xl border-4"
+        class="border-borde relative aspect-4/3 max-h-[65vh] w-full max-w-2xl overflow-hidden rounded-3xl border-4"
         style="background-color: #000"
       >
         <!--
@@ -768,7 +769,7 @@
       enormes, porque se centraba en TODO el alto disponible sin limite de
       ancho. Un bloque agrupado se lee mucho mas rapido que uno disperso.
     -->
-    <section class="mx-auto flex h-full min-h-0 w-full max-w-3xl flex-col items-center justify-center gap-4">
+    <section class="mx-auto flex h-full min-h-0 w-full max-w-4xl flex-col items-center justify-center gap-4">
       @if (config(); as configuracion) {
         <kiosco-reloj
           [zonaHoraria]="configuracion.zonaHoraria"
@@ -776,7 +777,29 @@
         />
       }
 
-      <p class="text-texto-suave texto-instruccion">{{ instruccion() }}</p>
+      <!--
+        La instruccion ocupa SIEMPRE el mismo lugar. Antes, al teclear la
+        primera cifra aparecia "Número: 0_" encima de la lista y la empujaba
+        hacia abajo: la lista brincaba justo cuando la persona buscaba su
+        nombre. Ahora ese texto sustituye a la instruccion, en su renglon.
+      -->
+      @if (paso() === 'identificador' && modo() === 'lista' && seleccionEnCurso(); as parcial) {
+        <p class="texto-instruccion text-center font-bold tabular-nums">
+          Número: {{ parcial }}<span class="animate-pulse">_</span>
+        </p>
+      } @else {
+        <p class="text-texto-suave texto-instruccion text-center">{{ instruccion() }}</p>
+      }
+      @if (paso() === 'identificador' && modo() === 'lista' && digitosDeLista() > 1 && empleados().length > 0) {
+        <p class="text-texto-suave texto-pista -mt-2 text-center">
+          @if (seleccionEnCurso(); as parcial) {
+            Teclea la segunda cifra, o <b class="text-texto">Enter</b> si eres el
+            {{ parcial.padStart(digitosDeLista(), '0') }}
+          } @else {
+            Son dos cifras: por ejemplo <b class="text-texto">0</b> y <b class="text-texto">7</b> para el 07
+          }
+        </p>
+      }
 
       <!-- ---------- PASO 1: identificador ---------- -->
       @if (paso() === 'identificador') {
@@ -819,29 +842,22 @@
                 el ultimo sigue siendo alcanzable en vez de quedar invisible.
               -->
               <!--
-                Con dos digitos, el primero queda "en espera" del segundo.
-                Se muestra para que quien teclea sepa que el sistema lo oyo.
-              -->
-              @if (seleccionEnCurso(); as parcial) {
-                <p class="text-texto mb-1 text-center text-2xl font-bold tabular-nums">
-                  Número: {{ parcial }}<span class="animate-pulse">_</span>
-                </p>
-                <!-- Que hacer ahora, en palabras: la segunda cifra, o Enter. -->
-                <p class="text-texto-suave mb-2 text-center text-lg">
-                  Teclea la segunda cifra, o <b class="text-texto">Enter</b> si eres el
-                  {{ parcial.padStart(digitosDeLista(), '0') }}
-                </p>
-              }
-              <!--
-                Con 20 personas (lo confirmado por el cliente) dos columnas
-                obligarian a desplazarse, y el ultimo de la lista no se veria.
-                A partir de 13 se pasa a tres columnas y botones compactos.
+                TODOS A LA VISTA, SIN DESPLAZARSE (28-09-2026).
+
+                Antes la lista tenia filas de alto fijo y, si no cabian, una
+                barra para desplazarse. A 1366x768 (la pantalla comun de
+                oficina) solo se veian 12 de 20: quien no ve su nombre no sabe
+                su numero, y nadie va a usar el mouse a las 6 AM.
+
+                Ahora las filas se REPARTEN el alto que haya (minmax(0, ...)):
+                en pantalla chica se encogen, en grande crecen hasta un tope
+                para no verse como ladrillos. El tamaño de letra ya se ajusta
+                al alto de la pantalla (clamp con vh, en styles.css).
               -->
               <div
-                class="grid max-h-full w-full gap-3 overflow-y-auto"
-                [class.grid-cols-2]="empleados().length <= 12"
-                [class.grid-cols-3]="empleados().length > 12"
-                [class.lista-compacta]="empleados().length > 12"
+                class="lista-empleados grid min-h-0 w-full shrink content-start gap-2"
+                [style.grid-template-columns]="'repeat(' + columnasLista() + ', minmax(0, 1fr))'"
+                [style.grid-template-rows]="'repeat(' + filasLista() + ', minmax(0, var(--alto-maximo-fila)))'"
               >
                 @for (empleado of empleados(); track empleado.id; let i = $index) {
                   <!--
@@ -869,7 +885,7 @@
                   <button
                     type="button"
                     class="bg-superficie border-borde hover:bg-borde boton-tactil entrar-escalonado
-                           texto-lista flex items-center gap-4 rounded-2xl border-2 px-5 py-4
+                           texto-lista flex min-h-0 items-center gap-3 overflow-hidden rounded-2xl border-2 px-4
                            boton-lista
                            text-left font-bold"
                     [style.animation-delay]="i * 40 + 'ms'"
@@ -893,38 +909,26 @@
                       {{ numeroEnLista(i) }}
                     </span>
 
-                    <span class="flex min-w-0 flex-1 flex-col">
+                    <span class="flex min-w-0 flex-1 flex-col leading-tight">
                       <span class="truncate">{{ empleado.nombreParaMostrar }}</span>
 
                       <!--
-                        La etiqueta de estado responde de un vistazo la
-                        pregunta "¿ya marque?" sin teclear nada, que era justo
-                        el problema del lector de huella.
+                        El estado responde de un vistazo "¿ya marque?" sin
+                        teclear nada. Un solo renglon corto: con dos ("Adentro
+                        desde las 10:46") esas casillas crecian y la
+                        cuadricula se desalineaba. La palomita va en el texto,
+                        asi no depende solo del color.
                       -->
                       @if (empleado.estado === 'adentro') {
-                        <span
-                          class="mt-0.5 flex items-center gap-1.5 text-sm font-medium"
-                          style="color: var(--kiosko-entrada)"
-                        >
-                          <span
-                            class="latir-suave inline-block h-2 w-2 rounded-full"
-                            style="background-color: var(--kiosko-entrada)"
-                          ></span>
-                          Adentro desde las {{ empleado.horaUltimaMarca }}
+                        <span class="texto-estado-lista truncate font-semibold" style="color: var(--kiosko-entrada)">
+                          &check; Entró {{ empleado.horaUltimaMarca }}
                         </span>
                       } @else if (empleado.estado === 'afuera') {
-                        <span class="text-texto-suave mt-0.5 text-sm font-medium">
-                          Salió a las {{ empleado.horaUltimaMarca }}
+                        <span class="texto-estado-lista text-texto-suave truncate font-medium">
+                          Salió {{ empleado.horaUltimaMarca }}
                         </span>
                       }
                     </span>
-
-                    <!-- Palomita: refuerza el estado sin depender solo del color -->
-                    @if (empleado.estado === 'adentro') {
-                      <span class="shrink-0 text-2xl" style="color: var(--kiosko-entrada)">
-                        &check;
-                      </span>
-                    }
                   </button>
                 }
               </div>
@@ -1257,7 +1261,10 @@
             Cerrar
           </button>
         } @else {
-          <p class="text-xl font-bold" style="color: var(--kiosko-entrada)">✔ Tu registro ya quedó guardado.</p>
+          <p class="text-xl font-bold"
+             [style.color]="ventana.registrado.tipo === 'entrada' ? 'var(--kiosko-entrada)' : 'var(--kiosko-salida)'">
+            ✔ {{ ventana.registrado.tipo === 'entrada' ? 'ENTRADA' : 'SALIDA' }} registrada a las {{ ventana.registrado.hora }}
+          </p>
           <p class="texto-nombre-grande font-bold">{{ ventana.nombre }}, elige tu PIN</p>
           <p class="text-texto-suave max-w-md text-xl">
             Estás usando el PIN que te dio el jefe. Elige 4 números que <b class="text-texto">sólo tú</b> sepas.

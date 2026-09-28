@@ -34,7 +34,7 @@ import { Component, OnDestroy, OnInit, computed, input, signal } from '@angular/
       <div class="texto-reloj font-bold leading-none tabular-nums tracking-tight">
         {{ horaTexto() }}
       </div>
-      <div class="text-texto-suave texto-fecha mt-2 capitalize">{{ fechaTexto() }}</div>
+      <div class="text-texto-suave texto-fecha mt-2">{{ fechaTexto() }}</div>
     </div>
   `,
 })
@@ -76,15 +76,21 @@ export class Reloj implements OnInit, OnDestroy {
     }),
   );
 
-  protected readonly fechaTexto = computed(() =>
-    this.ahora().toLocaleDateString('es-MX', {
+  /**
+   * "Lunes, 28 de septiembre de 2026": mayuscula SOLO al inicio. Antes se
+   * usaba la clase `capitalize` de CSS, que pone mayuscula a CADA palabra
+   * ("28 De Septiembre De 2026"), y en español eso esta mal.
+   */
+  protected readonly fechaTexto = computed(() => {
+    const texto = this.ahora().toLocaleDateString('es-MX', {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
       year: 'numeric',
       timeZone: this.zonaHoraria(),
-    }),
-  );
+    });
+    return texto.charAt(0).toUpperCase() + texto.slice(1);
+  });
 
   ngOnInit(): void {
     this.temporizador = setInterval(() => this.ahora.set(new Date()), this.intervaloMs());

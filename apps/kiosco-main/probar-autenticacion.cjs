@@ -83,6 +83,25 @@ app.whenReady().then(async () => {
   const trasOlvido = await bd.verificarPin(psanchez, PIN_DE_LA_SEMILLA);
   comprobar('y el PIN correcto vuelve a funcionar', trasOlvido.ok === true);
 
+  // --- 8c. El jefe le acaba de dar un PIN temporal ---
+  // El kiosco todavia tiene el PIN viejo. Antes de contar el fallo pregunta a
+  // la nube; aqui la "nube" es una funcion que devuelve el registro al dia.
+  const rmunoz = bd.buscarPorUsuario('rmunoz');
+  const conPinNuevo = Object.assign({}, rmunoz, { pinHash: bd.hashearPin('7302'), pinTemporal: true });
+  const alDiaNube = await bd.verificarPin(rmunoz, '7302', async () => conPinNuevo);
+  comprobar('PIN recien cambiado por el jefe: la nube lo confirma y entra',
+    alDiaNube.ok === true && alDiaNube.empleado.pinTemporal === true);
+  comprobar('y no cuenta como intento fallido', bd.estadoDeBloqueo(rmunoz.id).fallidos === 0);
+  const mismoHash = await bd.verificarPin(rmunoz, '7302', async () => rmunoz);
+  comprobar('si la nube trae el mismo PIN de antes, si cuenta como fallo',
+    mismoHash.ok === false && bd.estadoDeBloqueo(rmunoz.id).fallidos === 1);
+  const sinNube = await bd.verificarPin(rmunoz, '7302', async () => null);
+  comprobar('sin internet, igual que siempre: fallo',
+    sinNube.ok === false && bd.estadoDeBloqueo(rmunoz.id).fallidos === 2);
+  const bajaEnNube = await bd.verificarPin(rmunoz, '7302', async () => Object.assign({}, conPinNuevo, { activo: false }));
+  comprobar('si en la nube ya esta dado de baja, no entra', bajaEnNube.ok === false);
+  await bd.verificarPin(rmunoz, PIN_DE_LA_SEMILLA); // limpia sus fallos
+
   // --- 9. Apellidos con acentos y compuestos ---
   comprobar('"De la Cruz" generó jdelacruz', bd.buscarPorUsuario('jdelacruz') !== null);
   comprobar('"Munoz" generó rmunoz', bd.buscarPorUsuario('rmunoz') !== null);
