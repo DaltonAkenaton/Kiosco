@@ -65,6 +65,7 @@ import {
   effect,
   inject,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import type {
@@ -267,6 +268,15 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
   private ultimaListaPorSincronizacion: string | null = null;
 
   constructor() {
+    /**
+     * Al pasar a "teclea tu PIN", el kiosco se pone al dia con la nube
+     * mientras la persona teclea: si su ultimo registro fue en OTRO kiosco,
+     * la sugerencia de ENTRADA/SALIDA ya lo toma en cuenta. No espera nada.
+     */
+    effect(() => {
+      if (this.paso() === 'pin') untracked(() => this.puente.prepararRegistro());
+    });
+
     /**
      * Durante la pausa se SUELTA la camara.
      *

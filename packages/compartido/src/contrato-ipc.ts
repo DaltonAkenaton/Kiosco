@@ -64,6 +64,7 @@ export const CANALES = {
   registrarMarca: 'kiosco:registrar-marca',
   /** El empleado cancelo en la confirmacion: se tira el pase sin registrar nada. */
   cancelarRegistro: 'kiosco:cancelar-registro',
+  prepararRegistro: 'kiosco:preparar-registro',
   /** Tras registrar con un PIN temporal: el empleado elige uno propio (D-042). */
   elegirPin: 'kiosco:elegir-pin',
   /** Pide el estado actual: conexion, pendientes, camara. */
@@ -251,6 +252,8 @@ export interface ApiKiosco {
    * mensaje se perdiera, el pase caducaria solo en un minuto.
    */
   cancelarRegistro(tokenRegistro: string): Promise<void>;
+  /** "Alguien eligio su nombre": el kiosco se pone al dia mientras teclea el PIN. */
+  prepararRegistro(): Promise<void>;
 
   /**
    * Guarda el PIN que eligio el empleado (D-042). El permiso para hacerlo es

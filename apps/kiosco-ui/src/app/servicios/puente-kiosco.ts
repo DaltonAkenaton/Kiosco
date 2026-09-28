@@ -179,6 +179,15 @@ export class PuenteKiosco {
     return window.kiosco.elegirPin(tokenCambioPin, pinNuevo);
   }
 
+  /** Nunca espera ni falla: la pantalla no depende de la red. */
+  prepararRegistro(): void {
+    try {
+      void window.kiosco?.prepararRegistro?.().catch(() => {});
+    } catch {
+      // Es solo una ayuda para sugerir mejor; si falla, se sugiere como antes.
+    }
+  }
+
   async cancelarRegistro(tokenRegistro: string): Promise<void> {
     await window.kiosco?.cancelarRegistro(tokenRegistro);
   }

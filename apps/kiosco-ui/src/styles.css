@@ -69,12 +69,243 @@ body {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
+/* Los controles del navegador (calendario de las fechas, flechita de las
+   listas, casillas) se dibujan en su version OSCURA. Sin esto el icono del
+   calendario salia negro sobre fondo negro: invisible. */
+html {
+  color-scheme: dark;
+}
+
 /* En un kiosco nadie necesita seleccionar texto con el raton, y permitirlo
    solo invita a que la gente juegue con la pantalla. */
 body {
   user-select: none;
   cursor: default;
   overflow: hidden;
+  /* Un resplandor muy tenue del color institucional arriba a la derecha: le
+     quita lo "plano" a la pantalla sin distraer. Es un fondo fijo: no se
+     anima ni cuesta nada. */
+  background-image:
+    radial-gradient(70rem 40rem at 85% -15%, color-mix(in srgb, var(--kiosko-institucion-primario) 55%, transparent), transparent 70%),
+    radial-gradient(50rem 30rem at -10% 110%, color-mix(in srgb, var(--kiosko-institucion-secundario) 10%, transparent), transparent 70%);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ==========================================================================
+   LO QUE SE PUEDE PICAR, SE VE QUE SE PUEDE PICAR  (28-09-2026)
+   ==========================================================================
+   Tailwind deja los botones con el cursor de flecha. En una pantalla que se
+   usa con raton, la "manita" es la forma en que todo el mundo sabe que algo
+   se puede picar: sin ella, la gente duda.
+   ========================================================================== */
+button:not(:disabled),
+[role='button'],
+select,
+summary,
+input[type='checkbox'],
+input[type='radio'],
+input[type='date'],
+label:has(> input[type='checkbox']) {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+/* Foco visible solo con teclado (Tab), no al picar con el raton. */
+:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--kiosko-institucion-secundario) 85%, white);
+  outline-offset: 3px;
+}
+
+/* Campos de texto, fechas y listas: el borde se ilumina al escribir en ellos. */
+input[type='text'],
+input[type='password'],
+input[type='date'],
+select {
+  transition:
+    border-color 150ms ease-out,
+    box-shadow 150ms ease-out,
+    background-color 150ms ease-out;
+}
+input[type='text']:focus,
+input[type='password']:focus,
+input[type='date']:focus,
+select:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--kiosko-institucion-secundario) 80%, white);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--kiosko-institucion-secundario) 25%, transparent);
+}
+input[type='text']:hover:not(:focus),
+input[type='password']:hover:not(:focus),
+input[type='date']:hover:not(:focus),
+select:hover:not(:focus) {
+  border-color: color-mix(in srgb, var(--kiosko-borde) 60%, var(--kiosko-texto-suave));
+}
+input[type='checkbox'] {
+  accent-color: var(--kiosko-institucion-secundario);
+}
+
+/* ==========================================================================
+   PIEZAS QUE SE REPITEN
+   ========================================================================== */
+
+/*
+  El boton principal. El azul institucional (#003d5c) es muy oscuro para un
+  fondo oscuro: solo, el boton "Definirla ahora" casi no se distinguia. Se le
+  da un degradado un poco mas claro, un borde y una sombra para que resalte
+  sin cambiar de color.
+*/
+.boton-primario {
+  color: #fff;
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--kiosko-institucion-primario) 70%, #3b82c4) 0%,
+    var(--kiosko-institucion-primario) 100%
+  );
+  background-color: var(--kiosko-institucion-primario);
+  border: 1px solid color-mix(in srgb, var(--kiosko-institucion-primario) 55%, #7fb3dc);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.12),
+    0 6px 18px -6px color-mix(in srgb, var(--kiosko-institucion-primario) 80%, black);
+}
+.boton-primario:hover:not(:disabled) {
+  filter: brightness(1.15);
+}
+
+/* El boton secundario: superficie con borde, que se aclara al pasar. */
+.boton-secundario {
+  background-color: var(--kiosko-superficie);
+  border: 2px solid var(--kiosko-borde);
+}
+.boton-secundario:hover:not(:disabled) {
+  background-color: var(--kiosko-borde);
+}
+
+/* Tarjetas y ventanas: una luz sutil arriba y una sombra que las despega del fondo. */
+.tarjeta {
+  background-color: var(--kiosko-superficie);
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.035), transparent 40%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.05),
+    0 24px 60px -24px rgb(0 0 0 / 0.7);
+}
+
+/* Avisos de color, con el mismo aspecto en todos lados. */
+.aviso-atencion {
+  background-color: color-mix(in srgb, var(--kiosko-atencion) 12%, transparent);
+  border: 2px solid color-mix(in srgb, var(--kiosko-atencion) 70%, transparent);
+}
+.aviso-peligro {
+  background-color: color-mix(in srgb, var(--kiosko-peligro) 16%, transparent);
+  border: 2px solid color-mix(in srgb, var(--kiosko-peligro) 55%, transparent);
+  color: color-mix(in srgb, var(--kiosko-peligro) 80%, white);
+}
+
+/* Etiquetas pequeñas ("Foto tapada", "ENTRADA"): una pastilla de color. */
+.pastilla {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  padding: 0.15rem 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+  background-color: color-mix(in srgb, currentColor 14%, transparent);
+  border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+}
+
+/* El fondo oscuro detras de toda ventana (confirmacion, PIN, pausa...). */
+.fondo-dialogo {
+  background-color: rgb(15 23 42 / 0.8);
+  backdrop-filter: blur(8px);
+  animation: fondo-aparecer 200ms ease-out;
+}
+
+/* ==========================================================================
+   LA CAJA DE AYUDA (componentes/ayuda.ts)
+   ==========================================================================
+   Vive en la "capa superior" del navegador (atributo popover): por eso usa
+   position: fixed y quita el margin/inset que el navegador le pone de fabrica
+   para centrarla.
+   ========================================================================== */
+.ayuda-boton {
+  width: 1.45rem;
+  height: 1.45rem;
+  margin-left: 0.2rem;
+  border-color: var(--kiosko-texto-suave);
+  color: var(--kiosko-texto-suave);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-size: 0.85rem;
+}
+.ayuda-boton:hover,
+.ayuda-boton-abierta {
+  border-color: var(--kiosko-texto);
+  color: var(--kiosko-fondo);
+  background-color: var(--kiosko-texto);
+}
+
+.ayuda-caja {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  width: min(22rem, calc(100vw - 24px));
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem 1.1rem;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--kiosko-borde) 80%, var(--kiosko-texto-suave));
+  background-color: color-mix(in srgb, var(--kiosko-superficie) 92%, white);
+  color: var(--kiosko-texto);
+  box-shadow: 0 20px 50px -12px rgb(0 0 0 / 0.75);
+  text-align: left;
+  font-size: 1rem;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  user-select: text;
+  overflow: visible;
+}
+.ayuda-caja:popover-open {
+  animation: ayuda-aparecer 160ms cubic-bezier(0.2, 0.9, 0.3, 1.15);
+}
+/* Cerrada, oculta. El navegador ya lo hace, pero el `display: flex` de
+   arriba le ganaba y las cajas cerradas se veian en una esquina. */
+.ayuda-caja:not(:popover-open) {
+  display: none;
+}
+.ayuda-caja[data-lado='arriba'] {
+  transform-origin: var(--flecha-x) 100%;
+}
+.ayuda-caja[data-lado='abajo'] {
+  transform-origin: var(--flecha-x) 0%;
+}
+/* La flechita que apunta al simbolo. */
+.ayuda-caja::before {
+  content: '';
+  position: absolute;
+  left: calc(var(--flecha-x) - 7px);
+  width: 14px;
+  height: 14px;
+  background: inherit;
+  border: inherit;
+  transform: rotate(45deg);
+}
+.ayuda-caja[data-lado='abajo']::before {
+  top: -8px;
+  border-right: none;
+  border-bottom: none;
+}
+.ayuda-caja[data-lado='arriba']::before {
+  bottom: -8px;
+  border-left: none;
+  border-top: none;
 }
 
 /* ==========================================================================
@@ -301,16 +532,110 @@ body {
 @keyframes aparecer-suave {
   from {
     opacity: 0;
-    transform: scale(0.96);
+    transform: translateY(14px) scale(0.965);
   }
   to {
     opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* La curva termina con un rebote apenas perceptible: la ventana "llega" en
+   vez de solo encenderse. 240 ms: se nota, no hace esperar. */
+.aparecer-suave {
+  animation: aparecer-suave 240ms cubic-bezier(0.2, 0.9, 0.3, 1.12);
+}
+
+@keyframes fondo-aparecer {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Solo crece, sin partir de transparente: si por algo la animacion no
+   avanzara (se vio en una ventana oculta), la ayuda se ve igual. */
+@keyframes ayuda-aparecer {
+  from {
+    transform: scale(0.94);
+  }
+  to {
     transform: scale(1);
   }
 }
 
-.aparecer-suave {
-  animation: aparecer-suave 180ms ease-out;
+/* --------------------------------------------------------------------------
+   El circulo de ENTRADA/SALIDA en la tarjeta de exito
+   --------------------------------------------------------------------------
+   Llega con un pequeño rebote y suelta una onda que se desvanece: el "listo"
+   se entiende de reojo, aunque la persona ya se este dando la vuelta.
+   -------------------------------------------------------------------------- */
+@keyframes icono-llega {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes onda {
+  from {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  to {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+.icono-llega {
+  position: relative;
+  animation: icono-llega 420ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+.icono-llega::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: inherit;
+  animation: onda 900ms 180ms ease-out both;
+  z-index: -1;
+}
+
+/* --------------------------------------------------------------------------
+   La barra que se vacia: cuanto falta para que la tarjeta de exito se quite
+   --------------------------------------------------------------------------
+   La duracion la pone el HTML con la configuracion (segundosMensajeExito).
+   -------------------------------------------------------------------------- */
+@keyframes vaciarse {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+.barra-tiempo {
+  transform-origin: left;
+  animation: vaciarse linear forwards;
+}
+
+/* Los elementos de la tarjeta de exito entran uno tras otro, muy rapido. */
+.escalon-1 {
+  animation: entrar-desde-abajo 260ms 60ms ease-out backwards;
+}
+.escalon-2 {
+  animation: entrar-desde-abajo 260ms 120ms ease-out backwards;
+}
+.escalon-3 {
+  animation: entrar-desde-abajo 260ms 180ms ease-out backwards;
 }
 
 /* --------------------------------------------------------------------------
@@ -402,13 +727,89 @@ body {
    -------------------------------------------------------------------------- */
 .boton-tactil {
   transition:
-    transform 120ms ease-out,
+    transform 140ms ease-out,
     background-color 150ms ease-out,
-    border-color 150ms ease-out;
+    border-color 150ms ease-out,
+    box-shadow 150ms ease-out,
+    color 150ms ease-out,
+    opacity 150ms ease-out,
+    filter 150ms ease-out;
 }
 
-.boton-tactil:active {
+/* Al pasar el raton se levanta un pixel: "esto se puede picar". */
+.boton-tactil:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.boton-tactil:active:not(:disabled) {
   transform: scale(0.97);
+}
+
+/* --------------------------------------------------------------------------
+   La lista de empleados
+   --------------------------------------------------------------------------
+   Al pasar el raton, la casilla se levanta y se ilumina su borde.
+
+   Al teclear la PRIMERA cifra, las casillas que ya no pueden ser se apagan y
+   las que si pueden resaltan: quien tecleo "1" ve de inmediato que le queda
+   elegir entre el 10 y el 19. Menos que leer, menos errores.
+   -------------------------------------------------------------------------- */
+.boton-lista {
+  transition:
+    transform 160ms ease-out,
+    opacity 200ms ease-out,
+    filter 200ms ease-out,
+    border-color 150ms ease-out,
+    background-color 150ms ease-out,
+    box-shadow 160ms ease-out;
+}
+.boton-lista:hover {
+  border-color: color-mix(in srgb, var(--kiosko-texto-suave) 70%, transparent);
+  box-shadow: 0 10px 24px -14px rgb(0 0 0 / 0.8);
+}
+.boton-lista.atenuado {
+  opacity: 0.22;
+  filter: saturate(0.4);
+  transform: scale(0.97);
+}
+.boton-lista.candidato {
+  border-color: color-mix(in srgb, var(--kiosko-institucion-secundario) 80%, white);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--kiosko-institucion-secundario) 22%, transparent);
+}
+
+/* --------------------------------------------------------------------------
+   La camara: un marco que la despega del fondo, y la etiqueta "En vivo"
+   -------------------------------------------------------------------------- */
+.marco-camara {
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.04),
+    0 30px 70px -30px rgb(0 0 0 / 0.9);
+}
+
+@keyframes parpadeo-vivo {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+.punto-vivo {
+  animation: parpadeo-vivo 1.6s ease-in-out infinite;
+}
+
+/* Renglones de la tabla del modo administrador: aparecen al buscar. */
+@keyframes fila-aparecer {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.fila-aparecer {
+  animation: fila-aparecer 220ms ease-out backwards;
 }
 
 /* --------------------------------------------------------------------------
@@ -451,11 +852,22 @@ body {
   .entrar-escalonado,
   .punto-llenado,
   .sacudir,
-  .latir-suave {
+  .latir-suave,
+  .icono-llega,
+  .icono-llega::after,
+  .escalon-1,
+  .escalon-2,
+  .escalon-3,
+  .punto-vivo,
+  .fila-aparecer,
+  .fondo-dialogo,
+  .ayuda-caja:popover-open {
     animation: none;
   }
 
-  .boton-tactil:active {
+  .boton-tactil:active,
+  .boton-tactil:hover,
+  .boton-lista.atenuado {
     transform: none;
   }
 }

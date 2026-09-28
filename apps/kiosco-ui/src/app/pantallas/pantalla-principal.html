@@ -234,8 +234,7 @@
 -->
 @if (pidiendoCodigoDePausa()) {
   <div
-    class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto px-10 py-4"
-    style="background-color: rgb(15 23 42 / 0.82); backdrop-filter: blur(6px)"
+    class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto px-10 py-4 fondo-dialogo"
     (click)="cerrarPausa()"
   >
     <!--
@@ -243,7 +242,7 @@
       cierre el dialogo. Sin eso, teclear en la tarjeta la cerraria.
     -->
     <div
-      class="aparecer-suave bg-superficie border-borde w-full max-w-xl overflow-hidden
+      class="aparecer-suave tarjeta bg-superficie border-borde w-full max-w-xl overflow-hidden
              rounded-3xl border-2 shadow-2xl"
       (click)="$event.stopPropagation()"
     >
@@ -383,11 +382,10 @@
 -->
 @if (dandoDeAlta()) {
   <div
-    class="fixed inset-0 z-50 flex items-center justify-center px-10"
-    style="background-color: rgb(15 23 42 / 0.82); backdrop-filter: blur(6px)"
+    class="fixed inset-0 z-50 flex items-center justify-center px-10 fondo-dialogo"
   >
     <form
-      class="aparecer-suave bg-superficie border-borde flex w-full max-w-xl flex-col gap-5 rounded-3xl
+      class="aparecer-suave tarjeta bg-superficie border-borde flex w-full max-w-xl flex-col gap-5 rounded-3xl
              border-2 px-12 py-10 text-center shadow-2xl"
       (submit)="$event.preventDefault(); enviarAlta()"
     >
@@ -399,8 +397,7 @@
         </p>
         <button
           type="button"
-          class="boton-tactil self-center rounded-2xl px-10 py-3 text-xl font-bold"
-          style="background-color: var(--kiosko-institucion-primario)"
+          class="boton-tactil self-center rounded-2xl px-10 py-3 text-xl font-bold boton-primario"
           (click)="cerrarAlta()"
         >
           Listo
@@ -437,8 +434,7 @@
         <div class="flex justify-center gap-4">
           <button
             type="submit"
-            class="boton-tactil rounded-2xl px-10 py-3 text-xl font-bold"
-            style="background-color: var(--kiosko-institucion-primario)"
+            class="boton-tactil rounded-2xl px-10 py-3 text-xl font-bold boton-primario"
             [disabled]="enviandoAlta()"
           >
             {{ enviandoAlta() ? 'Revisando…' : 'Dar de alta' }}
@@ -463,11 +459,10 @@
 
 @if (pendiente(); as registro) {
   <div
-    class="fixed inset-0 z-50 flex items-center justify-center px-10"
-    style="background-color: rgb(15 23 42 / 0.82); backdrop-filter: blur(6px)"
+    class="fixed inset-0 z-50 flex items-center justify-center px-10 fondo-dialogo"
   >
     <div
-      class="aparecer-suave bg-superficie w-full max-w-3xl overflow-hidden rounded-3xl border-4 shadow-2xl"
+      class="aparecer-suave tarjeta bg-superficie w-full max-w-3xl overflow-hidden rounded-3xl border-4 shadow-2xl"
       [style.border-color]="
         registro.tipo === 'entrada' ? 'var(--kiosko-entrada)' : 'var(--kiosko-salida)'
       "
@@ -615,28 +610,33 @@
     esperar. Cualquier tecla hace lo mismo (ver alPresionarTecla).
   -->
   <div
-    class="fixed inset-0 z-50 flex cursor-pointer items-center justify-center px-10"
-    style="background-color: rgb(15 23 42 / 0.82); backdrop-filter: blur(6px)"
+    class="fixed inset-0 z-50 flex cursor-pointer items-center justify-center px-10 fondo-dialogo"
     (click)="descartarExito()"
   >
     <div
-      class="aparecer-suave bg-superficie w-full max-w-3xl overflow-hidden rounded-3xl border-4 shadow-2xl"
+      class="aparecer-suave tarjeta bg-superficie w-full max-w-3xl overflow-hidden rounded-3xl border-4 shadow-2xl"
       [style.border-color]="
         registro.tipo === 'entrada' ? 'var(--kiosko-entrada)' : 'var(--kiosko-salida)'
       "
     >
-      <!-- Franja de color arriba: se identifica de lejos sin deslumbrar -->
-      <div
-        class="h-3 w-full"
-        [style.background-color]="
-          registro.tipo === 'entrada' ? 'var(--kiosko-entrada)' : 'var(--kiosko-salida)'
-        "
-      ></div>
+      <!--
+        Franja de color arriba: se identifica de lejos sin deslumbrar. Se va
+        vaciando: dice cuanto falta para que la tarjeta se quite sola.
+      -->
+      <div class="h-3 w-full" style="background-color: rgb(255 255 255 / 0.06)">
+        <div
+          class="barra-tiempo h-full w-full"
+          [style.background-color]="
+            registro.tipo === 'entrada' ? 'var(--kiosko-entrada)' : 'var(--kiosko-salida)'
+          "
+          [style.animation-duration]="(config()?.segundosMensajeExito ?? 2) + 's'"
+        ></div>
+      </div>
 
       <div class="flex flex-col items-center gap-5 px-12 py-10 text-center">
-        <!-- Icono dentro de un circulo de color -->
+        <!-- Icono dentro de un circulo de color. Llega con un rebote y una onda. -->
         <div
-          class="icono-accion flex items-center justify-center rounded-full font-bold"
+          class="icono-accion icono-llega flex items-center justify-center rounded-full font-bold"
           [style.background-color]="
             registro.tipo === 'entrada' ? 'var(--kiosko-entrada)' : 'var(--kiosko-salida)'
           "
@@ -655,14 +655,14 @@
           {{ registro.tipo === 'entrada' ? 'ENTRADA' : 'SALIDA' }}
         </p>
 
-        <p class="texto-instruccion font-medium">registrada a las</p>
+        <p class="escalon-1 texto-instruccion font-medium">registrada a las</p>
 
-        <p class="texto-hora-grande font-bold tabular-nums">{{ registro.hora }}</p>
+        <p class="escalon-1 texto-hora-grande font-bold tabular-nums">{{ registro.hora }}</p>
 
         <!-- Quien checo: responde el "¿si fui yo?" -->
-        <p class="text-texto-suave texto-nombre-grande font-semibold">{{ registro.nombre }}</p>
+        <p class="escalon-2 text-texto-suave texto-nombre-grande font-semibold">{{ registro.nombre }}</p>
 
-        <p class="text-texto-suave texto-instruccion mt-1">Ya puedes retirarte</p>
+        <p class="escalon-3 text-texto-suave texto-instruccion mt-1">Ya puedes retirarte</p>
 
         <p class="text-texto-suave mt-2 text-sm opacity-60">
           Da clic o presiona cualquier tecla para continuar
@@ -711,7 +711,7 @@
     <!-- ================= Columna izquierda: la camara ================= -->
     <section class="flex justify-center">
       <div
-        class="border-borde relative aspect-4/3 max-h-[65vh] w-full max-w-2xl overflow-hidden rounded-3xl border-4"
+        class="marco-camara border-borde relative aspect-4/3 max-h-[65vh] w-full max-w-2xl overflow-hidden rounded-3xl border-4"
         style="background-color: #000"
       >
         <!--
@@ -734,6 +734,21 @@
           muted
           playsinline
         ></video>
+
+        <!--
+          "En vivo · no se graba". Lo pide el aviso de privacidad (CLAUDE.md
+          12): el video de la pantalla NO se guarda; solo la foto del momento
+          de checar. Dicho donde la gente se esta viendo, no solo en un papel.
+        -->
+        @if (camara.disponible()) {
+          <span
+            class="absolute left-3 top-3 flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold"
+            style="background-color: rgb(0 0 0 / 0.55); color: rgb(255 255 255 / 0.9); backdrop-filter: blur(4px)"
+          >
+            <span class="punto-vivo inline-block h-2.5 w-2.5 rounded-full" style="background-color: var(--kiosko-peligro)"></span>
+            En vivo · no se graba
+          </span>
+        }
 
         <!--
           Aviso de camara caida (CLAUDE.md 5).
@@ -774,6 +789,7 @@
         <kiosco-reloj
           [zonaHoraria]="configuracion.zonaHoraria"
           [intervaloMs]="configuracion.intervaloRelojMs"
+          [desfaseMs]="estado()?.desfaseRelojMs ?? 0"
         />
       }
 
@@ -888,7 +904,9 @@
                            texto-lista flex min-h-0 items-center gap-3 overflow-hidden rounded-2xl border-2 px-4
                            boton-lista
                            text-left font-bold"
-                    [style.animation-delay]="i * 40 + 'ms'"
+                    [style.animation-delay]="i * 30 + 'ms'"
+                    [class.atenuado]="!!seleccionEnCurso() && !numeroEnLista(i).startsWith(seleccionEnCurso())"
+                    [class.candidato]="!!seleccionEnCurso() && numeroEnLista(i).startsWith(seleccionEnCurso())"
                     [style.border-color]="
                       empleado.estado === 'adentro' ? 'var(--kiosko-entrada)' : null
                     "
@@ -973,11 +991,9 @@
 
       <!-- ---------- Error ---------- -->
       @if (error(); as mensaje) {
-        <p
-          class="sacudir max-w-xl rounded-2xl px-8 py-5 text-center text-3xl font-bold"
-          style="background-color: rgb(239 68 68 / 0.18); color: var(--kiosko-peligro)"
-        >
-          {{ mensaje }}
+        <p class="sacudir aviso-peligro flex max-w-xl items-center gap-4 rounded-2xl px-7 py-5 text-left text-2xl font-bold">
+          <span class="shrink-0 text-4xl leading-none" aria-hidden="true">✕</span>
+          <span>{{ mensaje }}</span>
         </p>
       }
 
@@ -1092,15 +1108,16 @@
     sin abrir nada.
   -->
   <footer
-    class="border-borde text-texto-suave flex shrink-0 items-center justify-between border-t px-8 py-3 text-lg"
+    class="border-borde text-texto-suave flex shrink-0 items-center justify-between gap-4 border-t px-8 py-2.5 text-base"
+    style="background-color: rgb(15 23 42 / 0.55); backdrop-filter: blur(6px)"
   >
-    <div class="flex items-center gap-6">
+    <div class="flex min-w-0 flex-wrap items-center gap-3">
       <!-- La conexion con la oficina, en palabras y con su ⓘ (CLAUDE.md 7). -->
       @let c = conexion();
-      <span class="flex items-center gap-2" [style.color]="c.color">
-        <span class="h-3 w-3 rounded-full" [style.background-color]="c.color"></span>
+      <span class="pastilla gap-2 py-1 font-semibold" [style.color]="c.color">
+        <span class="h-2.5 w-2.5 rounded-full" [class.latir-suave]="estado()?.nube === 'en_linea'" [style.background-color]="c.color"></span>
         {{ c.texto }}
-        <kiosco-ayuda [titulo]="c.texto" [texto]="c.ayuda" alinear="izquierda" />
+        <kiosco-ayuda [titulo]="c.texto" [texto]="c.ayuda" />
       </span>
       @if (c.alta) {
         <button
@@ -1116,13 +1133,19 @@
 
       <!-- Sin nube no hay nada "por enviar": todo se queda aqui. -->
       @if (estado()?.nube !== 'apagada') {
-        <span class="flex items-center gap-1">
-          {{ estado()?.registrosPendientes ?? 0 }} por enviar
-          <kiosco-ayuda titulo="Registros por enviar" [texto]="AYUDA_POR_ENVIAR" alinear="izquierda" />
+        <span class="pastilla py-1 font-semibold"
+              [style.color]="(estado()?.registrosPendientes ?? 0) > 0 ? 'var(--kiosko-texto)' : 'var(--kiosko-texto-suave)'">
+          <span class="tabular-nums">{{ estado()?.registrosPendientes ?? 0 }}</span> por enviar
+          <kiosco-ayuda titulo="Registros por enviar" [texto]="AYUDA_POR_ENVIAR" />
         </span>
       }
 
-      <span [style.color]="camara.disponible() ? 'var(--kiosko-entrada)' : 'var(--kiosko-atencion)'">
+      <span class="pastilla py-1 font-semibold"
+            [style.color]="camara.disponible() ? 'var(--kiosko-entrada)' : 'var(--kiosko-atencion)'">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M23 7l-7 5 7 5V7z" /><rect x="1" y="5" width="15" height="14" rx="2" />
+        </svg>
         {{ camara.disponible() ? 'Cámara funcionando' : 'Sin cámara' }}
       </span>
     </div>
@@ -1248,10 +1271,9 @@
 -->
 @if (eligiendoPin(); as ventana) {
   <div
-    class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto px-10 py-4"
-    style="background-color: rgb(15 23 42 / 0.82); backdrop-filter: blur(6px)"
+    class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto px-10 py-4 fondo-dialogo"
   >
-    <div class="aparecer-suave bg-superficie border-borde w-full max-w-xl overflow-hidden rounded-3xl border-2 shadow-2xl">
+    <div class="aparecer-suave tarjeta bg-superficie border-borde w-full max-w-xl overflow-hidden rounded-3xl border-2 shadow-2xl">
       <div class="flex flex-col items-center gap-3 px-12 py-6 text-center">
         @if (finalPinNuevo(); as final) {
           <p class="texto-nombre-grande font-bold">{{ final.ok ? '✔ PIN guardado' : 'No se cambió' }}</p>

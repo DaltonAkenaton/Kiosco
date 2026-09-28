@@ -81,7 +81,7 @@ import {
 import { type FotoGuardada, guardarFoto, pareceObstruida } from '../servicios/fotos';
 import { registrarEvento } from '../datos/repositorio-eventos';
 import { estadoDePausa, pausar } from '../servicios/pausa';
-import { consultarCambiosDePin, enrolar, sincronizarPronto } from '../servicios/sincronizacion';
+import { enrolar, esperarBajadaEnCamino, ponerseAlDia, sincronizarPronto } from '../servicios/sincronizacion';
 import { detectarAnomaliasDeReloj, leerReloj } from '../servicios/reloj';
 import { ES_DESARROLLO } from '../entorno';
 import {
@@ -113,6 +113,7 @@ const estado: EstadoKiosco = {
   nombreKiosco: null,
   pausado: false,
   pausaTerminaEn: null,
+  desfaseRelojMs: 0,
 };
 
 /**
@@ -320,7 +321,7 @@ export function registrarManejadoresIpc(): void {
 
         // --- 2. Verificar el PIN ------------------------------------------
         const verificacion = await verificarPin(empleado, pin, async () =>
-          (await consultarCambiosDePin()) ? buscarPorId(empleado.id) : null,
+          (await ponerseAlDia()) ? buscarPorId(empleado.id) : null,
         );
 
         if (!verificacion.ok) {
@@ -359,6 +360,12 @@ export function registrarManejadoresIpc(): void {
         // mismo momento, antes de que la confirmacion aparezca. Ver
         // `identificar()` en pantalla-principal.ts.)
         const reloj = leerReloj();
+
+        // La consulta que empezo al elegir el nombre (prepararRegistro) trae
+        // lo registrado en OTRO kiosco. Casi siempre ya termino; si no, se
+        // espera un momento y se sigue con lo que haya. La hora ya quedo
+        // fijada arriba: esperar aqui no la mueve.
+        await esperarBajadaEnCamino(CONFIG.sincronizacion.msMaximoEsperaSugerencia);
 
         const sugerencia = sugerenciaPara(alDia.id, reloj.horaEstimadaMs);
         const accionSugerida = sugerencia.accion;
@@ -568,6 +575,16 @@ export function registrarManejadoresIpc(): void {
     if (!validacion.success) return;
 
     descartarPase(validacion.data.tokenRegistro);
+  });
+
+  // ---------------------------------------------------------------------
+  //  prepararRegistro: alguien eligio su nombre y va a teclear su PIN
+  // ---------------------------------------------------------------------
+  //  Sin datos de entrada y sin respuesta: solo dispara la consulta rapida.
+  //  Tiene su propio limite de frecuencia (ponerseAlDia), asi que llamarlo
+  //  de mas no genera trafico de mas.
+  ipcMain.handle(CANALES.prepararRegistro, async (): Promise<void> => {
+    void ponerseAlDia();
   });
 
   // ---------------------------------------------------------------------

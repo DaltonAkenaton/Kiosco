@@ -116,6 +116,11 @@ function registrarDesfase(desfase: number): void {
         `${marcadas} registro(s) sin enviar quedan marcados como hora dudosa`,
     );
   }
+  // A la pantalla solo si cambio de verdad: cada llamada a la nube mide un
+  // poco distinto (el viaje de ida y vuelta), y el reloj no debe temblar.
+  if (desfaseConocidoMs === null || Math.abs(desfase - desfaseConocidoMs) > S.cambioDesfaseParaPantallaMs) {
+    avisar({ desfaseRelojMs: desfase });
+  }
   ultimaMedicionMs = Date.now();
   desfaseConocidoMs = desfase;
   establecerDesfaseServidor(desfase);
@@ -337,6 +342,7 @@ async function bajar(credencial: CredencialKiosco, segundosLimite?: number): Pro
   }
 
   aplicarCatalogo(catalogo.data);
+  ultimaBajadaOkMs = Date.now();
   if (catalogo.data.empleados.length > 0 || catalogo.data.administradores.length > 0) {
     console.info(
       `[sync] catalogo: ${catalogo.data.empleados.length} empleado(s), ` +
@@ -360,40 +366,42 @@ function bajarSinEncimar(credencial: CredencialKiosco, segundosLimite?: number):
   return bajadaEnCamino;
 }
 
-let ultimaConsultaPorPinMs = 0;
+/** Cuando se bajo el catalogo completo por ultima vez (con exito). */
+let ultimaBajadaOkMs = 0;
 
 /**
- * Un PIN salio incorrecto: ¿lo acaba de cambiar el jefe?
+ * Ponerse al dia con la nube AHORA, sin esperar la vuelta normal.
  *
- * El catalogo baja cada `intervaloPullMs` (5 min). Sin esta consulta, quien
- * recibe un PIN temporal y va directo al kiosco falla, reintenta y queda
- * bloqueado, aunque su PIN sea correcto. Eso es impedir que alguien registre
- * (CLAUDE.md 1: la regla de oro).
+ * Dos usos (ver `segundosLimiteConsultaRapida` en configuracion.ts):
+ *   - al elegir nombre: el ultimo registro de esa persona pudo hacerse en
+ *     OTRO kiosco hace un minuto, y hay que sugerir bien ENTRADA o SALIDA;
+ *   - con un PIN incorrecto: el jefe pudo cambiarlo hace un minuto. Sin
+ *     esto, quien recibe su PIN temporal falla, reintenta y queda bloqueado
+ *     (CLAUDE.md 1: la regla de oro).
  *
- * Devuelve `true` si el catalogo se bajo. Nunca lanza, y sin internet ni
- * siquiera intenta: ahi el kiosco sigue exactamente como antes.
+ * Devuelve `true` si lo que hay en el kiosco esta al dia (recien bajado, o
+ * bajado hace menos de `segundosEntreConsultasRapidas`). Nunca lanza, y sin
+ * internet ni siquiera intenta: ahi el kiosco sigue como siempre.
  */
-export async function consultarCambiosDePin(): Promise<boolean> {
+export async function ponerseAlDia(): Promise<boolean> {
   if (!sincronizacionDisponible() || nube !== 'en_linea') return false;
   const credencial = leerCredencial();
   if (!credencial) return false;
 
-  const ahora = Date.now();
-  if (ahora - ultimaConsultaPorPinMs < S.segundosEntreConsultasPorPin * 1000) return false;
-  ultimaConsultaPorPinMs = ahora;
+  if (Date.now() - ultimaBajadaOkMs < S.segundosEntreConsultasRapidas * 1000) return true;
 
   // Si ya iba una bajada normal (con su limite largo), tampoco se le espera
   // mas de lo que se esperaria a una propia.
   let temporizadorLimite: NodeJS.Timeout | undefined;
   const limite = new Promise<never>((_, rechazar) => {
     temporizadorLimite = setTimeout(
-      () => rechazar(new SinConexion('consulta por PIN: tiempo agotado')),
-      S.segundosLimiteConsultaPorPin * 1000,
+      () => rechazar(new SinConexion('consulta rapida: tiempo agotado')),
+      S.segundosLimiteConsultaRapida * 1000,
     );
   });
 
   try {
-    await Promise.race([bajarSinEncimar(credencial, S.segundosLimiteConsultaPorPin), limite]);
+    await Promise.race([bajarSinEncimar(credencial, S.segundosLimiteConsultaRapida), limite]);
     ultimoPullMs = Date.now();
     return !sinPermisoDeLaNube();
   } catch {
@@ -403,6 +411,29 @@ export async function consultarCambiosDePin(): Promise<boolean> {
   } finally {
     clearTimeout(temporizadorLimite);
   }
+}
+
+/**
+ * Si hay una bajada en camino (la que empezo al elegir el nombre), la espera
+ * como mucho `msMaximo`. Asi la sugerencia de ENTRADA/SALIDA sale con lo
+ * recien bajado, sin que la red pueda hacer esperar mas de eso.
+ */
+export async function esperarBajadaEnCamino(msMaximo: number): Promise<void> {
+  const enCamino = bajadaEnCamino;
+  if (!enCamino) return;
+  let temporizador: NodeJS.Timeout | undefined;
+  await Promise.race([
+    enCamino.catch(() => {}),
+    new Promise<void>((listo) => {
+      temporizador = setTimeout(listo, msMaximo);
+    }),
+  ]);
+  clearTimeout(temporizador);
+}
+
+/** Solo pruebas: como si la ultima bajada hubiera sido hace mucho. */
+export function olvidarUltimaBajadaParaPrueba(): void {
+  ultimaBajadaOkMs = 0;
 }
 
 // ============================================================================
@@ -585,6 +616,7 @@ export function iniciarSincronizacion(opciones: { avisar: Avisar; obtenerEstado:
   if (leerEstadoLocal(CLAVE_DESFASE) !== null && Number.isFinite(guardado)) {
     desfaseConocidoMs = guardado;
     establecerDesfaseServidor(guardado);
+    avisar({ desfaseRelojMs: guardado });
   }
 
   if (!sincronizacionDisponible()) {
@@ -611,5 +643,5 @@ export function reiniciarSincronizacionParaPrueba(): void {
   ultimaMedicionMs = 0;
   desfaseConocidoMs = null;
   bajadaEnCamino = null;
-  ultimaConsultaPorPinMs = 0;
+  ultimaBajadaOkMs = 0;
 }

@@ -327,4 +327,12 @@ export interface EstadoKiosco {
 
   /** Cuando vuelve sola la pantalla (fecha ISO), o `null` si no hay pausa. */
   pausaTerminaEn: string | null;
+
+  /**
+   * Cuanto se adelanta el reloj de Windows respecto a la nube, en ms
+   * (negativo = va atrasado). El reloj de la pantalla lo resta para mostrar
+   * la MISMA hora con la que se guardan los registros: sin esto, dos kioscos
+   * con Windows desfasado mostraban horas distintas (28-09-2026: 1.5 min).
+   */
+  desfaseRelojMs: number;
 }

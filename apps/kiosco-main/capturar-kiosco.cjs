@@ -62,7 +62,8 @@ app.whenReady().then(async () => {
   };
   const js = (codigo) => w.webContents.executeJavaScript(codigo);
   const oprimir = async (tecla) => {
-    await js(`window.dispatchEvent(new KeyboardEvent('keydown', { key: ${JSON.stringify(tecla)}, bubbles: true }))`);
+    // Desde `document`: sube hasta `window` y lo oyen los dos tipos de oyente.
+    await js(`document.dispatchEvent(new KeyboardEvent('keydown', { key: ${JSON.stringify(tecla)}, bubbles: true }))`);
     await esperar(120);
   };
   /** Digitos, uno por uno. Para Esc o Enter: `oprimir`. */
@@ -76,6 +77,13 @@ app.whenReady().then(async () => {
 
   try {
     await capturar('principal');
+
+    // La ayuda de la barra de abajo: debe abrirse HACIA ARRIBA, dentro de la pantalla.
+    await js(`document.querySelector('footer .ayuda-boton')?.click()`);
+    await esperar(500);
+    await capturar('ayuda-barra');
+    await js(`document.body.click()`);
+    await esperar(300);
 
     await teclear('03');
     await esperar(400);
@@ -163,6 +171,21 @@ app.whenReady().then(async () => {
     await js(`document.querySelector('tbody tr, [role=row], li')?.click()`);
     await esperar(1500);
     await capturar('admin-foto');
+
+    // La ayuda del ultimo renglon: no debe ensanchar la tabla ni salirse.
+    await js(`[...document.querySelectorAll('tbody tr:last-child .ayuda-boton')].at(-1)?.click()`);
+    await esperar(500);
+    await capturar('admin-ayuda-tabla');
+    await oprimir('Escape');
+    await esperar(300);
+
+    // Guardar en memoria USB, y su ayuda de "Elegir otra carpeta".
+    await picar('Guardar en memoria USB');
+    await esperar(2500);
+    await capturar('admin-usb');
+    await js(`[...document.querySelectorAll('.ayuda-boton')].at(-1)?.click()`);
+    await esperar(500);
+    await capturar('admin-usb-ayuda');
   } catch (fallo) {
     console.log('se detuvo:', fallo.message);
   }

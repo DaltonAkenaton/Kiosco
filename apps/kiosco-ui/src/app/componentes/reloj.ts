@@ -63,7 +63,15 @@ export class Reloj implements OnInit, OnDestroy {
   /** Cada cuantos milisegundos se refresca. Viene de la configuracion central. */
   readonly intervaloMs = input<number>(1000);
 
-  private readonly ahora = signal(new Date());
+  /**
+   * Cuanto se adelanta Windows respecto a la nube (EstadoKiosco). Se resta
+   * para mostrar la hora con la que se GUARDAN los registros, aunque la PC
+   * tenga el reloj desfasado.
+   */
+  readonly desfaseMs = input<number>(0);
+
+  private readonly reloj = signal(Date.now());
+  private readonly ahora = computed(() => new Date(this.reloj() - this.desfaseMs()));
   private temporizador: ReturnType<typeof setInterval> | null = null;
 
   protected readonly horaTexto = computed(() =>
@@ -93,7 +101,7 @@ export class Reloj implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
-    this.temporizador = setInterval(() => this.ahora.set(new Date()), this.intervaloMs());
+    this.temporizador = setInterval(() => this.reloj.set(Date.now()), this.intervaloMs());
   }
 
   ngOnDestroy(): void {

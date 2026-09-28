@@ -55,6 +55,7 @@ app.whenReady().then(async () => {
 
   const estados = [];
   const dispositivos = [];
+  const marcasDeOtroKiosco = [];
 
   try {
     bd.abrirBaseDeDatos();
@@ -136,13 +137,36 @@ app.whenReady().then(async () => {
     comprobar('una baja en el panel desactiva al empleado en el kiosco', bd.buscarPorUsuario('fortiz')?.activo === false);
 
     // El jefe da un PIN y la persona va directo al kiosco: no hay que esperar
-    // la vuelta de 5 minutos, el kiosco pregunta al ver el PIN "incorrecto".
+    // la vuelta normal, el kiosco pregunta al ver el PIN "incorrecto".
     await nube.query(`update empleados set pin_hash = extensions.crypt('7302', extensions.gen_salt('bf', 4)) where id = $1`, [DGOMEZ_NUBE]);
+    bd.olvidarUltimaBajadaParaPrueba(); // la vuelta de arriba fue hace un instante
     const antesDeConsultar = bd.buscarPorUsuario('dgomez');
     const alMomento = await bd.verificarPin(antesDeConsultar, '7302', async () =>
-      (await bd.consultarCambiosDePin()) ? bd.buscarPorId(DGOMEZ_NUBE) : null);
+      (await bd.ponerseAlDia()) ? bd.buscarPorId(DGOMEZ_NUBE) : null);
     comprobar('un PIN recien dado en el panel vale al primer intento', alMomento.ok === true);
-    comprobar('otra consulta en seguida ya no llama a la nube', (await bd.consultarCambiosDePin()) === false);
+    const t0 = Date.now();
+    const otraVez = await bd.ponerseAlDia();
+    comprobar('otra consulta en seguida ya no llama a la nube (lo recien bajado sigue valiendo)',
+      otraVez === true && Date.now() - t0 < 50, `${Date.now() - t0} ms`);
+
+    // Entro por OTRO kiosco hace un minuto: al elegir su nombre aqui, el
+    // kiosco se pone al dia y sugiere lo contrario (28-09-2026: la lista de un
+    // kiosco decia "Entró" y la del otro "Salió").
+    const { rows: [otraPersona] } = await nube.query(`select id from empleados where usuario = 'mibanez'`);
+    const sugeridoAntes = bd.sugerenciaPara(otraPersona.id, Date.now()).accion;
+    const idOtroKiosco = crypto.randomUUID();
+    marcasDeOtroKiosco.push(idOtroKiosco);
+    await nube.query(
+      `insert into marcas (id, empleado_id, dispositivo_id, tipo, origen, hora_dispositivo, hora_estimada,
+                           monotonico_ms, arranque_id, desfase_servidor_ms, foto_estado, banderas)
+       values ($1, $2, '00000000-0000-4000-8000-00000000d001', $3, 'kiosco', now() - interval '1 minute',
+               now() - interval '1 minute', 1, gen_random_uuid(), 0, 'sin_camara', '{}')`,
+      [idOtroKiosco, otraPersona.id, sugeridoAntes]);
+    bd.olvidarUltimaBajadaParaPrueba();
+    await bd.ponerseAlDia();
+    const sugeridoDespues = bd.sugerenciaPara(otraPersona.id, Date.now()).accion;
+    comprobar('lo registrado en otro kiosco cambia la sugerencia al elegir el nombre',
+      sugeridoDespues !== sugeridoAntes, `${sugeridoAntes} -> ${sugeridoDespues}`);
 
     // ======================================================================
     console.log('\n--- el reloj se movio sin internet (CLAUDE.md 6) ---');
@@ -209,6 +233,7 @@ app.whenReady().then(async () => {
       await nube.query('rollback').catch(() => {});
       await nube.query('set session_replication_role = replica');
       await nube.query('delete from marcas where dispositivo_id = any($1)', [dispositivos]);
+      await nube.query('delete from marcas where id = any($1)', [marcasDeOtroKiosco]);
       await nube.query('delete from eventos_dispositivo where dispositivo_id = any($1)', [dispositivos]);
       await nube.query('delete from accesos_foto where dispositivo_id = any($1)', [dispositivos]);
       await nube.query(`delete from codigos_enrolamiento where nombre_dispositivo = 'Kiosco de la prueba'`);

@@ -613,26 +613,46 @@ export const SINCRONIZACION = {
   /** Cada cuanto intenta vaciar la bandeja de salida (outbox) hacia Supabase. */
   intervaloPushMs: 30_000,
 
-  /** Cada cuanto baja el catalogo de empleados, PINes y configuracion. */
-  intervaloPullMs: 5 * 60 * 1000,
+  /**
+   * Cada cuanto baja el catalogo de empleados, PINes, configuracion y los
+   * ultimos registros de los OTROS kioscos. Era 5 min; con dos kioscos se
+   * vio que la lista de uno decia "Entró" y la del otro "Salió" durante ese
+   * rato (28-09-2026). Con 2-3 kioscos, una vez por minuto es poco trafico.
+   */
+  intervaloPullMs: 60 * 1000,
 
   /**
-   * PIN incorrecto con internet: antes de contarlo como fallo, el kiosco
-   * pregunta a la nube si el jefe acaba de cambiarlo (sin esperar la vuelta
-   * de `intervaloPullMs`). Asi quien recibe un PIN temporal puede usarlo en
-   * seguida, en vez de fallar 5 veces y quedar bloqueado.
+   * CONSULTA RAPIDA: el kiosco pregunta a la nube en el momento, sin esperar
+   * la vuelta de `intervaloPullMs`, en dos casos:
+   *   - al elegir nombre (mientras se teclea el PIN): trae el ultimo registro
+   *     hecho en OTRO kiosco, para sugerir bien ENTRADA o SALIDA;
+   *   - con un PIN incorrecto: por si el jefe lo acaba de cambiar.
    *
-   * La consulta tiene su propio limite, corto: la persona esta frente a la
-   * pantalla viendo "Revisando tu PIN...". Si la red tarda mas, se queda
-   * como PIN incorrecto y la vuelta normal lo trae despues.
+   * Tiene su propio limite, corto: la persona esta frente a la pantalla. Si
+   * la red tarda mas, se sigue con lo que ya se sabia.
    */
-  segundosLimiteConsultaPorPin: 3,
+  segundosLimiteConsultaRapida: 3,
 
   /**
-   * Como mucho una consulta de esas cada tantos segundos. Sin esto, alguien
-   * probando PINes haria una llamada a la nube por cada intento.
+   * Una consulta rapida sirve para los siguientes tantos segundos: dentro de
+   * ese rato no se vuelve a llamar a la nube. Sin esto, alguien probando
+   * PINes haria una llamada por intento.
    */
-  segundosEntreConsultasPorPin: 10,
+  segundosEntreConsultasRapidas: 10,
+
+  /**
+   * Al validar el PIN, cuanto se espera como mucho a que termine la consulta
+   * rapida que empezo al elegir el nombre. Casi siempre ya termino (teclear
+   * el PIN toma mas); esto solo acota el peor caso.
+   */
+  msMaximoEsperaSugerencia: 1500,
+
+  /**
+   * El reloj de la pantalla se corrige con el desfase contra la nube, pero
+   * solo cuando este cambia mas que esto: cada medicion sale un poco
+   * distinta y el reloj no debe brincar un segundo cada 30.
+   */
+  cambioDesfaseParaPantallaMs: 1000,
 
   /** Cada cuanto reporta "sigo vivo" al panel (heartbeat). */
   intervaloHeartbeatMs: 60_000,

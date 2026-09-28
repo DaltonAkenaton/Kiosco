@@ -10,11 +10,17 @@
     <!-- ====================== INICIO DE SESION ====================== -->
     <div class="flex flex-1 items-center justify-center p-8">
       <form
-        class="bg-superficie border-borde flex w-full max-w-xl flex-col gap-5 rounded-3xl border-2 p-10"
+        class="aparecer-suave tarjeta border-borde flex w-full max-w-xl flex-col gap-5 rounded-3xl border-2 p-10"
         (submit)="$event.preventDefault(); entrar()"
       >
         <div>
-          <h2 class="text-3xl font-bold">Modo administrador</h2>
+          <h2 class="flex items-center gap-3 text-3xl font-bold">
+            <svg class="h-8 w-8 opacity-80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            Modo administrador
+          </h2>
           <p class="text-texto-suave mt-2 text-lg">
             Para revisar los registros y sus fotos.
           </p>
@@ -67,8 +73,7 @@
         <div class="flex gap-4">
           <button
             type="submit"
-            class="boton-tactil flex-1 rounded-2xl px-6 py-4 text-2xl font-bold"
-            style="background-color: var(--kiosko-institucion-primario)"
+            class="boton-tactil flex-1 rounded-2xl px-6 py-4 text-2xl font-bold boton-primario"
             [disabled]="entrando()"
           >
             {{ entrando() ? 'Revisando...' : 'Entrar' }}
@@ -102,7 +107,7 @@
       </div>
       <button
         type="button"
-        class="bg-superficie border-borde hover:bg-borde boton-tactil rounded-2xl border-2 px-8 py-3 text-xl font-bold"
+        class="boton-secundario boton-tactil rounded-2xl border-2 px-8 py-3 text-xl font-bold"
         (click)="salir()"
       >
         Salir
@@ -127,8 +132,7 @@
       }
     } @else {
       <div
-        class="mx-8 mt-4 rounded-2xl px-6 py-4"
-        style="background-color: rgb(234 179 8 / 0.14); border: 2px solid var(--kiosko-atencion)"
+        class="mx-8 mt-4 rounded-2xl px-6 py-4 aviso-atencion"
       >
         @if (s.tieneContrasenaDeRecuperacion) {
           <p class="text-lg font-bold" style="color: var(--kiosko-atencion)">
@@ -156,8 +160,7 @@
         } @else if (!definiendoRecuperacion()) {
           <button
             type="button"
-            class="boton-tactil mt-3 rounded-xl px-5 py-2 text-lg font-bold"
-            style="background-color: var(--kiosko-institucion-primario)"
+            class="boton-tactil mt-3 rounded-xl px-5 py-2 text-lg font-bold boton-primario"
             (click)="definiendoRecuperacion.set(true)"
           >
             Definirla ahora
@@ -186,8 +189,7 @@
             </label>
             <button
               type="button"
-              class="boton-tactil rounded-xl px-5 py-2 text-lg font-bold"
-              style="background-color: var(--kiosko-institucion-primario)"
+              class="boton-tactil rounded-xl px-5 py-2 text-lg font-bold boton-primario"
               (click)="guardarRecuperacion()"
             >
               Guardar
@@ -220,7 +222,7 @@
             <span class="font-bold" style="color: var(--kiosko-atencion)">Hay una versión nueva lista: {{ ek.actualizacionLista }}</span>
             <button
               type="button"
-              class="bg-superficie border-borde hover:bg-borde boton-tactil rounded-xl border-2 px-4 py-2 font-bold"
+              class="boton-secundario boton-tactil rounded-xl border-2 px-4 py-2 font-bold"
               (click)="instalarActualizacion()"
             >
               Instalar la versión nueva
@@ -229,7 +231,7 @@
           }
         </p>
         @if (ek.fotosConLlaveAnterior > 0 && s.rol === 'admin') {
-          <div class="rounded-2xl px-5 py-3" style="background-color: rgb(234 179 8 / 0.14); border: 2px solid var(--kiosko-atencion)">
+          <div class="rounded-2xl px-5 py-3 aviso-atencion">
             <p class="font-bold" style="color: var(--kiosko-atencion)">
               {{ ek.fotosConLlaveAnterior }} foto(s) guardadas con un candado anterior
               <kiosco-ayuda titulo="Fotos con candado anterior" [texto]="AYUDA.llaveAnterior" alinear="izquierda" />
@@ -249,14 +251,14 @@
               />
               <button
                 type="button"
-                class="bg-superficie border-borde hover:bg-borde boton-tactil rounded-xl border-2 px-4 py-2"
+                class="boton-secundario boton-tactil rounded-xl border-2 px-4 py-2"
                 (click)="mostrarContrasena.set(!mostrarContrasena())"
               >
                 {{ mostrarContrasena() ? 'Ocultar' : 'Mostrar' }}
               </button>
               <button
                 type="button"
-                class="bg-superficie border-borde hover:bg-borde boton-tactil rounded-xl border-2 px-4 py-2 font-bold"
+                class="boton-secundario boton-tactil rounded-xl border-2 px-4 py-2 font-bold"
                 [disabled]="recuperando() || !contrasenaRecuperar()"
                 (click)="recuperarFotos()"
               >
@@ -269,7 +271,7 @@
           </div>
         }
         @if (ek.totalRechazados > 0) {
-          <div class="rounded-2xl px-5 py-3" style="background-color: rgb(234 179 8 / 0.14); border: 2px solid var(--kiosko-atencion)">
+          <div class="rounded-2xl px-5 py-3 aviso-atencion">
             <p class="flex flex-wrap items-center gap-3">
               <b style="color: var(--kiosko-atencion)">{{ ek.totalRechazados }} registro(s) que la oficina no aceptó</b>
               <kiosco-ayuda titulo="Registros no aceptados" [texto]="AYUDA.rechazados" alinear="izquierda" />
@@ -278,7 +280,7 @@
               </button>
               <button
                 type="button"
-                class="bg-superficie border-borde hover:bg-borde boton-tactil rounded-xl border-2 px-4 py-2 font-bold"
+                class="boton-secundario boton-tactil rounded-xl border-2 px-4 py-2 font-bold"
                 (click)="reintentarRechazados()"
               >
                 Volver a enviarlos
@@ -366,8 +368,7 @@
       <span class="ml-auto flex items-center gap-2">
         <button
           type="button"
-          class="boton-tactil rounded-xl px-5 py-2 text-lg font-bold"
-          style="background-color: var(--kiosko-institucion-primario)"
+          class="boton-tactil rounded-xl px-5 py-2 text-lg font-bold boton-primario"
           [disabled]="registros().length === 0"
           (click)="abrirExportacion()"
         >
@@ -383,44 +384,65 @@
 
     <!-- ====================== TABLA + FOTO ====================== -->
     <div class="flex min-h-0 flex-1 gap-6 px-8 pb-6">
-      <div class="min-h-0 flex-1 overflow-y-auto">
+      <div class="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
         @if (registros().length === 0 && !buscando()) {
           <p class="text-texto-suave mt-12 text-center text-2xl">
             No hay registros con estos filtros. Prueba con otras fechas.
           </p>
         } @else {
-          <table class="w-full border-collapse text-left">
-            <thead>
-              <tr class="text-texto-suave border-borde border-b text-base uppercase tracking-wide">
+          <table class="w-full table-fixed border-collapse text-left">
+            <colgroup>
+              <!--
+                Columnas de ancho fijo: nada de adentro puede ensanchar la tabla
+                (antes una ayuda abierta la hacia desbordarse de lado). "Quién"
+                se queda con lo que sobre y recorta con "…". Con la foto abierta
+                se oculta la columna "Foto": la foto ya esta a la derecha, y a
+                1366x768 no quedaba espacio ni para el nombre.
+              -->
+              <col class="w-[7.5rem]" />
+              <col class="w-[4.75rem]" />
+              <col />
+              <col class="w-[9.25rem]" />
+              @if (!seleccionada()) {
+                <col class="w-[11rem]" />
+              }
+              <col [class]="seleccionada() ? 'w-[10rem]' : 'w-[14rem]'" />
+            </colgroup>
+            <thead class="sticky top-0 z-10" style="background-color: var(--kiosko-fondo)">
+              <tr class="text-texto-suave border-borde border-b text-sm uppercase tracking-wider">
                 <th class="py-2 pr-3 font-semibold">Fecha</th>
                 <th class="py-2 pr-3 font-semibold">Hora</th>
                 <th class="py-2 pr-3 font-semibold">Quién</th>
                 <th class="py-2 pr-3 font-semibold">Qué</th>
-                <th class="py-2 pr-3 font-semibold">Foto</th>
+                @if (!seleccionada()) {
+                  <th class="py-2 pr-3 font-semibold">Foto</th>
+                }
                 <th class="py-2 font-semibold">Revisión</th>
               </tr>
             </thead>
             <tbody>
               @for (r of registros(); track r.id) {
                 <tr
-                  class="border-borde hover:bg-superficie cursor-pointer border-b text-lg"
+                  class="fila-aparecer border-borde hover:bg-superficie cursor-pointer border-b text-lg transition-colors"
                   [class.bg-superficie]="seleccionada()?.id === r.id"
+                  [style.box-shadow]="seleccionada()?.id === r.id ? 'inset 4px 0 0 var(--kiosko-institucion-secundario)' : null"
                   (click)="abrirFoto(r)"
                 >
-                  <td class="py-3 pr-3 tabular-nums">{{ fecha(r.horaEstimadaMs) }}</td>
+                  <td class="py-3 pl-2 pr-3 tabular-nums">{{ fecha(r.horaEstimadaMs) }}</td>
                   <td class="py-3 pr-3 tabular-nums font-bold">{{ hora(r.horaEstimadaMs) }}</td>
-                  <td class="py-3 pr-3">
+                  <td class="truncate py-3 pr-3" [title]="r.nombreCompleto">
                     <span class="font-semibold">{{ r.nombreCompleto }}</span>
                     @if (r.numeroEmpleado) {
                       <span class="text-texto-suave"> · #{{ r.numeroEmpleado }}</span>
                     }
                   </td>
-                  <td
-                    class="py-3 pr-3 font-bold"
-                    [style.color]="r.tipo === 'entrada' ? 'var(--kiosko-entrada)' : 'var(--kiosko-salida)'"
-                  >
-                    {{ r.tipo === 'entrada' ? '→ ENTRADA' : '← SALIDA' }}
+                  <td class="py-3 pr-3">
+                    <span class="pastilla text-base"
+                          [style.color]="r.tipo === 'entrada' ? 'var(--kiosko-entrada)' : 'var(--kiosko-salida)'">
+                      {{ r.tipo === 'entrada' ? '→ ENTRADA' : '← SALIDA' }}
+                    </span>
                   </td>
+                  @if (!seleccionada()) {
                   <td class="py-3 pr-3">
                     @switch (r.fotoEstado) {
                       @case ('disponible') {
@@ -440,9 +462,10 @@
                       }
                     }
                   </td>
-                  <td class="py-3" style="color: var(--kiosko-atencion)">
+                  }
+                  <td class="py-2" style="color: var(--kiosko-atencion)">
                     @for (b of r.banderas; track b) {
-                      <span class="mr-3 inline-flex items-center gap-1 whitespace-nowrap">
+                      <span class="pastilla my-0.5 mr-2 text-sm">
                         {{ NOMBRES_DE_BANDERAS[b] ?? b }}
                         @if (AYUDA_BANDERAS[b]; as explicacion) {
                           <kiosco-ayuda [titulo]="NOMBRES_DE_BANDERAS[b] ?? b" [texto]="explicacion" alinear="derecha" />
@@ -459,7 +482,7 @@
 
       <!-- ---------- La foto del registro elegido ---------- -->
       @if (seleccionada(); as r) {
-        <aside class="bg-superficie border-borde flex w-[34rem] shrink-0 flex-col gap-4 overflow-y-auto rounded-3xl border-2 p-5">
+        <aside class="aparecer-suave tarjeta border-borde flex w-[min(34rem,40vw)] shrink-0 flex-col *:shrink-0 gap-4 overflow-y-auto overflow-x-hidden rounded-3xl border-2 p-5">
           <div class="flex items-center justify-between">
             <h3 class="text-xl font-bold">Foto del registro</h3>
             <button
@@ -483,7 +506,7 @@
               <!-- Clic en la foto (o en "Ampliar") abre el visor con zoom. -->
               <button
                 type="button"
-                class="relative block cursor-zoom-in overflow-hidden rounded-2xl text-left"
+                class="relative block shrink-0 cursor-zoom-in overflow-hidden rounded-2xl text-left"
                 title="Ampliar"
                 (click)="abrirAmpliada()"
               >
@@ -492,8 +515,7 @@
               </button>
               <button
                 type="button"
-                class="boton-tactil self-start rounded-xl px-5 py-2 text-lg font-bold"
-                style="background-color: var(--kiosko-institucion-primario)"
+                class="boton-tactil self-start rounded-xl px-5 py-2 text-lg font-bold boton-primario"
                 (click)="abrirAmpliada()"
               >
                 🔍 Ampliar
@@ -503,7 +525,7 @@
                 <kiosco-ayuda titulo="Huella de la foto" [texto]="AYUDA.huella" alinear="izquierda" />
               </p>
             } @else {
-              <p class="rounded-xl px-4 py-4 text-lg" style="background-color: rgb(234 179 8 / 0.14)">
+              <p class="rounded-xl px-4 py-4 text-lg aviso-atencion">
                 {{ explicacion(f.estado) }}
               </p>
             }
@@ -527,8 +549,7 @@
               @if (!pidiendoMotivo()) {
                 <button
                   type="button"
-                  class="boton-tactil rounded-xl px-5 py-2 text-lg font-bold"
-                  style="background-color: var(--kiosko-institucion-primario)"
+                  class="boton-tactil rounded-xl px-5 py-2 text-lg font-bold boton-primario"
                   (click)="pidiendoMotivo.set(true)"
                 >
                   {{ r.fotoEstado === 'conservada' ? 'Quitar "Conservar"' : 'Conservar esta foto' }}
@@ -547,8 +568,7 @@
                 <div class="mt-2 flex gap-3">
                   <button
                     type="button"
-                    class="boton-tactil rounded-xl px-5 py-2 text-lg font-bold"
-                    style="background-color: var(--kiosko-institucion-primario)"
+                    class="boton-tactil rounded-xl px-5 py-2 text-lg font-bold boton-primario"
                     [disabled]="motivo().trim().length < 3"
                     (click)="confirmarConservar()"
                   >
@@ -612,8 +632,8 @@
     -->
     @if (exportacion(); as paso) {
       @let f = filtros();
-      <div class="fixed inset-0 z-[60] flex items-center justify-center p-8" style="background-color: rgb(0 0 0 / 0.7)">
-        <div class="bg-superficie border-borde flex max-h-full w-full max-w-2xl flex-col gap-5 overflow-y-auto rounded-3xl border-2 p-8">
+      <div class="fondo-dialogo fixed inset-0 z-[60] flex items-center justify-center p-8">
+        <div class="aparecer-suave tarjeta border-borde flex max-h-full w-full max-w-2xl flex-col gap-5 overflow-y-auto overflow-x-hidden rounded-3xl border-2 p-8">
           <h3 class="text-2xl font-bold">Guardar en memoria USB</h3>
 
           @if (paso === 'lista') {
@@ -625,7 +645,7 @@
               </p>
               <p class="bg-fondo rounded-xl px-4 py-3 font-mono text-base break-all">{{ r.archivo }}</p>
               @if (r.fotosConProblema > 0) {
-                <p class="rounded-xl px-4 py-3 text-lg" style="background-color: rgb(234 179 8 / 0.14)">
+                <p class="rounded-xl px-4 py-3 text-lg aviso-atencion">
                   {{ r.fotosConProblema }} foto(s) no se pudieron incluir. En la tabla de Excel, la columna
                   "foto" dice qué le pasó a cada una.
                 </p>
@@ -637,8 +657,7 @@
             }
             <button
               type="button"
-              class="boton-tactil self-start rounded-2xl px-8 py-3 text-xl font-bold"
-              style="background-color: var(--kiosko-institucion-primario)"
+              class="boton-tactil self-start rounded-2xl px-8 py-3 text-xl font-bold boton-primario"
               (click)="cerrarExportacion()"
             >
               Cerrar
@@ -676,7 +695,7 @@
               </p>
             </div>
 
-            <p class="rounded-xl px-4 py-3 text-lg" style="background-color: rgb(234 179 8 / 0.14)">
+            <p class="rounded-xl px-4 py-3 text-lg aviso-atencion">
               ⚠ Las fotos salen <b>sin candado</b>: cualquiera que tenga la memoria puede verlas.
               <kiosco-ayuda titulo="Sin candado" [texto]="AYUDA.sinCandado" alinear="izquierda" />
             </p>
@@ -691,8 +710,7 @@
                 @for (m of lista; track m.unidad) {
                   <button
                     type="button"
-                    class="boton-tactil rounded-2xl px-6 py-4 text-left text-xl font-bold"
-                    style="background-color: var(--kiosko-institucion-primario)"
+                    class="boton-tactil rounded-2xl px-6 py-4 text-left text-xl font-bold boton-primario"
                     (click)="exportarAUsb(m.unidad)"
                   >
                     Guardar en {{ m.unidad }} {{ m.etiqueta || 'Memoria USB' }}
@@ -745,7 +763,7 @@
     @if (ampliada() && seleccionada(); as r) {
       @if (foto(); as f) {
         @if (f.estado === 'con_foto') {
-          <div class="fixed inset-0 z-[60] flex flex-col" style="background-color: rgb(0 0 0 / 0.95)">
+          <div class="fondo-dialogo fixed inset-0 z-[60] flex flex-col" style="background-color: rgb(0 0 0 / 0.95)">
             <!-- Botones con palabras, grandes: no todos saben usar la rueda del raton. -->
             <div class="flex shrink-0 flex-wrap items-center justify-center gap-3 px-6 py-4 text-white">
               <button
@@ -774,8 +792,7 @@
               </button>
               <button
                 type="button"
-                class="boton-tactil ml-6 rounded-xl px-6 py-2 text-xl font-bold"
-                style="background-color: var(--kiosko-institucion-primario)"
+                class="boton-tactil ml-6 rounded-xl px-6 py-2 text-xl font-bold boton-primario"
                 (click)="cerrarAmpliada()"
               >
                 Cerrar (Esc)

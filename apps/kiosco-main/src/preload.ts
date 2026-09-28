@@ -85,6 +85,10 @@ const api: ApiKiosco = {
     return ipcRenderer.invoke(CANALES.cancelarRegistro, { tokenRegistro });
   },
 
+  prepararRegistro(): Promise<void> {
+    return ipcRenderer.invoke(CANALES.prepararRegistro);
+  },
+
   obtenerEstado(): Promise<EstadoKiosco> {
     return ipcRenderer.invoke(CANALES.obtenerEstado);
   },
