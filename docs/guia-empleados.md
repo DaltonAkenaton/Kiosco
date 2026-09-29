@@ -7,7 +7,8 @@
 ## 0. Si el kiosco está cerrado, ábrelo
 
 Doble clic al icono del **reloj con palomita** en el escritorio. Cuando
-termines de registrar, pica **Cerrar kiosco** (abajo a la derecha).
+termines de registrar, pica **Minimizar** o **Cerrar kiosco** (abajo a la derecha).
+Si está minimizado, está en la barra de tareas de abajo: pícale ahí.
 
 ## 1. Busca tu número en la pantalla
 

@@ -66,6 +66,7 @@ export const CANALES = {
   cancelarRegistro: 'kiosco:cancelar-registro',
   prepararRegistro: 'kiosco:preparar-registro',
   cerrarKiosco: 'kiosco:cerrar',
+  minimizarKiosco: 'kiosco:minimizar',
   /** Tras registrar con un PIN temporal: el empleado elige uno propio (D-042). */
   elegirPin: 'kiosco:elegir-pin',
   /** Pide el estado actual: conexion, pendientes, camara. */
@@ -258,6 +259,9 @@ export interface ApiKiosco {
   prepararRegistro(): Promise<void>;
   /** PC compartida: manda lo pendiente y cierra el kiosco. */
   cerrarKiosco(): Promise<void>;
+
+  /** PC compartida: quita el kiosco de en medio sin cerrarlo (servicios/pausa.ts). */
+  minimizarKiosco(): Promise<void>;
 
   /**
    * Guarda el PIN que eligio el empleado (D-042). El permiso para hacerlo es

@@ -71,7 +71,7 @@ Lo decide el ajuste **"La PC del kiosco se usa para otras cosas"** del panel
 | | PC compartida (**Sí**, por defecto) | PC sólo para checar (**No**) |
 |---|---|---|
 | Al prender Windows | No se abre sola: se abre con su **icono** | Se abre sola |
-| Para cerrarla | Botón **Cerrar kiosco** (o Alt+F4). Antes de salir manda lo pendiente | No se deja cerrar; sólo `Ctrl+Alt+Shift+Q` |
+| Para quitarla de en medio | **Minimizar** (vuelve desde la barra de tareas o picando su icono; suelta la cámara mientras tanto) o **Cerrar kiosco** / Alt+F4 (antes de salir manda lo pendiente) | No se deja cerrar; sólo `Ctrl+Alt+Shift+Q`. "Usar esta PC" la aparta 15 min |
 | Versiones nuevas | Se instalan **al cerrar** el kiosco | Se instalan de madrugada (2–5 h) |
 | Panel → Kioscos | Cerrado = normal, sin alerta | Sin reportarse = alerta |
 

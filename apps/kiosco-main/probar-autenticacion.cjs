@@ -513,6 +513,13 @@ app.whenReady().then(async () => {
   comprobar('PC compartida: por defecto SI', bd.esPcCompartida() === true);
   bdAdmins.prepare("INSERT OR REPLACE INTO configuracion_cache (clave, valor) VALUES ('kiosco_pc_compartida', '0')").run();
   comprobar('PC compartida: con 0 en el panel, NO', bd.esPcCompartida() === false);
+  // Minimizar (29-09-2026): solo en PC compartida, y nunca deja una "pausa"
+  // colgada si no hay ventana que esconder.
+  const minDedicada = bd.minimizar();
+  comprobar('PC dedicada: "Minimizar" se niega', minDedicada.ok === false && /sólo para registrar/.test(minDedicada.mensaje));
+  bdAdmins.prepare("INSERT OR REPLACE INTO configuracion_cache (clave, valor) VALUES ('kiosco_pc_compartida', '1')").run();
+  const minSinVentana = bd.minimizar();
+  comprobar('PC compartida sin ventana: no se da por minimizado', minSinVentana.ok === false && bd.estaPausado() === false);
   bdAdmins.prepare("DELETE FROM configuracion_cache WHERE clave = 'kiosco_pc_compartida'").run();
   const t0Cierre = Date.now();
   await bd.enviarAntesDeCerrar(8000);

@@ -1237,6 +1237,20 @@
         manda lo pendiente: por eso "Cerrando…" puede tardar unos segundos.
       -->
       @if (pcCompartida()) {
+        <!-- Minimizar: se quita de en medio sin cerrarse; vuelve desde la
+             barra de tareas o picando su icono otra vez. -->
+        <button
+          type="button"
+          class="boton-secundario boton-tactil flex items-center gap-2 rounded-xl px-4 py-1.5 text-base font-semibold"
+          [disabled]="cerrando()"
+          (click)="minimizarKiosco()"
+        >
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+               stroke-linecap="round" aria-hidden="true">
+            <path d="M5 18h14" />
+          </svg>
+          Minimizar
+        </button>
         <button
           type="button"
           class="boton-secundario boton-tactil flex items-center gap-2 rounded-xl px-4 py-1.5 text-base font-semibold"

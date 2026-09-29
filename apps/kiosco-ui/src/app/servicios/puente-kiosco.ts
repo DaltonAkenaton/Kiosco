@@ -180,6 +180,10 @@ export class PuenteKiosco {
   }
 
   /** PC compartida: manda lo pendiente y cierra el kiosco. */
+  async minimizarKiosco(): Promise<void> {
+    await window.kiosco?.minimizarKiosco?.();
+  }
+
   async cerrarKiosco(): Promise<void> {
     await window.kiosco?.cerrarKiosco?.();
   }

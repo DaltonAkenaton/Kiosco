@@ -1519,6 +1519,10 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
   /** "Cerrando…": mientras el kiosco manda lo pendiente antes de salir. */
   protected readonly cerrando = signal(false);
 
+  protected minimizarKiosco(): void {
+    void this.puente.minimizarKiosco();
+  }
+
   protected cerrarKiosco(): void {
     if (this.cerrando()) return;
     this.cerrando.set(true);

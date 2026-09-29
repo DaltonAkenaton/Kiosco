@@ -111,6 +111,7 @@ export {
   leerEstadoLocal,
 } from './datos/repositorio-sincronizacion';
 export { reglasDelPin, umbralesDeCamara, numeroConfigurado, zonaHorariaVigente, esPcCompartida } from './configuracion-vigente';
+export { minimizar, estaPausado } from './servicios/pausa';
 export { enviarAntesDeCerrar } from './servicios/sincronizacion';
 export {
   calcularDesfase,

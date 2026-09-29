@@ -81,7 +81,7 @@ import {
 } from '../servicios/identificaciones-pendientes';
 import { type FotoGuardada, guardarFoto, pareceObstruida } from '../servicios/fotos';
 import { registrarEvento } from '../datos/repositorio-eventos';
-import { estadoDePausa, pausar } from '../servicios/pausa';
+import { estadoDePausa, minimizar, pausar } from '../servicios/pausa';
 import { enrolar, esperarBajadaEnCamino, ponerseAlDia, sincronizarPronto } from '../servicios/sincronizacion';
 import { detectarAnomaliasDeReloj, leerReloj } from '../servicios/reloj';
 import { ES_DESARROLLO } from '../entorno';
@@ -583,12 +583,6 @@ export function registrarManejadoresIpc(): void {
     descartarPase(validacion.data.tokenRegistro);
   });
 
-  // ---------------------------------------------------------------------
-  //  prepararRegistro: alguien eligio su nombre y va a teclear su PIN
-  // ---------------------------------------------------------------------
-  //  Sin datos de entrada y sin respuesta: solo dispara la consulta rapida.
-  //  Tiene su propio limite de frecuencia (ponerseAlDia), asi que llamarlo
-  //  de mas no genera trafico de mas.
   // Cerrar el kiosco en una PC compartida: manda lo pendiente y sale
   // (servicios/cierre.ts). En una PC dedicada no se deja cerrar asi.
   ipcMain.handle(CANALES.cerrarKiosco, async (): Promise<void> => {
@@ -596,6 +590,18 @@ export function registrarManejadoresIpc(): void {
     await cerrarKiosco();
   });
 
+  // Minimizarlo en una PC compartida (servicios/pausa.ts). Sin datos de
+  // entrada; en una PC dedicada, `minimizar()` se niega sola.
+  ipcMain.handle(CANALES.minimizarKiosco, async (): Promise<void> => {
+    minimizar();
+  });
+
+  // ---------------------------------------------------------------------
+  //  prepararRegistro: alguien eligio su nombre y va a teclear su PIN
+  // ---------------------------------------------------------------------
+  //  Sin datos de entrada y sin respuesta: solo dispara la consulta rapida.
+  //  Tiene su propio limite de frecuencia (ponerseAlDia), asi que llamarlo
+  //  de mas no genera trafico de mas.
   ipcMain.handle(CANALES.prepararRegistro, async (): Promise<void> => {
     anotarUso();
     void ponerseAlDia();

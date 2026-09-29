@@ -33,7 +33,7 @@ import { ES_DESARROLLO } from './entorno';
 import { actualizarEstado, estadoActual, registrarManejadoresIpc } from './ipc/manejadores';
 import { registrarManejadoresAdmin } from './ipc/manejadores-admin';
 import { prepararLlaveDeFotos } from './servicios/llave-fotos';
-import { configurarPausa, reanudar } from './servicios/pausa';
+import { configurarPausa, estaPausado, reanudar } from './servicios/pausa';
 import { migrarFotosHeredadas, programarDepuracionDeFotos } from './servicios/retencion-fotos';
 import { iniciarSincronizacion } from './servicios/sincronizacion';
 import { alCerrarseSesionAdmin } from './servicios/sesion-admin';
@@ -64,8 +64,14 @@ if (!esLaPrimeraCopia) {
 
   // Si alguien intenta abrir una segunda copia, en vez de abrirla,
   // traemos al frente la que ya existe.
+  // Si estaba minimizado o en pausa (incluso escondido por el plan B de
+  // pausa.ts), picar el icono otra vez lo trae de vuelta completo.
   app.on('second-instance', () => {
     if (ventanaPrincipal) {
+      if (estaPausado()) {
+        reanudar('manual');
+        return;
+      }
       if (ventanaPrincipal.isMinimized()) ventanaPrincipal.restore();
       ventanaPrincipal.focus();
     }

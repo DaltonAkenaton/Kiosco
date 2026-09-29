@@ -30,6 +30,17 @@
  *  y regrese sin que el tenga que acordarse de nada.
  *
  *  ---------------------------------------------------------------------------
+ *  Y EN UNA PC COMPARTIDA: MINIMIZAR (29-09-2026)
+ *  ---------------------------------------------------------------------------
+ *  Con el ajuste "La PC del kiosco se usa para otras cosas" el kiosco no vive
+ *  abierto: se abre con su icono. Ahi la pausa de 15 minutos sobra, pero
+ *  cerrar y abrir cada vez tambien estorba. `minimizar()` es la misma pausa
+ *  SIN temporizador y SIN codigo: el kiosco se quita de en medio (soltando la
+ *  camara) y vuelve cuando alguien lo trae desde la barra de tareas o picando
+ *  su icono otra vez. No rompe la regla de oro por lo mismo que "Cerrar
+ *  kiosco" no la rompe: en esa PC, abrirlo es parte de checar.
+ *
+ *  ---------------------------------------------------------------------------
  *  LAS DOS COSAS QUE HACEN QUE ESTO NO ROMPA LA REGLA DE ORO
  *  ---------------------------------------------------------------------------
  *  Con el kiosco pausado NADIE PUEDE CHECAR. Eso choca de frente con la regla
@@ -49,6 +60,7 @@ import type { BrowserWindow } from 'electron';
 import { CONFIG, type EstadoKiosco } from '@kiosko/compartido';
 import { registrarEvento } from '../datos/repositorio-eventos';
 import { debeIrEnModoKiosco } from '../ventana';
+import { esPcCompartida } from '../configuracion-vigente';
 
 /** Como termino una pausa. Se guarda en el evento, para poder distinguirlas. */
 type MotivoDeRegreso = 'temporizador' | 'manual' | 'cierre';
@@ -68,7 +80,13 @@ let avisarCambioDeEstado: ((cambios: Partial<EstadoKiosco>) => void) | null = nu
 
 let temporizador: ReturnType<typeof setTimeout> | null = null;
 
-/** Cuando termina la pausa en curso, o `null` si no hay ninguna. */
+/** Cuando empezo la pausa en curso, o `null` si no hay ninguna. */
+let pausadoDesdeMs: number | null = null;
+
+/**
+ * Cuando termina la pausa en curso. `null` si no hay pausa, o si es un
+ * minimizado de PC compartida, que no vuelve solo.
+ */
 let terminaEnMs: number | null = null;
 
 export function configurarPausa(
@@ -87,19 +105,19 @@ export function configurarPausa(
    * y al vencer intentaria "reanudar" algo que ya estaba reanudado.
    */
   ventana.on('restore', () => {
-    if (terminaEnMs !== null) reanudar('manual');
+    if (pausadoDesdeMs !== null) reanudar('manual');
   });
 }
 
 /** ¿Esta pausado ahora mismo? */
 export function estaPausado(): boolean {
-  return terminaEnMs !== null;
+  return pausadoDesdeMs !== null;
 }
 
 /** El estado de la pausa, tal como viaja a la pantalla. */
 export function estadoDePausa(): Pick<EstadoKiosco, 'pausado' | 'pausaTerminaEn'> {
   return {
-    pausado: terminaEnMs !== null,
+    pausado: pausadoDesdeMs !== null,
     pausaTerminaEn: terminaEnMs === null ? null : new Date(terminaEnMs).toISOString(),
   };
 }
@@ -145,6 +163,54 @@ export function pausar(codigo: string): ResultadoPausa {
 
   const minutos = CONFIG.pausa.minutosParaVolver;
 
+  console.info('[pausa] codigo correcto; saliendo de pantalla completa');
+  esconderVentana(ventanaPrincipal);
+
+  pausadoDesdeMs = Date.now();
+  terminaEnMs = pausadoDesdeMs + minutos * 60 * 1000;
+
+  temporizador = setTimeout(() => reanudar('temporizador'), minutos * 60 * 1000);
+
+  registrarEvento('kiosco_pausado', { minutos });
+  avisarCambioDeEstado?.(estadoDePausa());
+
+  console.info(`[pausa] kiosco minimizado por ${minutos} minutos`);
+
+  return { ok: true, minutos };
+}
+
+/**
+ * PC compartida: quitar el kiosco de en medio sin cerrarlo (ver arriba, "Y EN
+ * UNA PC COMPARTIDA"). Sin codigo y sin temporizador. En una PC dedicada no
+ * hace nada: ahi sigue valiendo la pausa con codigo que vuelve sola.
+ */
+export function minimizar(): { ok: true } | { ok: false; mensaje: string } {
+  if (!esPcCompartida()) {
+    return { ok: false, mensaje: 'En este kiosco la computadora es sólo para registrar la asistencia.' };
+  }
+  if (!ventanaPrincipal || ventanaPrincipal.isDestroyed()) {
+    return { ok: false, mensaje: 'No se pudo esconder el checador. Intenta de nuevo.' };
+  }
+  if (pausadoDesdeMs !== null) return { ok: true };
+
+  esconderVentana(ventanaPrincipal);
+  pausadoDesdeMs = Date.now();
+  terminaEnMs = null;
+
+  // Mismo evento que la pausa, con su motivo: explica en el panel un hueco
+  // sin registros igual que una pausa (y no hace falta migrar la lista
+  // cerrada de tipos de evento de la nube).
+  registrarEvento('kiosco_pausado', { motivo: 'minimizado' });
+  avisarCambioDeEstado?.(estadoDePausa());
+  console.info('[pausa] kiosco minimizado (PC compartida, sin regreso automatico)');
+  return { ok: true };
+}
+
+/**
+ * Quita la ventana de la pantalla aunque este en modo kiosco. La usan la
+ * pausa y el minimizado de PC compartida.
+ */
+function esconderVentana(ventanaPrincipal: BrowserWindow): void {
   /**
    * Salir del modo kiosco ANTES de minimizar.
    *
@@ -153,8 +219,6 @@ export function pausar(codigo: string): ResultadoPausa {
    * apagarlo antes, no pasaria nada — y el sintoma seria un boton que no hace
    * nada, sin ningun error que lo explique.
    */
-  console.info('[pausa] codigo correcto; saliendo de pantalla completa');
-
   /*
     HAY QUE DESHACER LAS CUATRO COSAS, NO SOLO EL MODO KIOSCO.
 
@@ -211,23 +275,13 @@ export function pausar(codigo: string): ResultadoPausa {
 
       `hide()` la quita de la pantalla Y de la barra de tareas. Es mas brusco
       que minimizar —ya no se puede traer de vuelta con un clic— y por eso es el
-      plan B y no el A. La red de seguridad sigue puesta: el temporizador la
-      devuelve sola a los 15 minutos, pase lo que pase.
+      plan B y no el A. La red de seguridad sigue puesta: en la pausa, el
+      temporizador la devuelve sola a los 15 minutos; en el minimizado de PC
+      compartida, picar el icono otra vez la trae (main.ts, 'second-instance').
     */
     console.warn('[pausa] Windows ignoro minimize(); se oculta la ventana');
     ventana.hide();
   }, 250);
-
-  terminaEnMs = Date.now() + minutos * 60 * 1000;
-
-  temporizador = setTimeout(() => reanudar('temporizador'), minutos * 60 * 1000);
-
-  registrarEvento('kiosco_pausado', { minutos });
-  avisarCambioDeEstado?.(estadoDePausa());
-
-  console.info(`[pausa] kiosco minimizado por ${minutos} minutos`);
-
-  return { ok: true, minutos };
 }
 
 /**
@@ -237,11 +291,11 @@ export function pausar(codigo: string): ResultadoPausa {
  * ventana a mano, o la aplicacion se esta cerrando.
  */
 export function reanudar(motivo: MotivoDeRegreso): void {
-  if (terminaEnMs === null) return; // no habia pausa: no hay nada que deshacer
+  if (pausadoDesdeMs === null) return; // no habia pausa: no hay nada que deshacer
 
-  const inicioMs = terminaEnMs - CONFIG.pausa.minutosParaVolver * 60 * 1000;
-  const duracionRealSegundos = Math.max(0, Math.round((Date.now() - inicioMs) / 1000));
+  const duracionRealSegundos = Math.max(0, Math.round((Date.now() - pausadoDesdeMs) / 1000));
 
+  pausadoDesdeMs = null;
   terminaEnMs = null;
 
   if (temporizador !== null) {
