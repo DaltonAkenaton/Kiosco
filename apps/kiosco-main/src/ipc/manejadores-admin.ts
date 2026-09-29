@@ -40,9 +40,11 @@ import {
   listarRechazados,
   registrarEstadoDeFoto,
   reintentarRechazados,
+  descartarRechazados,
 } from '../datos/repositorio-sincronizacion';
 import { actualizacionLista, instalarActualizacionYReiniciar, versionActual } from '../actualizaciones';
 import { sincronizarPronto } from '../servicios/sincronizacion';
+import { registrarEvento } from '../datos/repositorio-eventos';
 import { contarFotosConLlaveAnterior, recuperarFotosConContrasena } from '../servicios/recuperacion-fotos';
 import { leerFoto } from '../servicios/fotos';
 import {
@@ -63,6 +65,7 @@ import {
   EsquemaEntradaAdmin,
   EsquemaExportarACarpeta,
   EsquemaExportarAUsb,
+  EsquemaDescartarRechazados,
   EsquemaRecuperarFotos,
   EsquemaSoloToken,
   EsquemaVerFoto,
@@ -287,6 +290,22 @@ export function registrarManejadoresAdmin(): void {
       const reintentados = reintentarRechazados();
       if (reintentados > 0) sincronizarPronto();
       return { reintentados };
+    }),
+  );
+
+  // Descartar lo rechazado: se oculta (no se borra) y se avisa a la oficina.
+  // Solo el rol admin: es quitar algo de la vista, y eso se responde.
+  ipcMain.handle(
+    CANALES.adminDescartarRechazados,
+    conSesion(EsquemaDescartarRechazados, (datos, sesion): { descartados: number } => {
+      if (sesion.rol !== 'admin') throw new ErrorParaMostrar('Sólo un administrador puede descartar registros.');
+      const descartados = descartarRechazados(datos.motivo);
+      if (descartados > 0) {
+        registrarEvento('registros_descartados', { adminId: sesion.adminId, cantidad: descartados, motivo: datos.motivo });
+        sincronizarPronto();
+        console.info(`[admin] ${descartados} registro(s) rechazados descartados`);
+      }
+      return { descartados };
     }),
   );
 

@@ -79,7 +79,13 @@ export type TipoDeEvento =
    */
   | 'exportacion_usb'
   /** Con la contrasena de recuperacion se volvieron a abrir fotos de una llave anterior. */
-  | 'fotos_recuperadas';
+  | 'fotos_recuperadas'
+  /**
+   * Un administrador descarto registros que la oficina no acepto (29-09-2026).
+   * Lleva cuantos y el motivo que escribio: es la huella de algo que ya no
+   * se va a ver en el kiosco.
+   */
+  | 'registros_descartados';
 
 /**
  * Deja constancia de un evento.

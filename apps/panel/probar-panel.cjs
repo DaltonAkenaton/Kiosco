@@ -119,6 +119,7 @@ app.whenReady().then(async () => {
   const motivoAlta = `Prueba del panel ${Date.now()}`;
   const correoAcceso = `supervisora-${Date.now()}@prueba.local`;
   let idCreado = null;
+  let idEventoDescarte = null;
 
   try {
     // ====================================================================
@@ -175,8 +176,18 @@ app.whenReady().then(async () => {
 
     // ====================================================================
     console.log('\n--- kioscos: codigo de alta ---');
+    // Un descarte hecho en un kiosco (0025): el jefe debe verlo aqui, en palabras.
+    const { rows: [eventoDescarte] } = await bd.query(
+      `insert into eventos_dispositivo (id, dispositivo_id, tipo, detalle, ocurrido_en)
+       values (gen_random_uuid(), '00000000-0000-4000-8000-00000000d001', 'registros_descartados',
+               '{"adminId": "00000000-0000-4000-8000-00000000a001", "cantidad": 7, "motivo": "prueba del panel"}', now())
+       returning id`);
+    idEventoDescarte = eventoDescarte.id;
     await ir('/kioscos');
     comprobar('muestra las alertas', (await texto()).includes('Para atender'));
+    comprobar('"Lo que se hizo en los kioscos": el descarte con quién, cuántos y el motivo',
+      (await texto()).includes('Lo que se hizo en los kioscos')
+        && /Jefe de prueba descartó 7 registro\(s\).*«prueba del panel»/.test(await texto()));
     await picar('+ Dar de alta un kiosco');
     await escribir('panel-dialogo input[placeholder="Ej.: Entrada principal"]', 'Kiosco de la prueba del panel');
     await picar('Generar código');
@@ -581,6 +592,7 @@ app.whenReady().then(async () => {
         await bd.query('delete from empleados where id = $1', [idCreado]);
       }
       await bd.query(`delete from codigos_enrolamiento where nombre_dispositivo = 'Kiosco de la prueba del panel'`);
+      if (idEventoDescarte) await bd.query('delete from eventos_dispositivo where id = $1', [idEventoDescarte]);
       const demo = `(select id from empleados where numero_empleado like 'DEMO-%')`;
       await bd.query(`delete from marcas where empleado_id in ${demo}`);
       await bd.query(`delete from asignaciones_turno where empleado_id in ${demo}`);

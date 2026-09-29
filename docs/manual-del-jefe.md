@@ -296,7 +296,11 @@ bitácora del panel.
 Lo que también puedes ver ahí:
 
 - **Registros que la oficina no aceptó** (por ejemplo, de alguien que no existe
-  en el panel): arregla la causa en el panel y pica **Volver a enviarlos**.
+  en el panel): arregla la causa en el panel y pica **Volver a enviarlos**. Si
+  no deben contar (por ejemplo, **pruebas** hechas con el kiosco dado de baja),
+  pica **Descartar…** y escribe el motivo: dejan de verse, **no se borran** de
+  esa PC, y en el panel, página **Kioscos → Lo que se hizo en los kioscos**,
+  queda quién los descartó, cuántos y por qué.
 - **Fotos guardadas con un candado anterior**: pasa si se reinstaló Windows.
   Escribe la **contraseña de recuperación** (hoja de credenciales).
 

@@ -37,6 +37,23 @@ interface Kiosco {
 /** Cada cuanto se refresca la pagina sola, para que la "ultima conexion" no mienta. */
 const SEGUNDOS_PARA_REFRESCAR = 60;
 
+/** Cuantos dias hacia atras se muestra "Lo que se hizo en los kioscos". */
+const DIAS_ACTIVIDAD = 30;
+const MAXIMO_ACTIVIDAD = 30;
+
+/** Los eventos que se muestran, en palabras. Los demas (camara, pausa...) ya salen en las alertas. */
+const TEXTOS_DE_ACTIVIDAD: Record<string, (quien: string, d: Record<string, unknown>) => string> = {
+  registros_descartados: (quien, d) =>
+    `${quien} descartó ${d['cantidad'] ?? '?'} registro(s) que la oficina no había aceptado. Motivo: «${d['motivo'] ?? 'sin motivo'}».`,
+  exportacion_usb: (quien, d) =>
+    `${quien} guardó ${d['registros'] ?? '?'} registro(s) y ${d['fotos'] ?? 0} foto(s) en una memoria USB.`,
+  fotos_recuperadas: (quien, d) =>
+    `${quien} recuperó ${d['recuperadas'] ?? '?'} foto(s) con la contraseña de recuperación.`,
+  modo_admin_bloqueado: () => 'Varios intentos fallidos seguidos de entrar al modo administrador: se bloqueó un rato.',
+  llave_fotos_reemplazada: () =>
+    'La llave de las fotos de este kiosco no se pudo abrir (¿se reinstaló Windows?) y se creó una nueva. Las fotos anteriores necesitan la contraseña de recuperación.',
+};
+
 @Component({
   selector: 'panel-kioscos',
   imports: [Ayuda, Dialogo],
@@ -50,6 +67,13 @@ export class Kioscos implements OnInit, OnDestroy {
 
   protected readonly kioscos = signal<Kiosco[]>([]);
   protected readonly fotosPorRevisar = signal<Map<string, number>>(new Map());
+  /** "Lo que se hizo en los kioscos": eventos que el jefe debe poder ver. */
+  protected readonly actividad = signal<{ id: string; kiosco: string; ocurrido_en: string; texto: string }[]>([]);
+  protected readonly DIAS_ACTIVIDAD = DIAS_ACTIVIDAD;
+  protected readonly AYUDA_ACTIVIDAD =
+    'Lo que alguien hizo en el modo administrador de un kiosco y que conviene saber desde aquí: ' +
+    'descartar registros que la oficina no aceptó, guardar fotos en una memoria USB o recuperar fotos ' +
+    'con la contraseña de recuperación. Queda anotado quién, cuándo y (si lo pidió) el motivo.';
   protected readonly minutosSinConexion = signal(60);
   protected readonly minutosCamara = signal(15);
   protected readonly ahora = signal(Date.now());
@@ -122,6 +146,7 @@ export class Kioscos implements OnInit, OnDestroy {
   }
 
   private async cargar(): Promise<void> {
+    void this.cargarActividad();
     const [kioscos, fotos, config] = await Promise.all([
       this.sesion.bd
         .from('dispositivos')
@@ -149,6 +174,30 @@ export class Kioscos implements OnInit, OnDestroy {
       if (c.clave === 'minutos_camara_caida_alerta' && typeof c.valor === 'number') this.minutosCamara.set(c.valor);
     }
     this.ahora.set(Date.now());
+  }
+
+  private async cargarActividad(): Promise<void> {
+    const desde = new Date(Date.now() - DIAS_ACTIVIDAD * 24 * 60 * 60 * 1000).toISOString();
+    const [eventos, admins] = await Promise.all([
+      this.sesion.bd
+        .from('eventos_dispositivo')
+        .select('id, tipo, detalle, ocurrido_en, dispositivo:dispositivos(nombre)')
+        .in('tipo', Object.keys(TEXTOS_DE_ACTIVIDAD))
+        .gte('ocurrido_en', desde)
+        .order('ocurrido_en', { ascending: false })
+        .limit(MAXIMO_ACTIVIDAD),
+      this.sesion.bd.from('administradores').select('user_id, nombre'),
+    ]);
+    if (eventos.error) return; // es informacion de apoyo: sin ella, la pagina sigue igual
+    const nombres = new Map((admins.data ?? []).map((a) => [a.user_id as string, a.nombre as string]));
+    this.actividad.set(
+      (eventos.data ?? []).map((e) => {
+        const detalle = (e.detalle ?? {}) as Record<string, unknown>;
+        const quien = nombres.get(String(detalle['adminId'] ?? '')) ?? 'Un administrador';
+        const kiosco = (e.dispositivo as unknown as { nombre: string } | null)?.nombre ?? 'Kiosco';
+        return { id: e.id as string, kiosco, ocurrido_en: e.ocurrido_en as string, texto: TEXTOS_DE_ACTIVIDAD[e.tipo as string](quien, detalle) };
+      }),
+    );
   }
 
   protected abrirAlta(): void {

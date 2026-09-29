@@ -1,6 +1,6 @@
 {
   "name": "@kiosko/kiosco-main",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "private": true,
   "description": "Proceso principal de Electron del kiosco de asistencia",
   "main": "dist/main.js",

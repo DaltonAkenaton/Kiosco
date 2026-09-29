@@ -773,6 +773,19 @@ app.whenReady().then(async () => {
   comprobar('Volver a enviarlos lo regresa a la cola', bd.reintentarRechazados() >= 1 && bd.renglonesParaSubir(1000).some((r) => r.id === segundo.id));
   bd.marcarRechazados([{ id: segundo.id, motivo: 'empleado_desconocido' }]);
 
+  // Descartar (29-09-2026): se oculta con motivo, NO se borra, y ya no vuelve.
+  const rechazadosAntes = bd.contarRechazados();
+  const descartados = bd.descartarRechazados('pruebas del kiosco antes de usarlo');
+  comprobar('descartar oculta todo lo rechazado', descartados === rechazadosAntes && bd.contarRechazados() === 0,
+    `${rechazadosAntes} -> descartados ${descartados}, quedan ${bd.contarRechazados()}`);
+  const filaDescartada = bdSql.prepare('SELECT descartado_en, descartado_motivo, ultimo_error FROM outbox WHERE id = ?').get(segundo.id);
+  comprobar('lo descartado NO se borra: queda con fecha, motivo y el motivo del rechazo',
+    filaDescartada && filaDescartada.descartado_en && filaDescartada.descartado_motivo === 'pruebas del kiosco antes de usarlo'
+      && filaDescartada.ultimo_error === 'empleado_desconocido');
+  comprobar('lo descartado ya no se lista ni sube',
+    !bd.listarRechazados(50).some((r) => r.id === segundo.id) && !bd.renglonesParaSubir(1000).some((r) => r.id === segundo.id));
+  comprobar('"Volver a enviarlos" no regresa lo descartado', bd.reintentarRechazados() === 0);
+
   // --- El catalogo ---
   const idNube = crypto.randomUUID();
   const antesDalton = bd.buscarPorUsuario('dgomez');

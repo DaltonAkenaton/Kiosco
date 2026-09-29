@@ -188,6 +188,9 @@ const api: ApiKiosco = {
     reintentarRechazados(token: string) {
       return ipcRenderer.invoke(CANALES.adminReintentarRechazados, { token });
     },
+    descartarRechazados(token: string, motivo: string) {
+      return ipcRenderer.invoke(CANALES.adminDescartarRechazados, { token, motivo });
+    },
     recuperarFotos(token: string, contrasena: string) {
       return ipcRenderer.invoke(CANALES.adminRecuperarFotos, { token, contrasena });
     },

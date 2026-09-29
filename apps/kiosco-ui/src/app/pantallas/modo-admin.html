@@ -290,7 +290,52 @@
               >
                 Volver a enviarlos
               </button>
+              @if (s.rol === 'admin' && motivoDescarte() === null) {
+                <button
+                  type="button"
+                  class="boton-secundario boton-tactil rounded-xl border-2 px-4 py-2"
+                  (click)="motivoDescarte.set('')"
+                >
+                  Descartar…
+                </button>
+                <kiosco-ayuda titulo="Descartar" [texto]="AYUDA.descartar" />
+              }
             </p>
+            @if (motivoDescarte() !== null) {
+              <!--
+                Descartar pide motivo: no se borra nada, pero algo deja de
+                verse, y eso se tiene que poder explicar. El motivo llega a la
+                oficina junto con quien lo hizo y cuantos fueron.
+              -->
+              <div class="mt-3 flex flex-wrap items-end gap-3">
+                <label class="flex min-w-[20rem] flex-1 flex-col gap-1">
+                  ¿Por qué se descartan? (llega a la oficina)
+                  <input
+                    type="text"
+                    class="border-borde rounded-xl border-2 bg-transparent px-3 py-2"
+                    placeholder="Ej.: pruebas del kiosco antes de empezar a usarlo"
+                    maxlength="200"
+                    [value]="motivoDescarte()"
+                    (input)="motivoDescarte.set(valorDe($event))"
+                  />
+                </label>
+                <button
+                  type="button"
+                  class="boton-primario boton-tactil rounded-xl px-5 py-2 font-bold"
+                  [disabled]="(motivoDescarte() ?? '').trim().length < 5"
+                  (click)="descartarRechazados()"
+                >
+                  Descartar {{ ek.totalRechazados }} registro(s)
+                </button>
+                <button
+                  type="button"
+                  class="border-borde boton-tactil rounded-xl border-2 px-5 py-2"
+                  (click)="motivoDescarte.set(null)"
+                >
+                  Cancelar
+                </button>
+              </div>
+            }
             @if (verRechazados()) {
               <table class="mt-2 w-full text-left">
                 <thead><tr class="text-texto-suave"><th class="pr-4">Cuándo</th><th class="pr-4">Qué</th><th>Por qué no</th></tr></thead>

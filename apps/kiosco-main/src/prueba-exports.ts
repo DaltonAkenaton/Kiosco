@@ -107,6 +107,7 @@ export {
   guardarEstadoLocal,
   listarRechazados,
   reintentarRechazados,
+  descartarRechazados,
   leerEstadoLocal,
 } from './datos/repositorio-sincronizacion';
 export { reglasDelPin, umbralesDeCamara, numeroConfigurado, zonaHorariaVigente } from './configuracion-vigente';

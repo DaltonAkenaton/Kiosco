@@ -168,6 +168,15 @@ app.whenReady().then(async () => {
     comprobar('lo registrado en otro kiosco cambia la sugerencia al elegir el nombre',
       sugeridoDespues !== sugeridoAntes, `${sugeridoAntes} -> ${sugeridoDespues}`);
 
+    // Descartar en el kiosco deja huella en la oficina (0025).
+    bd.registrarEvento('registros_descartados', { adminId: JEFE, cantidad: 3, motivo: 'prueba de punta a punta' });
+    await bd.ciclo();
+    const { rows: [descarte] } = await nube.query(
+      `select detalle from eventos_dispositivo where dispositivo_id = $1 and tipo = 'registros_descartados' order by ocurrido_en desc limit 1`,
+      [credencial.dispositivoId]);
+    comprobar('el aviso de "registros descartados" llega a la oficina con cantidad y motivo',
+      descarte && descarte.detalle.cantidad === 3 && descarte.detalle.motivo === 'prueba de punta a punta');
+
     // ======================================================================
     console.log('\n--- el reloj se movio sin internet (CLAUDE.md 6) ---');
     // Se simula: la ultima vez que hablo con la nube, Windows iba 10 minutos

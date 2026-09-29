@@ -243,6 +243,12 @@ export const EsquemaEntradaAdmin = z.strictObject({
 export const EsquemaSoloToken = z.strictObject({ token: EsquemaToken });
 
 /** La contrasena de recuperacion, para abrir fotos de una llave anterior. */
+/** Descartar rechazados: el motivo es obligatorio y queda en la oficina. */
+export const EsquemaDescartarRechazados = z.strictObject({
+  token: EsquemaToken,
+  motivo: z.string().trim().min(5).max(200),
+});
+
 export const EsquemaRecuperarFotos = z.strictObject({
   token: EsquemaToken,
   contrasena: z.string().min(1).max(200),

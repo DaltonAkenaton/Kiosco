@@ -167,7 +167,9 @@ export function anotarFallo(ids: readonly string[], error: string): void {
 
 /** Cuantos renglones rechazo la nube para siempre. Para diagnostico y para el modo admin. */
 export function contarRechazados(): number {
-  const fila = baseDeDatos().prepare('SELECT COUNT(*) AS n FROM outbox WHERE rechazado_en IS NOT NULL').get() as {
+  const fila = baseDeDatos()
+    .prepare('SELECT COUNT(*) AS n FROM outbox WHERE rechazado_en IS NOT NULL AND descartado_en IS NULL')
+    .get() as {
     n: number;
   };
   return fila.n;
@@ -355,7 +357,7 @@ export function listarRechazados(limite: number): { id: string; tipo: string; cr
   return baseDeDatos()
     .prepare(
       `SELECT id, tipo_registro AS tipo, creado_en AS creadoEn, COALESCE(ultimo_error, '') AS motivo
-         FROM outbox WHERE rechazado_en IS NOT NULL
+         FROM outbox WHERE rechazado_en IS NOT NULL AND descartado_en IS NULL
         ORDER BY creado_en DESC LIMIT ?`,
     )
     .all(limite) as { id: string; tipo: string; creadoEn: string; motivo: string }[];
@@ -368,7 +370,26 @@ export function listarRechazados(limite: number): { id: string; tipo: string; cr
  */
 export function reintentarRechazados(): number {
   return Number(
-    baseDeDatos().prepare('UPDATE outbox SET rechazado_en = NULL, ultimo_error = NULL WHERE rechazado_en IS NOT NULL').run()
-      .changes,
+    baseDeDatos()
+      .prepare(
+        'UPDATE outbox SET rechazado_en = NULL, ultimo_error = NULL WHERE rechazado_en IS NOT NULL AND descartado_en IS NULL',
+      )
+      .run().changes,
+  );
+}
+
+/**
+ * Descarta TODO lo rechazado que sigue a la vista: deja de mostrarse y de
+ * poder reenviarse. NO borra nada (ver la migracion 5). Devuelve cuantos.
+ * Quien llama es responsable de avisar a la oficina (evento).
+ */
+export function descartarRechazados(motivo: string): number {
+  return Number(
+    baseDeDatos()
+      .prepare(
+        `UPDATE outbox SET descartado_en = ?, descartado_motivo = ?
+          WHERE rechazado_en IS NOT NULL AND descartado_en IS NULL`,
+      )
+      .run(new Date().toISOString(), motivo).changes,
   );
 }

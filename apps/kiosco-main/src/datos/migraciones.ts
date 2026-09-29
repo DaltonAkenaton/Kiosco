@@ -277,4 +277,21 @@ export const MIGRACIONES: Migracion[] = [
       ALTER TABLE outbox ADD COLUMN rechazado_en TEXT;
     `,
   },
+  {
+    version: 5,
+    descripcion: 'Descartar rechazados: se ocultan con motivo, nunca se borran',
+    sql: `
+      -- ====================================================================
+      --  outbox.descartado_en / descartado_motivo  (29-09-2026)
+      -- ====================================================================
+      --  Un administrador puede DESCARTAR lo que la nube rechazo (por ejemplo,
+      --  pruebas hechas con el kiosco dado de baja). Descartar NO borra: el
+      --  renglon se queda, con fecha y motivo, y deja de mostrarse y de
+      --  poder reenviarse. Ademas se avisa a la oficina (evento
+      --  'registros_descartados'), para que el jefe sepa quien, cuando,
+      --  cuantos y por que. Nada se descarta en silencio (CLAUDE.md 3.3).
+      ALTER TABLE outbox ADD COLUMN descartado_en TEXT;
+      ALTER TABLE outbox ADD COLUMN descartado_motivo TEXT;
+    `,
+  },
 ];

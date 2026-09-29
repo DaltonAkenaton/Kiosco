@@ -102,6 +102,29 @@
   </div>
 }
 
+<!-- ====================== LO QUE SE HIZO EN LOS KIOSCOS ====================== -->
+<!--
+  Transparencia (29-09-2026): lo que una persona hizo en el modo administrador
+  de un kiosco y que el jefe debe poder ver desde aqui, sin ir a la PC:
+  descartar registros, sacar fotos a una USB, recuperar fotos con la
+  contrasena. Llegan como eventos del kiosco (tabla eventos_dispositivo).
+-->
+@if (actividad().length > 0) {
+  <h2 class="mt-8 text-xl font-bold">
+    Lo que se hizo en los kioscos
+    <panel-ayuda titulo="Lo que se hizo en los kioscos" [texto]="AYUDA_ACTIVIDAD" />
+  </h2>
+  <p class="text-texto-suave mt-1">Últimos {{ DIAS_ACTIVIDAD }} días.</p>
+  <ul class="mt-3 flex flex-col gap-2">
+    @for (a of actividad(); track a.id) {
+      <li class="bg-superficie border-borde rounded-2xl border px-4 py-3">
+        <b>{{ a.kiosco }}</b> · <span class="text-texto-suave">{{ fecha(a.ocurrido_en, zona()) }} {{ hora(a.ocurrido_en, zona()) }}</span>
+        <p class="mt-1">{{ a.texto }}</p>
+      </li>
+    }
+  </ul>
+}
+
 <!-- ====================== DAR DE ALTA: nombre, luego el codigo ====================== -->
 @if (dandoDeAlta()) {
   <panel-dialogo titulo="Dar de alta un kiosco" textoBoton="Generar código" [pedirMotivo]="false"

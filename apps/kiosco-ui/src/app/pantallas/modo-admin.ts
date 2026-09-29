@@ -100,9 +100,14 @@ const AYUDA = {
     'ejemplo, porque no conoce a esa persona), el registro no se pierde: se queda guardado en esta ' +
     'computadora. Cuando el problema ya esté resuelto en el panel, pulsa "Volver a enviarlos".',
   actualizacion:
-    'Este kiosco descarga solo las versiones nuevas del programa, pero no las instala hasta que un ' +
-    'administrador lo pide, para que nunca se reinicie a la hora de entrada. Instálala cuando nadie ' +
-    'esté checando: el kiosco se cierra y vuelve a abrir solo en uno o dos minutos.',
+    'Este kiosco descarga solo las versiones nuevas del programa y las instala solo de madrugada ' +
+    '(entre 2 y 5 de la mañana), cuando nadie lo está usando. Si la quieres ya, pica el botón cuando ' +
+    'nadie esté checando: el kiosco se cierra y vuelve a abrir solo en uno o dos minutos.',
+  descartar:
+    'Para registros que la oficina no aceptó y que no se van a volver a enviar (por ejemplo, pruebas ' +
+    'hechas con el kiosco dado de baja). No se borran: dejan de verse aquí y quedan guardados en esta ' +
+    'computadora. Hay que escribir el motivo, y la oficina recibe un aviso con quién lo hizo, cuántos ' +
+    'fueron y por qué. Si alguno sí debía contar, usa "Volver a enviarlos" en lugar de esto.',
   conservada:
     'Esta foto NO se borrará sola. Normalmente las fotos se borran a los 30 días, para cuidar la ' +
     'privacidad del personal. Si hay una queja o una duda sobre un registro, se marca "Conservar" ' +
@@ -243,6 +248,8 @@ export class ModoAdmin implements OnInit, OnDestroy {
   /** Version, actualizacion lista y registros que la oficina no acepto. */
   protected readonly estadoKiosco = signal<EstadoDelKioscoParaAdmin | null>(null);
   protected readonly verRechazados = signal(false);
+  /** "Descartar": pidiendo el motivo (null = cerrado). */
+  protected readonly motivoDescarte = signal<string | null>(null);
   protected readonly avisoEstado = signal<string | null>(null);
   protected readonly contrasenaRecuperar = signal('');
   protected readonly recuperando = signal(false);
@@ -356,6 +363,24 @@ export class ModoAdmin implements OnInit, OnDestroy {
     await this.cargarEstadoKiosco();
   }
 
+  /**
+   * Descartar lo rechazado. No se borra: deja de mostrarse y de poder
+   * reenviarse, y la oficina recibe un aviso con quien, cuantos y el motivo.
+   */
+  protected async descartarRechazados(): Promise<void> {
+    const sesion = this.sesion();
+    const motivo = (this.motivoDescarte() ?? '').trim();
+    if (!sesion || motivo.length < 5) return;
+    const datos = this.atender(await this.puente.admin?.descartarRechazados(sesion.token, motivo));
+    if (!datos) return;
+    this.avisoEstado.set(
+      `Listo: ${datos.descartados} registro(s) descartados. No se borraron: quedan guardados en esta computadora, y la oficina recibió el aviso con tu motivo.`,
+    );
+    this.motivoDescarte.set(null);
+    this.verRechazados.set(false);
+    await this.cargarEstadoKiosco();
+  }
+
   protected async instalarActualizacion(): Promise<void> {
     const sesion = this.sesion();
     if (!sesion) return;
@@ -389,6 +414,9 @@ export class ModoAdmin implements OnInit, OnDestroy {
       empleado_desconocido: 'La oficina no conoce a esa persona (se dio de alta sólo aquí, o la borraron).',
       dispositivo_revocado: 'Este kiosco ya estaba dado de baja en el panel cuando se hizo.',
       payload_ilegible: 'El registro se dañó en esta computadora y no se puede leer.',
+      marca_desconocida:
+        'Es un aviso sobre un registro que la oficina no tiene (casi siempre, uno de los que también rechazó).',
+      datos_invalidos: 'La oficina no pudo leer este registro (llegó incompleto o con datos que no reconoce).',
     };
     return textos[motivo] ?? motivo;
   }

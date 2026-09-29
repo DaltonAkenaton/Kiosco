@@ -107,6 +107,7 @@ export const CANALES = {
   adminEstadoDelKiosco: 'admin:estado-del-kiosco',
   /** Vuelve a poner en la cola los registros que la oficina rechazo. */
   adminReintentarRechazados: 'admin:reintentar-rechazados',
+  adminDescartarRechazados: 'admin:descartar-rechazados',
   /** Abre fotos de una llave anterior con la contrasena de recuperacion. */
   adminRecuperarFotos: 'admin:recuperar-fotos',
   /** Instala la version nueva ya descargada y reinicia el kiosco. */
@@ -458,6 +459,7 @@ export interface ApiAdmin {
   ): Promise<ResultadoAdmin<ResultadoExportacion | null>>;
   estadoDelKiosco(token: string): Promise<ResultadoAdmin<EstadoDelKioscoParaAdmin>>;
   reintentarRechazados(token: string): Promise<ResultadoAdmin<{ reintentados: number }>>;
+  descartarRechazados(token: string, motivo: string): Promise<ResultadoAdmin<{ descartados: number }>>;
   instalarActualizacion(token: string): Promise<ResultadoAdmin<null>>;
   recuperarFotos(token: string, contrasena: string): Promise<ResultadoAdmin<ResultadoRecuperacionFotos>>;
   /** La sesion se cerro sola (inactividad). */
