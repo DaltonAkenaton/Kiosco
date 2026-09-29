@@ -1,9 +1,9 @@
 # Panel administrativo
 
 La página web desde la que el jefe revisa la asistencia y administra el sistema
-desde su oficina. Angular + Supabase (Auth y RLS). Se publicará en Netlify
-cuando exista la cuenta de producción; mientras tanto corre contra el Supabase
-local.
+desde su oficina. Angular + Supabase (Auth y RLS). Publicado en Cloudflare
+(<https://panel.mi-cuenta.workers.dev>); en desarrollo corre contra
+el Supabase local.
 
 ## Cómo verlo en tu computadora
 
@@ -45,8 +45,9 @@ Necesita el Supabase local y `npm run panel:servir` corriendo.
 
 ## Para publicarlo
 
-Netlify lo compila solo con `netlify.toml` (en la raíz). Sólo hay que poner
-dos variables de entorno en Netlify: `SUPABASE_URL` y `SUPABASE_LLAVE_PUBLICA`
-(la **anon**, nunca la `service_role`: si se pega esa, la compilación se
-detiene). `escribir-entorno.mjs` arma `entorno.produccion.ts` con ellas.
-Paso a paso: [docs/PASOS-FINALES.md](../../docs/PASOS-FINALES.md), paso 5.
+La GitHub Action "Publicar el panel" (`.github/workflows/panel-cloudflare.yml`)
+lo arma con los secretos `PANEL_SUPABASE_URL` y `PANEL_SUPABASE_LLAVE_PUBLICA`
+(la **publishable/anon**, nunca la secreta: si se pega esa, la compilación se
+detiene) y lo sube a Cloudflare con `wrangler` (`wrangler.jsonc`, cabeceras en
+`public/_headers`). `escribir-entorno.mjs` arma `entorno.produccion.ts`.
+Paso a paso: [manual técnico, "Publicar el panel"](../../docs/manual-tecnico.md#publicar-el-panel).
