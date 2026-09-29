@@ -1,0 +1,93 @@
+# ============================================================================
+#  PUBLICAR EL PANEL EN CLOUDFLARE
+# ============================================================================
+#
+#  Arma el panel aqui en GitHub y sube los archivos a Cloudflare con
+#  `wrangler` (29-09-2026: se dejo Netlify porque se acabaron sus creditos
+#  gratis). Cloudflare no compila nada: solo sirve los archivos.
+#
+#  Corre solo cuando cambia algo que usa el panel (mismas rutas que la regla
+#  "ignore" que tenia Netlify), o a mano desde Actions -> "Publicar el panel"
+#  -> Run workflow (por ejemplo, tras cambiar un secreto).
+#
+#  Secretos (Settings -> Secrets and variables -> Actions):
+#    PANEL_SUPABASE_URL            "Project URL" del Supabase al que apunta el
+#                                  panel (pruebas ahora; produccion al entregar)
+#    PANEL_SUPABASE_LLAVE_PUBLICA  su llave "publishable" (o "anon public").
+#                                  NUNCA la secreta: la compilacion se niega.
+#    CLOUDFLARE_API_TOKEN          token de Cloudflare con permiso de Workers
+#    CLOUDFLARE_ACCOUNT_ID         el Account ID de la cuenta de Cloudflare
+#
+#  Paso a paso: docs/manual-tecnico.md, seccion "Publicar el panel".
+
+name: Publicar el panel
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - apps/panel/**
+      - packages/compartido/**
+      - apps/kiosco-ui/generar-tema.mjs
+      - package.json
+      - package-lock.json
+      - .github/workflows/panel-cloudflare.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Si llegan dos cambios seguidos, se publica solo el ultimo.
+concurrency:
+  group: panel-cloudflare
+  cancel-in-progress: true
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # El panel no necesita Electron: sin esto se bajarian ~100 MB de mas.
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - name: Revisar que esten los secretos
+        env:
+          URL: ${{ secrets.PANEL_SUPABASE_URL }}
+          LLAVE: ${{ secrets.PANEL_SUPABASE_LLAVE_PUBLICA }}
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CUENTA: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        # Sin esto, un secreto olvidado haria que el panel se armara con los
+        # datos de desarrollo que trae el repositorio.
+        run: |
+          falta=""
+          [ -n "$URL" ]    || falta="$falta PANEL_SUPABASE_URL"
+          [ -n "$LLAVE" ]  || falta="$falta PANEL_SUPABASE_LLAVE_PUBLICA"
+          [ -n "$TOKEN" ]  || falta="$falta CLOUDFLARE_API_TOKEN"
+          [ -n "$CUENTA" ] || falta="$falta CLOUDFLARE_ACCOUNT_ID"
+          if [ -n "$falta" ]; then
+            echo "::error::Faltan secretos en GitHub:$falta (ver docs/manual-tecnico.md, 'Publicar el panel')"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Armar el panel
+        env:
+          SUPABASE_URL: ${{ secrets.PANEL_SUPABASE_URL }}
+          SUPABASE_LLAVE_PUBLICA: ${{ secrets.PANEL_SUPABASE_LLAVE_PUBLICA }}
+        run: npm run panel:compilar
+
+      - name: Subir a Cloudflare
+        working-directory: apps/panel
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4 deploy

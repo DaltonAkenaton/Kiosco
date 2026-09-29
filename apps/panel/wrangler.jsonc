@@ -1,0 +1,19 @@
+// ============================================================================
+//  COMO PUBLICA CLOUDFLARE EL PANEL ADMINISTRATIVO
+// ============================================================================
+//  El panel es una pagina estatica: no hay codigo corriendo en Cloudflare,
+//  solo archivos. Los arma y los sube la GitHub Action
+//  `.github/workflows/panel-cloudflare.yml`. Paso a paso completo:
+//  docs/manual-tecnico.md, seccion "Publicar el panel".
+{
+  // Queda en https://panel.<subdominio-de-la-cuenta>.workers.dev
+  "name": "panel",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    "directory": "./dist",
+    // Angular maneja sus propias direcciones (/asistencia, /reportes...). Si
+    // alguien recarga en /reportes, se entrega index.html y Angular decide.
+    // Sin esto, recargar daria "pagina no encontrada".
+    "not_found_handling": "single-page-application"
+  }
+}

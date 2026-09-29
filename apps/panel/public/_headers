@@ -1,0 +1,30 @@
+# ============================================================================
+#  ENCABEZADOS DEL PANEL EN CLOUDFLARE
+# ============================================================================
+#  Cloudflare lee este archivo al publicar (no se sirve como pagina). Son los
+#  mismos que tenia netlify.toml:
+#  - CSP: el panel solo carga lo suyo y solo habla con Supabase.
+#    `style-src 'unsafe-inline'` hace falta porque Angular inserta los estilos
+#    de cada pantalla en etiquetas <style>. Los scripts NO tienen esa excepcion.
+#  - frame-ancestors 'none' / X-Frame-Options: nadie puede meter el panel
+#    dentro de otra pagina para engañar al jefe con clics (clickjacking).
+#  - Referrer-Policy / Permissions-Policy: no contar a otros sitios de donde
+#    viene la gente, y no pedir camara, microfono ni ubicacion.
+#
+#  index.html no se guarda en cache (Cloudflare ya lo sirve asi): una version
+#  nueva llega en cuanto se publica. Los .js y .css llevan una huella en el
+#  nombre (outputHashing) y esos si pueden guardarse un año.
+
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+  Strict-Transport-Security: max-age=31536000
+
+/*.js
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.css
+  Cache-Control: public, max-age=31536000, immutable
