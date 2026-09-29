@@ -156,6 +156,10 @@ kiosco y si algún kiosco o cámara está fallando.
   el kiosco le pide **elegir uno propio** (como en el cajero del banco); así
   nadie más lo conoce, ni tú. Mientras no lo elija, en la lista dice
   "Todavía no elige su PIN".
+- **Después del alta**, en la ventana del PIN, pica **Siguiente: asignar su
+  horario**: abre el editor de horarios con esa persona ya elegida. También
+  hay un botón **Horario** en cada persona de la lista. El número de empleado
+  lleva **sólo números**; si no tiene, déjalo vacío.
 - **Importar lista de Excel**: para muchos a la vez. En la ventana, **⬇
   Descargar plantilla**: es un Excel con las columnas listas, dos renglones de
   ejemplo y una hoja de **Instrucciones**. Borra los ejemplos, escribe un
@@ -339,6 +343,8 @@ panel.
 |---|---|
 | Alguien olvidó su PIN | Empleados → **PIN nuevo**. Mientras, **Registrar a mano**. |
 | Alguien tiene que irse a medio turno (una emergencia) | Que marque **SALIDA** en el kiosco al irse. Después, en **Reportes**, ese día sale "(N min antes)" con el botón **Justificar**, que ya propone **Permiso**: escribe el motivo y listo. Sus horas trabajadas sí cuentan. Si se fue sin marcar: **Registrar a mano** su salida, y luego el Permiso. |
+| El kiosco está cerrado | Es lo normal si la PC se usa para otras cosas: se abre con su **icono** del escritorio, se registra y se pica **Cerrar kiosco**. En el panel, Kioscos lo muestra como "Cerrado" y no es alerta. |
+| No puedo entrar al ⚙ Administrador de un kiosco nuevo | Primero hay que **darlo de alta**; los administradores le llegan de la oficina. Además tu usuario del kiosco debe estar definido en **Mi cuenta**. |
 | Quiero ver los registros que acaban de llegar | En **Asistencia**, botón **↻ Actualizar**. También se actualiza sola cada minuto si estás viendo el día de hoy. |
 | Un kiosco dado de baja sigue registrando | Sus registros **no llegan al panel** (a propósito: ya no se confía en él). Se quedan guardados en esa PC. Si la baja fue un error: dale de alta de nuevo con un código y, en ese kiosco, **⚙ Administrador → Registros que la oficina no aceptó → Volver a enviarlos**. (Lo que registró **antes** de la baja y no alcanzó a subir llega solo, marcado "en cuarentena" para revisarlo.) |
 | Se fue la luz / no hay kiosco | El personal te avisa por WhatsApp; tú **Registrar a mano** con motivo "sin luz". |

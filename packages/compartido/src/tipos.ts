@@ -335,4 +335,10 @@ export interface EstadoKiosco {
    * con Windows desfasado mostraban horas distintas (28-09-2026: 1.5 min).
    */
   desfaseRelojMs: number;
+
+  /**
+   * PC compartida (ajuste del jefe `kiosco_pc_compartida`): el kiosco se
+   * abre con su icono y tiene "Cerrar kiosco" en vez de "Usar esta PC".
+   */
+  pcCompartida: boolean;
 }

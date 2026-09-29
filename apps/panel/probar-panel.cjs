@@ -160,6 +160,15 @@ app.whenReady().then(async () => {
     const usuarioPropuesto = await js(`document.querySelectorAll('panel-dialogo input')[4].value`);
     comprobar('propone el usuario solo (rgomez)', usuarioPropuesto === 'rgomez', usuarioPropuesto);
     await escribir('panel-dialogo input[placeholder^="Ej."]', motivoAlta);
+    // "no tiene" en el numero (29-09-2026: se guardaba tal cual).
+    await js(`(() => { const el = document.querySelectorAll('panel-dialogo input')[3];
+      el.value = 'no tiene'; el.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+    await picar('Dar de alta');
+    await esperar(600);
+    comprobar('un numero de empleado con letras no se guarda y dice por que',
+      (await texto()).includes('lleva sólo números'));
+    await js(`(() => { const el = document.querySelectorAll('panel-dialogo input')[3];
+      el.value = '2001'; el.dispatchEvent(new Event('input', { bubbles: true })); })()`);
     await picar('Dar de alta');
     await esperar(1500);
     const pinMostrado = await js(`document.querySelector('.hoja-de-pines td.font-mono.text-3xl')?.textContent.trim() ?? ''`);
@@ -172,7 +181,12 @@ app.whenReady().then(async () => {
     const { rows: [b] } = await bd.query(
       `select motivo from bitacora_auditoria where tabla = 'empleados' and registro_id = $1`, [idCreado]);
     comprobar('y en la bitacora con el motivo escrito', b?.motivo === motivoAlta);
-    await picar('Ya lo anoté, cerrar');
+    await picar('Siguiente: asignar su horario');
+    await esperar(1800);
+    comprobar('"Siguiente: asignar su horario" abre el editor de horario de esa persona',
+      (await js('location.pathname')) === '/horarios' && (await texto()).includes('Horario de Rogelio'));
+    await picar('Cancelar');
+    await esperar(400);
 
     // ====================================================================
     console.log('\n--- kioscos: codigo de alta ---');
@@ -185,6 +199,8 @@ app.whenReady().then(async () => {
     idEventoDescarte = eventoDescarte.id;
     await ir('/kioscos');
     comprobar('muestra las alertas', (await texto()).includes('Para atender'));
+    comprobar('PC compartida: un kiosco que no se reporta sale "Cerrado" y no como alerta',
+      (await texto()).includes('Cerrado') && !/no se reporta desde/.test(await texto()));
     comprobar('"Lo que se hizo en los kioscos": el descarte con quién, cuántos y el motivo',
       (await texto()).includes('Lo que se hizo en los kioscos')
         && /Jefe de prueba descartó 7 registro\(s\).*«prueba del panel»/.test(await texto()));

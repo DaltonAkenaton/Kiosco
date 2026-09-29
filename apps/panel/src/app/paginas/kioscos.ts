@@ -76,6 +76,11 @@ export class Kioscos implements OnInit, OnDestroy {
     'con la contraseña de recuperación. Queda anotado quién, cuándo y (si lo pidió) el motivo.';
   protected readonly minutosSinConexion = signal(60);
   protected readonly minutosCamara = signal(15);
+  /**
+   * PC compartida (ajuste "kiosco_pc_compartida", 0026): el kiosco se cierra
+   * al terminar de checar, asi que "no se reporta" es lo normal y NO es alerta.
+   */
+  protected readonly pcCompartida = signal(true);
   protected readonly ahora = signal(Date.now());
   protected readonly error = signal<string | null>(null);
 
@@ -118,7 +123,7 @@ export class Kioscos implements OnInit, OnDestroy {
     const limiteMs = this.minutosSinConexion() * 60_000;
     for (const k of this.kioscos()) {
       if (!k.activo) continue;
-      if (!k.ultima_conexion || this.ahora() - new Date(k.ultima_conexion).getTime() > limiteMs) {
+      if (!this.pcCompartida() && (!k.ultima_conexion || this.ahora() - new Date(k.ultima_conexion).getTime() > limiteMs)) {
         lista.push(`${k.nombre}: no se reporta desde ${haceCuanto(k.ultima_conexion, this.ahora()).replace('hace ', 'hace ')}.`);
       }
       // La camara avisa cuando lleva caida mas que "Minutos de camara caida
@@ -159,7 +164,7 @@ export class Kioscos implements OnInit, OnDestroy {
       this.sesion.bd
         .from('configuracion')
         .select('clave, valor')
-        .in('clave', ['minutos_kiosco_sin_conexion_alerta', 'minutos_camara_caida_alerta']),
+        .in('clave', ['minutos_kiosco_sin_conexion_alerta', 'minutos_camara_caida_alerta', 'kiosco_pc_compartida']),
     ]);
     this.cargando.set(false);
     if (kioscos.error) {
@@ -172,6 +177,7 @@ export class Kioscos implements OnInit, OnDestroy {
     for (const c of config.data ?? []) {
       if (c.clave === 'minutos_kiosco_sin_conexion_alerta' && typeof c.valor === 'number') this.minutosSinConexion.set(c.valor);
       if (c.clave === 'minutos_camara_caida_alerta' && typeof c.valor === 'number') this.minutosCamara.set(c.valor);
+      if (c.clave === 'kiosco_pc_compartida') this.pcCompartida.set(Number(c.valor) === 1);
     }
     this.ahora.set(Date.now());
   }

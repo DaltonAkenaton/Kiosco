@@ -52,13 +52,18 @@
             <span class="shrink-0 whitespace-nowrap rounded-lg px-2 py-1 text-sm font-bold" style="background-color: rgb(239 68 68 / 0.18); color: var(--kiosko-peligro)">
               Dado de baja
             </span>
+          } @else if (sinReportarse(k) && pcCompartida()) {
+            <!-- PC compartida: cerrado es lo normal (se abre para checar y se cierra). -->
+            <span class="shrink-0 whitespace-nowrap rounded-lg px-2 py-1 text-sm font-bold" style="background-color: rgb(148 163 184 / 0.18); color: var(--kiosko-texto-suave)">
+              Cerrado
+            </span>
           } @else if (sinReportarse(k)) {
             <span class="shrink-0 whitespace-nowrap rounded-lg px-2 py-1 text-sm font-bold" style="background-color: rgb(234 179 8 / 0.18); color: var(--kiosko-atencion)">
               Sin reportarse
             </span>
           } @else {
             <span class="shrink-0 whitespace-nowrap rounded-lg px-2 py-1 text-sm font-bold" style="background-color: rgb(16 185 129 / 0.18); color: var(--kiosko-entrada)">
-              Funcionando
+              {{ pcCompartida() ? 'Abierto' : 'Funcionando' }}
             </span>
           }
         </div>

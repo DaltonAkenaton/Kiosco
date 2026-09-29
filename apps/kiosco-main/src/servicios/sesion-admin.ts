@@ -33,7 +33,7 @@ import { randomBytes, timingSafeEqual } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { CONFIG } from '@kiosko/compartido';
 import { baseDeDatos } from '../datos/base-de-datos';
-import { buscarAdministrador } from '../datos/repositorio-admin';
+import { buscarAdministrador, contarAdministradoresActivos } from '../datos/repositorio-admin';
 import { registrarEvento } from '../datos/repositorio-eventos';
 
 export interface SesionAdmin {
@@ -98,6 +98,12 @@ export function segundosDeEsperaTras(fallidos: number): number {
   return Math.min(segundosDeEsperaInicial * 2 ** duplicaciones, segundosDeEsperaMaxima);
 }
 
+/** Kiosco sin administradores conocidos (ver entrarModoAdmin). */
+const MENSAJE_SIN_ADMINISTRADORES =
+  'Este kiosco todavía no conoce a ningún administrador. Si es nuevo, primero dalo de alta (botón «Dar de alta», abajo) ' +
+  'y espera un minuto a que baje los datos de la oficina. Si ya está dado de alta, revisa en el panel, en «Mi cuenta», ' +
+  'que tengas definido tu usuario y contraseña del kiosco.';
+
 /**
  * Intenta abrir una sesion. Nunca dice si fallo el usuario o la contrasena.
  */
@@ -112,6 +118,13 @@ export async function entrarModoAdmin(usuario: string, contrasena: string): Prom
       ok: false,
       mensaje: `Hubo varios intentos fallidos seguidos. Espera ${segundos} segundos e intenta otra vez.`,
     };
+  }
+
+  // Un kiosco que todavia no conoce a NINGUN administrador (recien instalado,
+  // sin dar de alta) no debe decir "intento fallido": la contraseña puede
+  // estar bien. Decir que no hay ninguno no revela nada que sirva para adivinar.
+  if (contarAdministradoresActivos() === 0) {
+    return { ok: false, mensaje: MENSAJE_SIN_ADMINISTRADORES };
   }
 
   const admin = buscarAdministrador(usuario);

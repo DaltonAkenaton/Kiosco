@@ -227,6 +227,12 @@ export const PALABRAS_CONFIGURACION: Record<string, { nombre: string; explicacio
     explicacion: 'Si nadie usa este panel durante estos minutos, la sesión se cierra sola y hay que volver a entrar. Protege la computadora que se queda abierta (por ejemplo, toda la noche). Un minuto antes aparece un aviso.',
     seUsaEn: 'Este panel',
   },
+  kiosco_pc_compartida: {
+    nombre: 'La PC del kiosco se usa para otras cosas',
+    explicacion:
+      'Con "Sí" (lo normal aquí): el kiosco se abre con su icono cuando alguien va a checar, tiene un botón "Cerrar kiosco" y, antes de cerrarse, manda los registros a la oficina. Un kiosco cerrado no es alerta, y las versiones nuevas se instalan al cerrarlo. Con "No": la PC es sólo para checar; el kiosco se abre solo al prender, se queda en pantalla completa todo el día y avisa si deja de reportarse.',
+    seUsaEn: 'Los kioscos y este panel',
+  },
   permitir_datos_demostracion: {
     nombre: 'Permitir datos de demostración',
     explicacion: 'Con "Sí", en Empleados aparece el botón para generar empleados y registros FALSOS, para probar el sistema. Sirve sólo en el sistema de pruebas: en el sistema real debe quedar en "No".',

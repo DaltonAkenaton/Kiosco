@@ -40,6 +40,8 @@ import { alCerrarseSesionAdmin } from './servicios/sesion-admin';
 import { aplicarPoliticasDeSesion } from './seguridad';
 import { crearVentanaPrincipal } from './ventana';
 import { anotarUso } from './servicios/actividad';
+import { cerrarKiosco } from './servicios/cierre';
+import { esPcCompartida } from './configuracion-vigente';
 
 /**
  * ----------------------------------------------------------------------------
@@ -126,6 +128,7 @@ if (!esLaPrimeraCopia) {
      * se ve bien y no guarda nada.
      */
     abrirBaseDeDatos();
+    actualizarEstado({ pcCompartida: esPcCompartida() });
     sembrarEmpleadosDePrueba(); // no hace nada si la app esta empaquetada
     sembrarAdministradorDePrueba(); // tampoco
 
@@ -169,7 +172,7 @@ if (!esLaPrimeraCopia) {
      * Cubren cosas distintas y ninguna sustituye a la otra. El porque completo
      * esta en arranque-automatico.ts.
      */
-    blindarContraCierre(ventanaPrincipal);
+    blindarContraCierre(ventanaPrincipal, () => void cerrarKiosco());
     vigilarCaidas(ventanaPrincipal);
 
     // Modo administrador: aviso de que la sesion se cerro sola por

@@ -179,6 +179,11 @@ export class PuenteKiosco {
     return window.kiosco.elegirPin(tokenCambioPin, pinNuevo);
   }
 
+  /** PC compartida: manda lo pendiente y cierra el kiosco. */
+  async cerrarKiosco(): Promise<void> {
+    await window.kiosco?.cerrarKiosco?.();
+  }
+
   /** Nunca espera ni falla: la pantalla no depende de la red. */
   prepararRegistro(): void {
     try {

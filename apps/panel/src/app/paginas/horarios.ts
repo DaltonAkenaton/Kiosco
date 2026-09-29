@@ -16,6 +16,7 @@
  */
 
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { hoyEn } from '@kiosko/compartido';
 import { Ayuda } from '../componentes/ayuda';
 import { CargandoTabla, RENGLONES_CARGANDO } from '../componentes/cargando-tabla';
@@ -73,6 +74,7 @@ interface DiaElegido {
 export class Horarios implements OnInit {
   protected readonly sesion = inject(Sesion);
   private readonly avisos = inject(Avisos);
+  private readonly ruta = inject(ActivatedRoute);
   protected readonly cargando = signal(true);
   protected readonly RENGLONES_CARGANDO = RENGLONES_CARGANDO;
   /** A una persona solo se le asigna un turno activo (la base tampoco acepta otro). */
@@ -129,6 +131,11 @@ export class Horarios implements OnInit {
 
   async ngOnInit(): Promise<void> {
     await this.cargar();
+    // Viene de Empleados ("Horario" o "Siguiente: asignar su horario"):
+    // abre el editor directo con esa persona.
+    const id = this.ruta.snapshot.queryParamMap.get('empleado');
+    const empleado = id ? this.empleados().find((e) => e.id === id) : undefined;
+    if (empleado) this.abrirHorario(empleado);
   }
 
   private async cargar(): Promise<void> {

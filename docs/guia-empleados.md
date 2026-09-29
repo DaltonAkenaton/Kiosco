@@ -4,6 +4,11 @@
 
 ---
 
+## 0. Si el kiosco está cerrado, ábrelo
+
+Doble clic al icono del **reloj con palomita** en el escritorio. Cuando
+termines de registrar, pica **Cerrar kiosco** (abajo a la derecha).
+
 ## 1. Busca tu número en la pantalla
 
 La pantalla muestra la lista del personal con un número de dos cifras:

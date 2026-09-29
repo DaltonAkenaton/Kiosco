@@ -461,7 +461,24 @@ export const INTERFAZ = {
 //  Una pausa sin constancia seria un hueco inexplicable en la asistencia.
 export const PAUSA = {
   /**
-   * ¿Se puede pausar el kiosco?
+   * PC COMPARTIDA (29-09-2026). Lo decide el jefe en el panel (ajuste
+   * `kiosco_pc_compartida`, migracion 0026); este es el valor mientras el
+   * kiosco todavia no ha bajado la configuracion (recien instalado, sin
+   * internet). `true` porque es lo que confirmo el maestro: la PC se usa
+   * tambien para otras cosas. Ver servicios/cierre.ts.
+   */
+  pcCompartidaPorDefecto: true,
+
+  /**
+   * En una PC compartida, al cerrar el kiosco se intenta mandar lo pendiente
+   * como mucho estos segundos. Sin internet no se espera: se manda la
+   * proxima vez que se abra.
+   */
+  segundosMaximosParaEnviarAlCerrar: 8,
+
+  /**
+   * ¿Se puede pausar el kiosco? (Solo en una PC dedicada: en una compartida
+   * el boton es "Cerrar kiosco".)
    *
    * <-- PONLO EN false SI LA PC ES SOLO PARA CHECAR
    *

@@ -85,10 +85,11 @@ win:
       arch:
         - x64
 
-  ## Sin `icon`: todavia no hay escudo oficial de la UAT en formato .ico
-  ## (CLAUDE.md 14, pendiente del manual de identidad grafica). Mientras
-  ## tanto se usa el icono por defecto de Electron. Cuando llegue el oficial,
-  ## se pone en `recursos-instalador/icon.ico` y esto se resuelve solo.
+  ## Icono: `recursos-instalador/icon.ico` (electron-builder lo toma solo de
+  ## esa carpeta). Es un reloj con palomita, PROVISIONAL (29-09-2026) hasta
+  ## tener el escudo oficial de la UAT (CLAUDE.md 14). Se dibuja en
+  ## `recursos-instalador/icono.svg`; para regenerar el .ico:
+  ## `npx electron generar-icono.cjs`.
 
   ## El .exe no va firmado digitalmente. Windows SmartScreen mostrara un aviso
   ## la primera vez que se instale, y hay que darle a "Mas informacion" ->

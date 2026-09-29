@@ -60,9 +60,22 @@ Las fotos **nunca** salen del kiosco. A la nube sólo llega su huella (hash).
    Configuración → Cuentas → Otros usuarios → **Configurar un quiosco**
    (Assigned Access) para que la cuenta sólo abra esta app. Con Windows Home no
    existe; la app ya se protege sola (pantalla completa, no se deja cerrar con
-   Alt+F4, vuelve a abrirse si se cierra). Si la PC es **compartida**, no usar
-   Assigned Access: el botón **Usar esta PC** de la app permite apartarla 15
-   minutos.
+   Alt+F4, vuelve a abrirse si se cierra). Si la PC es **compartida** (lo
+   normal en esta facultad), **no** usar Assigned Access: ver abajo.
+
+### ¿PC sólo para checar, o compartida?
+
+Lo decide el ajuste **"La PC del kiosco se usa para otras cosas"** del panel
+(Configuración → Kioscos). Viene en **Sí**.
+
+| | PC compartida (**Sí**, por defecto) | PC sólo para checar (**No**) |
+|---|---|---|
+| Al prender Windows | No se abre sola: se abre con su **icono** | Se abre sola |
+| Para cerrarla | Botón **Cerrar kiosco** (o Alt+F4). Antes de salir manda lo pendiente | No se deja cerrar; sólo `Ctrl+Alt+Shift+Q` |
+| Versiones nuevas | Se instalan **al cerrar** el kiosco | Se instalan de madrugada (2–5 h) |
+| Panel → Kioscos | Cerrado = normal, sin alerta | Sin reportarse = alerta |
+
+Deja el **icono en el escritorio** a la vista: es la forma de abrirlo.
 
 ### Instalar
 
@@ -71,8 +84,9 @@ Las fotos **nunca** salen del kiosco. A la nube sólo llega su huella (hash).
 2. Doble clic. Windows SmartScreen puede avisar "Windows protegió su PC"
    (el `.exe` no está firmado con certificado de pago): **Más información →
    Ejecutar de todas formas**.
-3. Se instala en el perfil del usuario, crea accesos directos, y **se abre sola
-   al encender** la PC.
+3. Se instala en el perfil del usuario y crea el icono en el escritorio (un
+   reloj con palomita). Si la PC es sólo para checar, además **se abre sola al
+   encender**.
 4. Probar: la cámara se ve, el reloj marca la hora de Nuevo Laredo.
 
 **Cerrar la app para mantenimiento:** `Ctrl + Alt + Shift + Q`. Se vuelve a

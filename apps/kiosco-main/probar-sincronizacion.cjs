@@ -56,6 +56,7 @@ app.whenReady().then(async () => {
   const estados = [];
   const dispositivos = [];
   const marcasDeOtroKiosco = [];
+  const empleadosDeLaPrueba = [];
 
   try {
     bd.abrirBaseDeDatos();
@@ -168,6 +169,40 @@ app.whenReady().then(async () => {
     comprobar('lo registrado en otro kiosco cambia la sugerencia al elegir el nombre',
       sugeridoDespues !== sugeridoAntes, `${sugeridoAntes} -> ${sugeridoDespues}`);
 
+    // Alta de un empleado en el panel (29-09-2026: "el PIN que da el alta no
+    // funciona"). El PIN que muestra el panel debe servir en el kiosco.
+    await nube.query('begin');
+    await nube.query(`select set_config('request.jwt.claims', $1, true)`, [JSON.stringify({ sub: JEFE })]);
+    await nube.query('set local role authenticated');
+    const { rows: [altaPanel] } = await nube.query(
+      `select * from alta_empleado('Ernesto', 'Altamirano', 'Prueba', null, 'ealtamirano', 'prueba del PIN de alta')`);
+    await nube.query('commit');
+    empleadosDeLaPrueba.push(altaPanel.id);
+    bd.olvidarUltimaBajadaParaPrueba();
+    await bd.ponerseAlDia();
+    const nuevo = bd.buscarPorUsuario('ealtamirano');
+    comprobar('un empleado recien dado de alta llega al kiosco', !!nuevo && nuevo.id === altaPanel.id);
+    const conPinDeAlta = nuevo ? await bd.verificarPin(nuevo, altaPanel.pin) : { ok: false };
+    comprobar('y el PIN que mostro el panel al darlo de alta funciona (y es temporal)',
+      conPinDeAlta.ok === true && conPinDeAlta.empleado.pinTemporal === true);
+
+    // PC compartida (0026): el ajuste viaja del panel al kiosco, y al cerrar
+    // se manda lo pendiente.
+    await nube.query(`update configuracion set valor = '0'::jsonb where clave = 'kiosco_pc_compartida'`);
+    bd.olvidarUltimaBajadaParaPrueba();
+    await bd.ponerseAlDia();
+    comprobar('el jefe apaga "PC compartida" en el panel y el kiosco se entera', bd.esPcCompartida() === false);
+    await nube.query(`update configuracion set valor = '1'::jsonb where clave = 'kiosco_pc_compartida'`);
+    bd.olvidarUltimaBajadaParaPrueba();
+    await bd.ponerseAlDia();
+    comprobar('y la vuelve a encender', bd.esPcCompartida() === true);
+    const idAlCerrar = bd.nuevoIdDeMarca();
+    bd.guardarMarca({ id: idAlCerrar, empleadoId: DGOMEZ_NUBE, usuario: 'dgomez', tipo: 'entrada', reloj: bd.leerReloj(), banderas: [], foto: null });
+    const quedanAlCerrar = await bd.enviarAntesDeCerrar(8000);
+    const { rows: [marcaAlCerrar] } = await nube.query('select id from marcas where id = $1', [idAlCerrar]);
+    comprobar('al cerrar el kiosco, lo recien registrado ya llego a la oficina', quedanAlCerrar === 0 && !!marcaAlCerrar,
+      `quedan ${quedanAlCerrar}`);
+
     // Descartar en el kiosco deja huella en la oficina (0025).
     bd.registrarEvento('registros_descartados', { adminId: JEFE, cantidad: 3, motivo: 'prueba de punta a punta' });
     await bd.ciclo();
@@ -243,6 +278,8 @@ app.whenReady().then(async () => {
       await nube.query('set session_replication_role = replica');
       await nube.query('delete from marcas where dispositivo_id = any($1)', [dispositivos]);
       await nube.query('delete from marcas where id = any($1)', [marcasDeOtroKiosco]);
+      await nube.query('delete from cambios_pin where empleado_id = any($1)', [empleadosDeLaPrueba]);
+      await nube.query('delete from empleados where id = any($1)', [empleadosDeLaPrueba]);
       await nube.query('delete from eventos_dispositivo where dispositivo_id = any($1)', [dispositivos]);
       await nube.query('delete from accesos_foto where dispositivo_id = any($1)', [dispositivos]);
       await nube.query(`delete from codigos_enrolamiento where nombre_dispositivo = 'Kiosco de la prueba'`);

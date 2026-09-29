@@ -35,6 +35,16 @@ export interface AdministradorEnCache {
   activo: boolean;
 }
 
+/**
+ * ¿Cuantos administradores activos conoce este kiosco? Cero significa que
+ * todavia no se da de alta (los administradores bajan con la sincronizacion)
+ * o que nadie tiene definido su usuario del kiosco en el panel.
+ */
+export function contarAdministradoresActivos(): number {
+  const fila = baseDeDatos().prepare('SELECT COUNT(*) AS n FROM administradores_cache WHERE activo = 1').get() as { n: number };
+  return fila.n;
+}
+
 export function buscarAdministrador(usuario: string): AdministradorEnCache | null {
   const fila = baseDeDatos()
     .prepare('SELECT * FROM administradores_cache WHERE usuario = ?')

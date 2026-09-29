@@ -49,6 +49,7 @@
 
 import { app, BrowserWindow } from 'electron';
 import { ES_PRODUCCION, MODO_PRUEBA } from './entorno';
+import { esPcCompartida } from './configuracion-vigente';
 
 /**
  * ¿Ya se autorizo salir?
@@ -116,8 +117,12 @@ export function configurarArranqueConWindows(): void {
      * arranque. Esa es la propiedad que importa en una PC que nadie
      * administra.
      */
+    // PC compartida (ajuste del jefe, 0026): NO se abre sola; se abre con su
+    // icono cuando alguien va a checar. Se escribe igual (con false) para
+    // QUITAR el inicio automatico que dejaron versiones anteriores.
+    const abrirConWindows = !esPcCompartida();
     app.setLoginItemSettings({
-      openAtLogin: true,
+      openAtLogin: abrirConWindows,
 
       /**
        * `path` explicito y no el valor por defecto.
@@ -131,7 +136,7 @@ export function configurarArranqueConWindows(): void {
       path: process.execPath,
     });
 
-    console.info('[arranque] la aplicacion queda configurada para abrirse con Windows');
+    console.info(`[arranque] abrir con Windows: ${abrirConWindows ? 'si' : 'no (PC compartida)'}`);
   } catch (fallo) {
     // Si el registro esta bloqueado por politicas de la facultad, el kiosco
     // sigue sirviendo: simplemente habra que abrirlo a mano. No es motivo
@@ -167,7 +172,7 @@ export function configurarArranqueConWindows(): void {
  *  haya que hacer mantenimiento en una PC sin administrador, no habria como.
  *  Queda documentada en el manual tecnico, no escondida.
  */
-export function blindarContraCierre(ventana: BrowserWindow): void {
+export function blindarContraCierre(ventana: BrowserWindow, alCerrarEnPcCompartida: () => void = () => {}): void {
   if (!ES_PRODUCCION) return;
 
   // En modo prueba se deja cerrar con normalidad: estas probando en tu
@@ -180,6 +185,12 @@ export function blindarContraCierre(ventana: BrowserWindow): void {
     if (salidaAutorizada) return;
 
     evento.preventDefault();
+    // PC compartida: cerrar SI se puede (Alt+F4 o el boton), pero pasando
+    // por servicios/cierre.ts, que primero manda lo pendiente.
+    if (esPcCompartida()) {
+      alCerrarEnPcCompartida();
+      return;
+    }
     console.warn('[kiosco] intento de cerrar la ventana: bloqueado');
   });
 

@@ -22,6 +22,7 @@
 
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { desempatarUsuario, generarUsuario } from '@kiosko/compartido';
 import { Ayuda } from '../componentes/ayuda';
 import { CargandoTabla, RENGLONES_CARGANDO } from '../componentes/cargando-tabla';
@@ -103,6 +104,9 @@ export class Empleados implements OnInit {
   protected readonly guardando = signal(false);
   protected readonly errorAccion = signal<string | null>(null);
   protected readonly pines = signal<PinParaEntregar[]>([]);
+  /** Quien se acaba de dar de alta: la ventana del PIN ofrece ponerle su horario. */
+  protected readonly recienDadoDeAlta = signal<{ id: string; nombre: string } | null>(null);
+  private readonly router = inject(Router);
 
   /** ARCO: la constancia en pantalla, lista para imprimir o guardar como PDF. */
   protected readonly constancia = signal<{ empleado: Empleado; datos: DatosArco } | null>(null);
@@ -223,6 +227,13 @@ export class Empleados implements OnInit {
       this.errorAccion.set('Falta el nombre o el apellido paterno.');
       return false;
     }
+    // Solo digitos (29-09-2026: alguien escribio "no tiene" y se guardo como
+    // numero). Sin largo fijo: los de la universidad pueden ser mas largos
+    // que los que teclea el kiosco.
+    if (d.numero.trim() !== '' && !/^[0-9]+$/.test(d.numero.trim())) {
+      this.errorAccion.set('El número de empleado lleva sólo números. Si no tiene, déjalo vacío.');
+      return false;
+    }
     if (!/^[a-z][a-z0-9.]{2,19}$/.test(d.usuario.trim())) {
       this.errorAccion.set('El usuario debe empezar con una letra y tener de 3 a 20 letras o números, sin espacios ni acentos.');
       return false;
@@ -248,19 +259,39 @@ export class Empleados implements OnInit {
     return true;
   }
 
+  /**
+   * Alta. El PIN se muestra EN CUANTO responde la base; la lista se recarga
+   * detras. Antes se esperaba a recargar toda la lista para cerrar la
+   * ventana, y parecia que "no funcionaba" (29-09-2026).
+   */
   protected async guardarAlta(motivo: string): Promise<void> {
     if (!this.datosCompletos()) return;
     const d = this.datos();
-    let pin = '';
-    await this.ejecutar(async () => {
-      const r = await this.sesion.bd.rpc('alta_empleado', {
-        p_nombre: d.nombre, p_paterno: d.paterno, p_materno: d.materno,
-        p_numero: d.numero, p_usuario: d.usuario, p_motivo: motivo,
-      });
-      pin = (r.data as { pin: string }[] | null)?.[0]?.pin ?? '';
-      return r;
+    this.guardando.set(true);
+    this.errorAccion.set(null);
+    const r = await this.sesion.bd.rpc('alta_empleado', {
+      p_nombre: d.nombre.trim(), p_paterno: d.paterno.trim(), p_materno: d.materno.trim(),
+      p_numero: d.numero.trim() || null, p_usuario: d.usuario.trim(), p_motivo: motivo,
     });
-    if (pin) this.pines.set([{ nombre: this.nombreCompleto(d), usuario: d.usuario, pin }]);
+    this.guardando.set(false);
+    if (r.error) {
+      this.errorAccion.set(mensajeDeError(r.error));
+      return;
+    }
+    const creado = (r.data as { id: string; pin: string }[] | null)?.[0];
+    this.accion.set(null);
+    if (creado) {
+      this.recienDadoDeAlta.set({ id: creado.id, nombre: this.nombreCompleto(d) });
+      this.pines.set([{ nombre: this.nombreCompleto(d), usuario: d.usuario, pin: creado.pin }]);
+    }
+    void this.cargar();
+  }
+
+  /** Abre el editor de horario (pagina Horarios) ya con esa persona elegida. */
+  protected irAHorario(empleado: { id: string }): void {
+    this.pines.set([]);
+    this.recienDadoDeAlta.set(null);
+    void this.router.navigate(['/horarios'], { queryParams: { empleado: empleado.id } });
   }
 
   protected async guardarEdicion(empleado: Empleado, motivo: string): Promise<void> {
@@ -444,7 +475,9 @@ export class Empleados implements OnInit {
       else {
         d.usuario = desempatarUsuario(base, usados);
         usados.push(d.usuario);
-        if (d.numero && this.empleados().some((e) => e.numero_empleado === d.numero)) {
+        if (d.numero && !/^[0-9]+$/.test(d.numero.trim())) {
+          problema = `El número "${d.numero}" no es un número (déjalo vacío si no tiene)`;
+        } else if (d.numero && this.empleados().some((e) => e.numero_empleado === d.numero)) {
           problema = `Ya hay alguien con el número ${d.numero}`;
         }
       }

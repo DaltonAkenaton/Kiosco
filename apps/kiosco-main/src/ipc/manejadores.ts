@@ -53,6 +53,7 @@ import {
 } from '@kiosko/compartido';
 import {
   cambiarModoIdentificacion,
+  esPcCompartida,
   modoIdentificacionVigente,
   umbralesDeCamara,
   zonaHorariaVigente,
@@ -85,6 +86,7 @@ import { enrolar, esperarBajadaEnCamino, ponerseAlDia, sincronizarPronto } from 
 import { detectarAnomaliasDeReloj, leerReloj } from '../servicios/reloj';
 import { ES_DESARROLLO } from '../entorno';
 import { anotarUso } from '../servicios/actividad';
+import { cerrarKiosco } from '../servicios/cierre';
 import {
   EsquemaCambioDeModo,
   EsquemaCancelacion,
@@ -115,6 +117,7 @@ const estado: EstadoKiosco = {
   pausado: false,
   pausaTerminaEn: null,
   desfaseRelojMs: 0,
+  pcCompartida: CONFIG.pausa.pcCompartidaPorDefecto,
 };
 
 /**
@@ -586,6 +589,13 @@ export function registrarManejadoresIpc(): void {
   //  Sin datos de entrada y sin respuesta: solo dispara la consulta rapida.
   //  Tiene su propio limite de frecuencia (ponerseAlDia), asi que llamarlo
   //  de mas no genera trafico de mas.
+  // Cerrar el kiosco en una PC compartida: manda lo pendiente y sale
+  // (servicios/cierre.ts). En una PC dedicada no se deja cerrar asi.
+  ipcMain.handle(CANALES.cerrarKiosco, async (): Promise<void> => {
+    if (!esPcCompartida()) return;
+    await cerrarKiosco();
+  });
+
   ipcMain.handle(CANALES.prepararRegistro, async (): Promise<void> => {
     anotarUso();
     void ponerseAlDia();

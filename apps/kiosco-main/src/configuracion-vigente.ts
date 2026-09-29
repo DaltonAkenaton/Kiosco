@@ -92,6 +92,13 @@ export function numeroConfigurado(
   return respaldo;
 }
 
+/** ¿La PC del kiosco se usa tambien para otras cosas? (migracion 0026) */
+export function esPcCompartida(): boolean {
+  return (
+    numeroConfigurado('kiosco_pc_compartida', CONFIG.pausa.pcCompartidaPorDefecto ? 1 : 0, { minimo: 0, maximo: 1 }) === 1
+  );
+}
+
 /** Las reglas del PIN vigentes (CLAUDE.md 3.4). */
 export function reglasDelPin(): { intentosMaximos: number; segundosDeBloqueo: number; minutosParaOlvidar: number } {
   return {

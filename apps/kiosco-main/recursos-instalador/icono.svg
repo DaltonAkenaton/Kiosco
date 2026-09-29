@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!--
+    Icono del kiosco (29-09-2026): un reloj con una palomita de "registrado".
+    Provisional hasta tener el escudo oficial de la UAT (CLAUDE.md 14).
+    Colores de tema.json: azul institucional, naranja institucional, verde
+    de ENTRADA. Para regenerar el .ico: node generar-icono.cjs (con electron).
+  -->
+  <defs>
+    <linearGradient id="fondo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0b5a85"/>
+      <stop offset="1" stop-color="#003d5c"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="url(#fondo)"/>
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="none" stroke="#bb4b26" stroke-width="8"/>
+  <!-- Caratula -->
+  <circle cx="122" cy="126" r="78" fill="#f1f5f9"/>
+  <circle cx="122" cy="126" r="78" fill="none" stroke="#0b5a85" stroke-width="6"/>
+  <!-- Marcas de las horas -->
+  <g stroke="#003d5c" stroke-width="7" stroke-linecap="round">
+    <line x1="122" y1="58" x2="122" y2="70"/>
+    <line x1="190" y1="126" x2="178" y2="126"/>
+    <line x1="122" y1="194" x2="122" y2="182"/>
+    <line x1="54" y1="126" x2="66" y2="126"/>
+  </g>
+  <!-- Manecillas -->
+  <g stroke="#003d5c" stroke-linecap="round">
+    <line x1="122" y1="126" x2="122" y2="84" stroke-width="10"/>
+    <line x1="122" y1="126" x2="152" y2="140" stroke-width="10"/>
+  </g>
+  <circle cx="122" cy="126" r="9" fill="#bb4b26"/>
+  <!-- Palomita de "registrado" -->
+  <circle cx="190" cy="190" r="44" fill="#10b981" stroke="#003d5c" stroke-width="8"/>
+  <path d="M170 191 l14 14 l26 -30" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

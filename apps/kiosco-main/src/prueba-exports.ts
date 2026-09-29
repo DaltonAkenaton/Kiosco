@@ -110,7 +110,8 @@ export {
   descartarRechazados,
   leerEstadoLocal,
 } from './datos/repositorio-sincronizacion';
-export { reglasDelPin, umbralesDeCamara, numeroConfigurado, zonaHorariaVigente } from './configuracion-vigente';
+export { reglasDelPin, umbralesDeCamara, numeroConfigurado, zonaHorariaVigente, esPcCompartida } from './configuracion-vigente';
+export { enviarAntesDeCerrar } from './servicios/sincronizacion';
 export {
   calcularDesfase,
   enrolar,

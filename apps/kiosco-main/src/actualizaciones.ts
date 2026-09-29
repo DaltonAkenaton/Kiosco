@@ -177,6 +177,15 @@ export function instalarActualizacionYReiniciar(): void {
   autoUpdater.quitAndInstall(true, true);
 }
 
+/**
+ * PC compartida: instala la version descargada al cerrar el kiosco, en
+ * silencio y SIN volver a abrirlo (la persona lo esta cerrando a proposito).
+ */
+export function instalarAlCerrar(): void {
+  permitirSalir();
+  autoUpdater.quitAndInstall(true, false);
+}
+
 /** La version que corre ahora mismo. Para el heartbeat y el diagnostico. */
 export function versionActual(): string {
   return app.getVersion();

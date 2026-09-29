@@ -1507,9 +1507,23 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
   protected readonly estadoDePausa = signal<string | null>(null);
 
   /** ¿Se muestra el boton? Si la PC es dedicada, el jefe lo apaga y desaparece. */
+  /**
+   * PC compartida (ajuste del jefe, 29-09-2026): en vez de "Usar esta PC"
+   * por 15 minutos, "Cerrar kiosco". En una PC dedicada, como antes.
+   */
+  protected readonly pcCompartida = computed(() => this.estado()?.pcCompartida === true);
   protected readonly pausaPermitida = computed(
-    () => this.configuracion()?.pausaPermitida === true,
+    () => this.configuracion()?.pausaPermitida === true && !this.pcCompartida(),
   );
+
+  /** "Cerrando…": mientras el kiosco manda lo pendiente antes de salir. */
+  protected readonly cerrando = signal(false);
+
+  protected cerrarKiosco(): void {
+    if (this.cerrando()) return;
+    this.cerrando.set(true);
+    void this.puente.cerrarKiosco();
+  }
 
   /**
    * Los puntos del codigo, igual que los del PIN: cuantos llevas, nunca cuales.

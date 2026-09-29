@@ -59,6 +59,8 @@ import {
 import { ES_DESARROLLO } from '../entorno';
 import { type CredencialKiosco, guardarCredencial, leerCredencial } from './credencial-kiosco';
 import { establecerDesfaseServidor } from './reloj';
+import { esPcCompartida } from '../configuracion-vigente';
+import { configurarArranqueConWindows } from '../arranque-automatico';
 
 const S = CONFIG.sincronizacion;
 const CLAVE_DESFASE = 'desfase_servidor_ms';
@@ -343,6 +345,10 @@ async function bajar(credencial: CredencialKiosco, segundosLimite?: number): Pro
 
   aplicarCatalogo(catalogo.data);
   ultimaBajadaOkMs = Date.now();
+  // El jefe pudo cambiar "PC compartida" en el panel: la pantalla y el inicio
+  // con Windows se ajustan sin reiniciar.
+  avisar({ pcCompartida: esPcCompartida() });
+  configurarArranqueConWindows();
   if (catalogo.data.empleados.length > 0 || catalogo.data.administradores.length > 0) {
     console.info(
       `[sync] catalogo: ${catalogo.data.empleados.length} empleado(s), ` +
@@ -429,6 +435,25 @@ export async function esperarBajadaEnCamino(msMaximo: number): Promise<void> {
     }),
   ]);
   clearTimeout(temporizador);
+}
+
+/**
+ * Antes de cerrar el kiosco (PC compartida): manda lo pendiente, esperando
+ * como mucho `msMaximo`. Sin internet no espera. Devuelve cuantos quedaron.
+ */
+export async function enviarAntesDeCerrar(msMaximo: number): Promise<number> {
+  if (!sincronizacionDisponible() || !leerCredencial() || sinPermisoDeLaNube()) return contarPendientes();
+  const limite = Date.now() + msMaximo;
+  while (contarPendientes() > 0 && Date.now() < limite) {
+    if (nube === 'sin_conexion') break;
+    const restante = limite - Date.now();
+    if (enCurso) {
+      await new Promise((listo) => setTimeout(listo, 200));
+    } else {
+      await Promise.race([ciclo(), new Promise((listo) => setTimeout(listo, restante))]);
+    }
+  }
+  return contarPendientes();
 }
 
 /** Solo pruebas: como si la ultima bajada hubiera sido hace mucho. */

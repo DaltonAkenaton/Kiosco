@@ -495,6 +495,29 @@ app.whenReady().then(async () => {
   // ======================================================================
   console.log('\n--- modo administrador ---');
 
+  // Kiosco recien instalado, sin administradores conocidos (29-09-2026): el
+  // mensaje dice que falta darlo de alta, no "intento fallido".
+  const bdAdmins = bd.baseDeDatos();
+  const respaldoAdmins = bdAdmins.prepare('SELECT * FROM administradores_cache').all();
+  bdAdmins.prepare('DELETE FROM administradores_cache').run();
+  const sinAdmins = await bd.entrarModoAdmin('cualquiera', 'lo-que-sea');
+  comprobar('kiosco sin administradores: dice que falta darlo de alta',
+    sinAdmins.ok === false && /todavía no conoce a ningún administrador/.test(sinAdmins.mensaje), sinAdmins.mensaje);
+  for (const fila of respaldoAdmins) {
+    const columnas = Object.keys(fila);
+    bdAdmins.prepare(`INSERT INTO administradores_cache (${columnas.join(', ')}) VALUES (${columnas.map(() => '?').join(', ')})`)
+      .run(...columnas.map((c) => fila[c]));
+  }
+
+  // PC compartida (0026): por defecto si; el jefe lo puede apagar.
+  comprobar('PC compartida: por defecto SI', bd.esPcCompartida() === true);
+  bdAdmins.prepare("INSERT OR REPLACE INTO configuracion_cache (clave, valor) VALUES ('kiosco_pc_compartida', '0')").run();
+  comprobar('PC compartida: con 0 en el panel, NO', bd.esPcCompartida() === false);
+  bdAdmins.prepare("DELETE FROM configuracion_cache WHERE clave = 'kiosco_pc_compartida'").run();
+  const t0Cierre = Date.now();
+  await bd.enviarAntesDeCerrar(8000);
+  comprobar('al cerrar sin conexion con la oficina, no se queda esperando', Date.now() - t0Cierre < 500, `${Date.now() - t0Cierre} ms`);
+
   bd.sembrarAdministradorDePrueba();
   const { usuario: U_ADMIN, contrasena: C_ADMIN } = bd.ADMIN_DE_PRUEBA;
 

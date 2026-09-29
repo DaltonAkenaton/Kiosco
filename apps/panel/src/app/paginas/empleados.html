@@ -76,6 +76,9 @@
             <div class="flex flex-wrap gap-2">
               <button type="button" class="boton-secundario !px-3 !py-1" (click)="abrir({ tipo: 'editar', empleado: e })">Corregir datos</button>
               @if (e.activo) {
+                <button type="button" class="boton-secundario !px-3 !py-1" (click)="irAHorario(e)">Horario</button>
+              }
+              @if (e.activo) {
                 <button type="button" class="boton-secundario !px-3 !py-1" (click)="abrir({ tipo: 'pin', empleado: e })">PIN nuevo</button>
               }
               <button type="button" class="boton-secundario !px-3 !py-1" (click)="abrir({ tipo: 'estado', empleado: e })">
@@ -120,7 +123,8 @@
       <input class="campo" [value]="datos().materno" (input)="cambiarDato('materno', valor($event))" />
     </label>
     <label class="flex flex-col gap-1">Número de empleado <span class="text-texto-suave text-sm">(si tiene)</span>
-      <input class="campo" [value]="datos().numero" (input)="cambiarDato('numero', valor($event))" />
+      <input class="campo" inputmode="numeric" placeholder="Sólo números; vacío si no tiene"
+             [value]="datos().numero" (input)="cambiarDato('numero', valor($event))" />
     </label>
     <label class="flex flex-col gap-1 sm:col-span-2">
       <span>Usuario <panel-ayuda titulo="Usuario" [texto]="AYUDA.usuario" alinear="izquierda" /></span>
@@ -351,7 +355,11 @@
       </table>
       <div class="no-imprimir flex gap-3">
         <button type="button" class="boton-principal" (click)="imprimirPines()">Imprimir</button>
-        <button type="button" class="boton-secundario" (click)="pines.set([])">Ya lo anoté, cerrar</button>
+        @if (recienDadoDeAlta(); as nuevo) {
+          <!-- Recien dado de alta: el siguiente paso natural es su horario. -->
+          <button type="button" class="boton-principal" (click)="irAHorario(nuevo)">Siguiente: asignar su horario</button>
+        }
+        <button type="button" class="boton-secundario" (click)="pines.set([]); recienDadoDeAlta.set(null)">Ya lo anoté, cerrar</button>
       </div>
     </div>
   </div>
