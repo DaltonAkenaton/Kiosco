@@ -8,7 +8,7 @@
 #    - la revision de sintaxis de las migraciones;
 #    - las pruebas del esquema (RLS, triggers, reportes, ARCO...);
 #    - las pruebas de las Edge Functions;
-#    - y compila el panel como lo compilara Netlify.
+#    - y compila el panel (como lo hace "Publicar el panel").
 #
 #  Si algo sale en rojo, NO se publica en Supabase hasta arreglarlo.
 #

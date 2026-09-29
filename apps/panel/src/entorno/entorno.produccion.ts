@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- *  A QUE SUPABASE SE CONECTA EL PANEL  (el publicado en Netlify)
+ *  A QUE SUPABASE SE CONECTA EL PANEL  (el publicado en Cloudflare)
  * ============================================================================
  *
  *  VACIO a proposito hasta que exista la cuenta de produccion (se decidio

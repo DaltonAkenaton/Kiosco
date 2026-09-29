@@ -26,7 +26,7 @@ y# Manual técnico
 | Pieza | Qué es | Dónde vive | Se actualiza con |
 |---|---|---|---|
 | **Kiosco** | App de escritorio (Electron + Angular) | PC del pasillo, `.exe` | Instalador nuevo o actualización automática |
-| **Panel** | Página web (Angular) | Netlify | `git push` a `main` (Netlify recompila solo) |
+| **Panel** | Página web (Angular) | Cloudflare | `git push` a `main` (GitHub lo arma y lo sube solo) |
 | **Nube** | Base de datos, reglas y Edge Functions | Supabase | Actions → "Publicar en Supabase" |
 | **Automatizaciones** | Pruebas, respaldos, resumen diario, instalador | GitHub Actions | Solas |
 
@@ -215,8 +215,9 @@ Si una corrida sale en rojo: casi siempre el secreto `SUPABASE_DB_URL` cambió
    coincide, el script las reutiliza.
 4. Subir las Edge Functions: Actions → "Publicar en Supabase" (con los secretos
    del proyecto nuevo).
-5. El proyecto nuevo tiene **otra dirección**: actualizar Netlify
-   (`SUPABASE_URL`, `SUPABASE_LLAVE_PUBLICA`) y el kiosco
+5. El proyecto nuevo tiene **otra dirección**: actualizar los secretos del
+   panel en GitHub (`PANEL_SUPABASE_URL`, `PANEL_SUPABASE_LLAVE_PUBLICA`) y
+   volver a publicarlo (ver "Publicar el panel"), y el kiosco
    (`PROYECTOS_SUPABASE` en `configuracion.ts`, publicar versión nueva). Los kioscos conservan su
    gafete: la tabla `dispositivos` se restauró con sus huellas.
 
@@ -290,6 +291,42 @@ los kioscos la bajen.
 
 ---
 
+## Publicar el panel
+
+El panel es una página de puros archivos. **GitHub la arma y la sube a
+Cloudflare** cada vez que cambia algo del panel en `main` (workflow
+`.github/workflows/panel-cloudflare.yml`). Cloudflare no compila nada: sólo
+sirve los archivos, gratis y sin límite de visitas.
+
+- **Dirección:** <https://panel.mi-cuenta.workers.dev>
+- **Cuenta:** Cloudflare, se entra **con Google** (Gmail del sistema).
+- **Configuración:** `apps/panel/wrangler.jsonc` (nombre y "recargar en una
+  sección entrega el panel") y `apps/panel/public/_headers` (cabeceras de
+  seguridad).
+
+### Publicar a mano
+
+GitHub → **Actions → "Publicar el panel" → Run workflow**. Hace falta tras
+cambiar un secreto (por ejemplo, al pasar a producción), porque eso no es un
+cambio de código.
+
+### Los secretos (GitHub → Settings → Secrets and variables → Actions)
+
+| Secreto | Qué es | De dónde sale |
+|---|---|---|
+| `PANEL_SUPABASE_URL` | A qué Supabase se conecta el panel | Supabase → Project Settings → Data API → Project URL |
+| `PANEL_SUPABASE_LLAVE_PUBLICA` | Su llave **pública** (`sb_publishable_…` o `anon`) | Supabase → Project Settings → API Keys. **Nunca la secreta**: la compilación se niega |
+| `CLOUDFLARE_API_TOKEN` | Permiso para subir el panel | Cloudflare → 👤 → Profile → API Tokens → plantilla "Edit Cloudflare Workers", sin fecha de fin |
+| `CLOUDFLARE_ACCOUNT_ID` | Qué cuenta de Cloudflare | Cloudflare → Workers & Pages → Account details |
+
+Si falta alguno, la publicación sale en rojo y dice cuál; el panel en línea se
+queda como estaba.
+
+### Si el token de Cloudflare se filtra o deja de servir
+
+Cloudflare → 👤 → Profile → API Tokens → en el token, **Roll** (da uno nuevo)
+o borrarlo y crear otro igual. Pegar el nuevo en `CLOUDFLARE_API_TOKEN`.
+
 ## 9. Supabase
 
 - **Pausa por inactividad**: el plan gratuito pausa un proyecto tras 7 días sin
@@ -317,8 +354,8 @@ funcione en **cada** proyecto (pruebas y producción) hay que hacer tres cosas
 en supabase.com, una sola vez:
 
 1. **A dónde regresa el enlace.** Authentication → URL Configuration:
-   - *Site URL*: la dirección del panel, `https://mi-panel.netlify.app`.
-   - *Redirect URLs* → Add URL: `https://mi-panel.netlify.app/**`.
+   - *Site URL*: la dirección del panel, `https://panel.mi-cuenta.workers.dev`.
+   - *Redirect URLs* → Add URL: `https://panel.mi-cuenta.workers.dev/**`.
 
    Sin esto, el enlace del correo lleva a una página que no existe.
 2. **Quién manda el correo.** El correo que trae Supabase de fábrica sólo
@@ -378,8 +415,8 @@ contraseña, el otro le da una temporal desde Accesos.
 | "Cámara no disponible" | Cable suelto, otra app usa la cámara | Reconectar; cerrar otras apps. Se sigue registrando |
 | Muchos "Foto no guardada" | Disco lleno o Windows sin cifrado | Liberar espacio; revisar el perfil de Windows |
 | "Hora dudosa" en todos | Pila del BIOS agotada o zona horaria mal | Cambiar la pila; hora automática en Windows |
-| El panel no carga tras publicar | Variables de Netlify mal | Netlify → Deploys → leer el error; revisar variables |
-| El panel dice "This site is private" / pide cuenta de Netlify | Protección de visitantes de Netlify encendida | Netlify → Site configuration → Access & security → Visitor access → sin protección |
+| El panel no se actualiza tras un cambio | Falló "Publicar el panel" | GitHub → Actions → "Publicar el panel" → abrir la corrida en rojo y leer el error (casi siempre un secreto) |
+| El panel abre pero no deja entrar a nadie | Secretos del panel apuntan a otro Supabase | Revisar `PANEL_SUPABASE_URL` / `PANEL_SUPABASE_LLAVE_PUBLICA` y volver a publicar |
 | El jefe no puede entrar al modo administrador del kiosco | No ha puesto su usuario del kiosco, o el kiosco no ha sincronizado | Panel → Mi cuenta; esperar unos minutos con internet |
 | "Registros que la oficina no aceptó" | Persona inexistente en el panel, kiosco revocado | Arreglar en el panel y "Volver a enviarlos" |
 | Una corrida de Actions en rojo | Secreto vencido o mal copiado | Abrir la corrida, leer el primer error |

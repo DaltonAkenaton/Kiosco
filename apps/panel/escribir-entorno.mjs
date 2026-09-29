@@ -6,10 +6,11 @@
  *  Corre antes de `ng build` (ver `prebuild` en package.json).
  *
  *  Si existen las variables de entorno SUPABASE_URL y SUPABASE_LLAVE_PUBLICA
- *  (Netlify las pone), escribe `src/entorno/entorno.produccion.ts` con ellas.
+ *  (las pone la GitHub Action "Publicar el panel"), escribe `src/entorno/entorno.produccion.ts` con ellas.
  *  Si no existen, no toca nada: se usa lo que ya diga el archivo.
  *
- *  Asi las credenciales viven en Netlify y no en el repositorio (CLAUDE.md 1.1).
+ *  Asi las credenciales viven en los secretos de GitHub y no en el repositorio
+ *  (CLAUDE.md 1.1).
  *
  *  Y una red de seguridad: si la llave es la `service_role` (la que abre TODO,
  *  CLAUDE.md 3.2), se niega a compilar. Esa llave publicada en una pagina web

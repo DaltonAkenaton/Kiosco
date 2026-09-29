@@ -17,7 +17,7 @@ import { RUTAS } from './rutas';
  * Cada seccion es un archivo aparte que se baja la primera vez que se pica
  * (`chunk-XXXX.js`, con un nombre que cambia en cada publicacion). Una pestaña
  * abierta ANTES de publicar sigue pidiendo los nombres viejos, que ya no
- * existen: Netlify contesta con la pagina principal, la descarga falla y el
+ * existen: el servidor contesta con la pagina principal, la descarga falla y el
  * clic "no hace nada" (se vio el 28-09-2026: "doy clic en el menu y no se
  * mueve").
  *
