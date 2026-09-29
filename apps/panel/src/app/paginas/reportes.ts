@@ -197,12 +197,17 @@ export class Reportes implements OnInit {
   protected readonly justificando = signal<IncidenciaSugerida | null>(null);
   protected readonly aviso = signal<string | null>(null);
 
-  /** ¿Tiene algo que justificar ese dia? Falta, retardo o salida sin registrar. */
+  /**
+   * ¿Tiene algo que justificar ese dia? Falta, retardo, salida sin registrar,
+   * o se fue antes de su hora (28-09-2026: "¿y si se va a medio turno por una
+   * emergencia?" -> se le da un Permiso desde aqui mismo).
+   */
   protected sePuedeJustificar(f: Fila): boolean {
+    const yaResuelto = f.estado === 'justificado' || f.estado === 'incidencia';
     return (
       ['falta', 'retardo', 'retardo_mayor', 'sin_entrada'].includes(f.estado) ||
-      (f.estado !== 'justificado' && f.estado !== 'incidencia' &&
-        ['salida_no_registrada', 'salida_sin_entrada'].includes(f.estado_salida ?? ''))
+      (!yaResuelto && ['salida_no_registrada', 'salida_sin_entrada'].includes(f.estado_salida ?? '')) ||
+      (!yaResuelto && (f.minutos_salida_anticipada ?? 0) > 0)
     );
   }
 
@@ -211,7 +216,8 @@ export class Reportes implements OnInit {
     const tipo =
       f.estado === 'falta' ? 'falta_justificada'
         : f.estado === 'retardo' || f.estado === 'retardo_mayor' ? 'retardo_justificado'
-          : 'olvido_registro';
+          : (f.minutos_salida_anticipada ?? 0) > 0 ? 'permiso'
+            : 'olvido_registro';
     this.aviso.set(null);
     this.justificando.set({ empleadoId: f.empleado_id, fecha: f.fecha.slice(0, 10), tipo });
   }

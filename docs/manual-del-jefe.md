@@ -334,6 +334,9 @@ panel.
 | Pasa esto | Haz esto |
 |---|---|
 | Alguien olvidó su PIN | Empleados → **PIN nuevo**. Mientras, **Registrar a mano**. |
+| Alguien tiene que irse a medio turno (una emergencia) | Que marque **SALIDA** en el kiosco al irse. Después, en **Reportes**, ese día sale "(N min antes)" con el botón **Justificar**, que ya propone **Permiso**: escribe el motivo y listo. Sus horas trabajadas sí cuentan. Si se fue sin marcar: **Registrar a mano** su salida, y luego el Permiso. |
+| Quiero ver los registros que acaban de llegar | En **Asistencia**, botón **↻ Actualizar**. También se actualiza sola cada minuto si estás viendo el día de hoy. |
+| Un kiosco dado de baja sigue registrando | Sus registros **no llegan al panel** (a propósito: ya no se confía en él). Se quedan guardados en esa PC. Si la baja fue un error: dale de alta de nuevo con un código y, en ese kiosco, **⚙ Administrador → Registros que la oficina no aceptó → Volver a enviarlos**. (Lo que registró **antes** de la baja y no alcanzó a subir llega solo, marcado "en cuarentena" para revisarlo.) |
 | Se fue la luz / no hay kiosco | El personal te avisa por WhatsApp; tú **Registrar a mano** con motivo "sin luz". |
 | No hay internet | Nada: el kiosco guarda todo y lo manda al volver. En Kioscos verás "por enviar". |
 | El kiosco dice "cámara no disponible" | Se sigue registrando, marcado "sin foto". Revisa el cable de la cámara. |

@@ -138,6 +138,8 @@ app.whenReady().then(async () => {
     await picar('Entrar');
     await esperar(1500);
     comprobar('con la contrasena del panel entra a Asistencia', (await js('location.pathname')) === '/asistencia');
+    comprobar('Asistencia tiene boton "Actualizar" y dice a que hora se actualizo',
+      await js(`[...document.querySelectorAll('button')].some((b) => b.textContent.includes('Actualizar')) && document.body.innerText.includes('actualizado a las')`));
     comprobar('saluda con su nombre y rol', (await texto()).includes('Jefe de prueba') && (await texto()).includes('Administrador'));
     await capturar('1-asistencia');
 
@@ -332,7 +334,28 @@ app.whenReady().then(async () => {
     })()`);
     await ir('/reportes');
     const antes = await js(`[...document.querySelectorAll('tbody tr')].filter((t) => t.textContent.includes('Justificado')).length`);
-    const hayBoton = await js(`(() => { const b = [...document.querySelectorAll('tbody button')].find((x) => x.textContent.trim() === 'Justificar');
+    // Se fue antes de su hora (una emergencia): "Justificar" propone Permiso.
+    const salidaAntes = await js(`(() => {
+      const fila = [...document.querySelectorAll('tbody tr')].find((t) => t.textContent.includes('min antes)')
+        && !t.textContent.includes('Retardo') && [...t.querySelectorAll('button')].some((x) => x.textContent.trim() === 'Justificar'));
+      if (!fila) return false;
+      [...fila.querySelectorAll('button')].find((x) => x.textContent.trim() === 'Justificar').click();
+      return true; })()`);
+    if (salidaAntes) {
+      await esperar(800);
+      comprobar('quien se fue antes de su hora: "Justificar" propone Permiso',
+        await js(`[...document.querySelectorAll('panel-dialogo select')].some((s) => s.value === 'permiso')`));
+      await js(`[...document.querySelectorAll('panel-dialogo button')].find((x) => x.textContent.includes('Cancelar'))?.click()`);
+      await esperar(500);
+    } else {
+      console.log('(sin salidas anticipadas ese dia en los datos de prueba: no se comprueba "Permiso")');
+    }
+
+    // El primer renglon con RETARDO (no cualquiera: tambien hay "Justificar" en salidas anticipadas).
+    const hayBoton = await js(`(() => {
+      const fila = [...document.querySelectorAll('tbody tr')].find((t) => t.textContent.includes('Retardo')
+        && [...t.querySelectorAll('button')].some((x) => x.textContent.trim() === 'Justificar'));
+      const b = fila && [...fila.querySelectorAll('button')].find((x) => x.textContent.trim() === 'Justificar');
       if (b) b.click(); return !!b; })()`);
     comprobar('un retardo tiene su botón "Justificar"', hayBoton);
     await esperar(800);

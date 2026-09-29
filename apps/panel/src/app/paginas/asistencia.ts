@@ -19,7 +19,7 @@
  *  el matutino a las 6:00" no se confunda con "sale el velador a las 6:00".
  */
 
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { diaSiguiente, hoyEn, inicioDelDiaLocal, instanteLocal } from '@kiosko/compartido';
 import { Ayuda } from '../componentes/ayuda';
 import { Dialogo, mensajeDeError } from '../componentes/dialogo';
@@ -66,12 +66,19 @@ const SIN_TURNO = '(sin turno)';
 /** Tope de renglones por consulta: con 20 personas, 500 son ~12 dias completos. */
 const MAXIMO = 500;
 
+/**
+ * Con "Hasta" en hoy, la lista se vuelve a pedir sola cada tantos segundos
+ * (y no si la pestaña esta escondida: nadie la esta viendo). Asi los
+ * registros que van llegando de los kioscos aparecen sin recargar.
+ */
+const SEGUNDOS_PARA_REFRESCAR = 60;
+
 @Component({
   selector: 'panel-asistencia',
   imports: [Ayuda, Dialogo],
   templateUrl: './asistencia.html',
 })
-export class Asistencia implements OnInit {
+export class Asistencia implements OnInit, OnDestroy {
   protected readonly sesion = inject(Sesion);
   private readonly avisos = inject(Avisos);
   protected readonly zona = this.sesion.zona;
@@ -140,7 +147,25 @@ export class Asistencia implements OnInit {
     return [...cuenta.entries()].map(([nombre, casos]) => ({ nombre, casos }));
   });
 
+  /** "Actualizado a las 19:10": para que el jefe sepa que lo que ve esta al dia. */
+  protected readonly actualizadoA = signal<string | null>(null);
+  private temporizador: ReturnType<typeof setInterval> | null = null;
+
+  ngOnDestroy(): void {
+    if (this.temporizador) clearInterval(this.temporizador);
+  }
+
+  /** El boton "Actualizar": trae lo ultimo que llego de los kioscos. */
+  protected actualizar(): void {
+    void this.buscar();
+  }
+
   async ngOnInit(): Promise<void> {
+    this.temporizador = setInterval(() => {
+      const incluyeHoy = !this.hasta() || this.hasta() >= hoyEn(this.sesion.zona());
+      if (!document.hidden && incluyeHoy && !this.cargando()) void this.buscar();
+    }, SEGUNDOS_PARA_REFRESCAR * 1000);
+
     const [emp, disp, asig] = await Promise.all([
       this.sesion.bd.from('empleados').select('id, nombre, apellido_paterno, numero_empleado, activo, anonimizado_en').order('nombre'),
       this.sesion.bd.from('dispositivos').select('id, nombre').order('nombre'),
@@ -222,6 +247,9 @@ export class Asistencia implements OnInit {
       return;
     }
     this.marcas.set((data ?? []) as unknown as Marca[]);
+    this.actualizadoA.set(
+      new Intl.DateTimeFormat('es-MX', { timeZone: zona, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date()),
+    );
   }
 
   /**

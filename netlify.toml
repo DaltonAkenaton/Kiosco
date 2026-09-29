@@ -21,6 +21,19 @@
   command = "npm run panel:compilar"
   publish = "apps/panel/dist"
 
+  # PUBLICAR SOLO SI CAMBIO EL PANEL (28-09-2026). Cada publicacion gasta
+  # creditos de Netlify, y cada push publicaba aunque solo cambiara el kiosco
+  # o la documentacion: en un dia se fue el 75% del mes. Si ninguna de estas
+  # rutas cambio entre la publicacion anterior y este push, Netlify se salta
+  # la publicacion (y no cuenta). Son todo lo que usa el panel al armarse:
+  # su carpeta, packages/compartido (configuracion y colores), el script de
+  # colores y las dependencias.
+  #
+  # OJO: una publicacion a mano ("Trigger deploy") sin cambios en estas rutas
+  # tambien se salta. Si hace falta forzarla (por ejemplo, tras cambiar solo
+  # las variables de entorno), basta un commit que toque apps/panel.
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- apps/panel packages/compartido apps/kiosco-ui/generar-tema.mjs netlify.toml package.json package-lock.json"
+
 [build.environment]
   NODE_VERSION = "24"
   # El panel no necesita Electron. Sin esto, `npm install` bajaria ~100 MB
