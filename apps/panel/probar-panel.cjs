@@ -299,6 +299,24 @@ app.whenReady().then(async () => {
     comprobar('su entrada de las 06:05 sale "A tiempo" en el reporte', resultadoHoy.includes('A tiempo'), resultadoHoy.trim().slice(0, 90));
     await capturar('6-reporte');
 
+    // Dia por dia: lo mas reciente arriba por defecto, y un boton lo invierte (30-09-2026).
+    const encabezados = () => js(`[...document.querySelectorAll('tr.encabezado-dia')].map((t) => t.textContent.trim())`);
+    // Con todas las personas, para que haya varios dias que ordenar.
+    await js(`(() => { const s = document.querySelector('select');
+      s.value = ''; s.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+    await esperar(1500);
+    const diasAntes = await encabezados();
+    comprobar('"Día por día" empieza con los más recientes', (await texto()).includes('↓ Más recientes primero'));
+    await picar('↓ Más recientes primero');
+    await esperar(300);
+    const diasDespues = await encabezados();
+    comprobar('y el botón invierte el orden de los días',
+      diasAntes.length > 1 && JSON.stringify(diasDespues) === JSON.stringify([...diasAntes].reverse()), `${diasAntes.length} días`);
+    await picar('↑ Más antiguos primero');
+    await js(`(() => { const s = document.querySelector('select');
+      s.value = ${JSON.stringify(idCreado)}; s.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+    await esperar(1000);
+
     // Los filtros se recuerdan: al volver a Reportes sigue elegida la persona.
     await ir('/asistencia');
     await ir('/reportes');

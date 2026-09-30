@@ -27,6 +27,13 @@
     <button type="button" class="rounded-xl border-2 px-4 py-2" [class.font-bold]="vista() === 'dias'"
             [style.border-color]="vista() === 'dias' ? 'var(--kiosko-institucion-secundario)' : 'var(--kiosko-borde)'"
             (click)="vista.set('dias')">Día por día</button>
+    @if (vista() === 'dias') {
+      <button type="button" class="rounded-xl border-2 px-4 py-2" style="border-color: var(--kiosko-borde)"
+              [title]="orden() === 'recientes' ? 'Pica para ver primero los días más antiguos' : 'Pica para ver primero los días más recientes'"
+              (click)="orden.set(orden() === 'recientes' ? 'antiguos' : 'recientes')">
+        {{ orden() === 'recientes' ? '↓ Más recientes primero' : '↑ Más antiguos primero' }}
+      </button>
+    }
   </div>
   <div class="ml-auto flex flex-wrap gap-2">
     <button type="button" class="boton-secundario" [disabled]="filas().length === 0" (click)="descargarExcel()">⬇ Descargar Excel</button>
@@ -124,9 +131,9 @@
       </tr>
     </thead>
     <tbody>
-      @for (f of filas(); track f.fecha + f.empleado_id + (f.entrada ?? f.salida ?? ''); let i = $index) {
+      @for (f of filasEnOrden(); track f.fecha + f.empleado_id + (f.entrada ?? f.salida ?? ''); let i = $index) {
         @let e = ESTADOS[f.estado];
-        @if (i === 0 || filas()[i - 1].fecha !== f.fecha) {
+        @if (i === 0 || filasEnOrden()[i - 1].fecha !== f.fecha) {
           <tr class="encabezado-dia">
             <td colspan="7">{{ fechaLarga(f.fecha) }}</td>
           </tr>

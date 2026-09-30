@@ -134,6 +134,18 @@ export class Reportes implements OnInit {
   protected readonly hasta = senalRecordada('reportes.hasta', hoyEn(this.sesion.zona()), { delDia: hoyEn(this.sesion.zona()) });
   protected readonly empleadoId = senalRecordada('reportes.empleado', '');
   protected readonly vista = senalRecordada<'dias' | 'resumen'>('reportes.vista', 'resumen');
+  /**
+   * "Dia por dia": los dias MAS RECIENTES arriba por defecto (30-09-2026: lo
+   * que el jefe busca casi siempre es lo de hoy o ayer, no el lunes). Dentro
+   * de cada dia se respeta el orden por turno y nombre.
+   */
+  protected readonly orden = senalRecordada<'recientes' | 'antiguos'>('reportes.orden', 'recientes');
+  protected readonly filasEnOrden = computed<Fila[]>(() => {
+    const filas = this.filas();
+    if (this.orden() === 'antiguos') return filas;
+    // `sort` es estable: al ordenar solo por fecha, cada dia conserva su orden interno.
+    return [...filas].sort((a, b) => b.fecha.localeCompare(a.fecha));
+  });
 
   protected readonly empleados = signal<Map<string, { nombre: string; numero: string | null }>>(new Map());
   protected readonly filas = signal<Fila[]>([]);
@@ -313,7 +325,7 @@ export class Reportes implements OnInit {
     const dias = [
       ['Fecha', 'Número', 'Nombre', 'Turno', 'Entrada programada', 'Salida programada', 'Entró', 'Salió',
         'Minutos tarde', 'Repuso', 'Tiempo extra', 'Horas', 'Horas que cuentan', 'Resultado', 'Salida', 'Incidencia', 'Revisión'],
-      ...this.filas().map((f) => [
+      ...this.filasEnOrden().map((f) => [
         f.fecha.slice(0, 10), this.numero(f.empleado_id), this.nombre(f.empleado_id), f.turno ?? '',
         f.programado_inicio ? hora(f.programado_inicio, z) : '', f.programado_fin ? hora(f.programado_fin, z) : '',
         f.entrada ? hora(f.entrada, z) : '', f.salida ? hora(f.salida, z) : '',

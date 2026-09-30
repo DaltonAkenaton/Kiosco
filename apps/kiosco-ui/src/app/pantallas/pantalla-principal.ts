@@ -1314,6 +1314,18 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
     this.arrancarCuentaRegresiva();
   }
 
+  /**
+   * Cuando el kiosco pregunto "¿vienes llegando o te vas?", lo que la persona
+   * elige se registra de una vez: ya contesto, no hace falta otra cuenta
+   * regresiva que le pregunte lo mismo.
+   */
+  protected responderDuda(tipo: 'entrada' | 'salida'): void {
+    const pendiente = this.pendiente();
+    if (!pendiente) return;
+    this.pendiente.set({ ...pendiente, tipo, duda: null });
+    void this.confirmarRegistro();
+  }
+
   /** El empleado se arrepintio: no se guarda nada. */
   protected cancelarConfirmacion(): void {
     this.reiniciar(); // tira el pase y deja la pantalla limpia
@@ -1364,6 +1376,14 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
    * siguiente empleado.
    */
   private teclaEnConfirmacion(evento: KeyboardEvent): void {
+    // Con la pregunta en pantalla, 1 y 2 son las dos respuestas (en el orden
+    // de los botones) y se registran de una vez.
+    const pendiente = this.pendiente();
+    if (pendiente?.duda && (evento.key === '1' || evento.key === '2')) {
+      evento.preventDefault();
+      this.responderDuda(evento.key === '1' ? pendiente.tipo : this.tipoContrario());
+      return;
+    }
     switch (evento.key) {
       case 'Enter':
       case '1':
