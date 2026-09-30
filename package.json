@@ -29,7 +29,8 @@
     "supabase:probar": "node supabase/probar-esquema.mjs",
     "supabase:funciones:probar": "node supabase/probar-funciones.mjs",
     "supabase:codigo": "node supabase/codigo-de-prueba.mjs",
-    "supabase:primer-admin": "node supabase/primer-administrador.mjs"
+    "supabase:primer-admin": "node supabase/primer-administrador.mjs",
+    "pasar-a-produccion": "node pasar-a-produccion.mjs"
   },
   "engines": {
     "node": ">=20"

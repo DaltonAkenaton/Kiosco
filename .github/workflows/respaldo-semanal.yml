@@ -2,7 +2,8 @@
 #  RESPALDO DE LA BASE DE DATOS (CLAUDE.md 13.3)  +  SUPABASE DESPIERTO (13)
 # ============================================================================
 #
-#  Dos veces por semana, GitHub se conecta a la base de PRODUCCION y guarda:
+#  Dos veces por semana, GitHub se conecta a la base del AMBIENTE (produccion,
+#  una vez encendida) y guarda:
 #
 #    - un volcado SQL completo (roles, estructura y datos), para restaurar;
 #    - un CSV por tabla, que se abre con Excel, para consultar sin saber SQL.
@@ -15,12 +16,8 @@
 #  De paso, conectarse a la base cuenta como actividad: Supabase no pausa el
 #  proyecto gratuito por inactividad (lo pausa a los 7 dias sin uso).
 #
-#  NECESITA un secreto en GitHub (Settings -> Secrets and variables ->
-#  Actions -> New repository secret):
-#
-#    SUPABASE_DB_URL   la cadena de conexion de la base de produccion.
-#                      Supabase -> Connect -> "Session pooler" -> URI, con la
-#                      contrasena de la base en lugar de [YOUR-PASSWORD].
+#  La conexion se arma sola con los secretos de "Publicar en Supabase"
+#  (.github/scripts/url-base-de-datos.mjs). No hay que copiar nada mas.
 #
 #  Se puede correr a mano: Actions -> "Respaldo de la base de datos" ->
 #  Run workflow.
@@ -51,18 +48,17 @@ jobs:
         with:
           version: latest
 
-      - name: Revisar que exista la conexion
+      - name: Conexion a la base (la del AMBIENTE)
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-        run: |
-          if [ -z "$SUPABASE_DB_URL" ]; then
-            echo "::error::Falta el secreto SUPABASE_DB_URL. Ver el encabezado de este archivo."
-            exit 1
-          fi
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF_PRUEBAS: ${{ secrets.SUPABASE_REF_PRUEBAS }}
+          REF_PRODUCCION: ${{ secrets.SUPABASE_REF_PRODUCCION }}
+          PASS_PRUEBAS: ${{ secrets.SUPABASE_PASSWORD_PRUEBAS }}
+          PASS_PRODUCCION: ${{ secrets.SUPABASE_PASSWORD_PRODUCCION }}
+        run: node .github/scripts/url-base-de-datos.mjs
 
       - name: Volcado SQL (para restaurar)
-        env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           mkdir -p respaldo/sql
           supabase db dump --db-url "$SUPABASE_DB_URL" --role-only -f respaldo/sql/1-roles.sql
@@ -70,8 +66,6 @@ jobs:
           supabase db dump --db-url "$SUPABASE_DB_URL" --data-only --use-copy -f respaldo/sql/3-datos.sql
 
       - name: Una hoja CSV por tabla (para abrir en Excel)
-        env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           mkdir -p respaldo/excel
           # Sin hashes de PIN, de tokens ni de contrasenas: el CSV se abre en

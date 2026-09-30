@@ -1,70 +1,118 @@
 # ============================================================================
-#  PUBLICAR LA BASE Y LAS EDGE FUNCTIONS EN SUPABASE  (con un boton)
+#  PUBLICAR LA BASE Y LAS EDGE FUNCTIONS EN SUPABASE
 # ============================================================================
 #
-#  Aplica las migraciones nuevas (`supabase/migrations`) y sube las Edge
-#  Functions al proyecto elegido: PRUEBAS o PRODUCCION (CLAUDE.md 13.3: nunca
-#  se prueba contra produccion; primero pruebas, luego produccion).
+#  Aplica las migraciones nuevas (`supabase/migrations`), sube las Edge
+#  Functions y deja listo el acceso al panel (Auth) en el proyecto que diga
+#  AMBIENTE (packages/compartido/src/configuracion.ts): pruebas o produccion.
 #
-#  Se corre A MANO: Actions -> "Publicar en Supabase" -> Run workflow -> elegir
-#  el proyecto. Nunca se corre solo, a proposito: cambiar la base de
-#  produccion es una decision, no un efecto secundario de subir codigo.
+#  CUANDO CORRE
+#    - SOLO, cada vez que las "Pruebas" salen en verde en `main` (30-09-2026).
+#      Antes era a mano, y un dia se publico el codigo de ANTES de subir el
+#      cambio: la migracion nueva no llego. Si las pruebas fallan, no publica.
+#    - A MANO: Actions -> "Publicar en Supabase" -> Run workflow. Por defecto
+#      va al proyecto de AMBIENTE; se puede elegir el otro (por ejemplo, para
+#      preparar produccion antes de encenderla).
 #
 #  NUNCA aplica `seed.sql` (los datos de demostracion): `db push` solo aplica
 #  migraciones.
 #
-#  NECESITA estos secretos (Settings -> Secrets and variables -> Actions):
+#  QUE CONFIGURA DE AUTH (lo que antes se hacia a mano en supabase.com):
+#    - nadie se registra solo (los accesos los da un administrador);
+#    - la direccion del panel, para el correo de "olvide mi contrasena";
+#    - el texto de ese correo en espanol (supabase/plantillas/);
+#    - el envio con el Gmail del sistema, SI existen los secretos
+#      CORREO_USUARIO y CORREO_CONTRASENA_APP.
 #
+#  SECRETOS (Settings -> Secrets and variables -> Actions):
 #    SUPABASE_ACCESS_TOKEN        supabase.com -> Account -> Access Tokens
 #    SUPABASE_REF_PRUEBAS         el "Reference ID" del proyecto de pruebas
 #    SUPABASE_PASSWORD_PRUEBAS    la contrasena de la base de pruebas
 #    SUPABASE_REF_PRODUCCION      igual, del de produccion
 #    SUPABASE_PASSWORD_PRODUCCION
-#
-#  (Reference ID: Supabase -> Project Settings -> General.)
-#
-#  Los secretos se eligen UNA vez, a nivel del trabajo (env), y no pasando
-#  "outputs" de un paso a otro: GitHub borra cualquier output que contenga un
-#  secreto, y el siguiente paso lo recibiria vacio.
+#    CORREO_USUARIO               (opcional) el Gmail del sistema
+#    CORREO_CONTRASENA_APP        (opcional) su contrasena de aplicacion
 
 name: Publicar en Supabase
 
 on:
+  workflow_run:
+    workflows: [Pruebas]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       proyecto:
         description: 'Proyecto de destino'
         required: true
-        default: pruebas
+        default: segun-ambiente
         type: choice
         options:
+          - segun-ambiente
           - pruebas
           - produccion
 
 permissions:
   contents: read
 
+# Nunca dos publicaciones a la vez sobre la misma base.
+concurrency:
+  group: publicar-supabase
+  cancel-in-progress: false
+
+env:
+  # Donde vive el panel (Cloudflare). `panel` sigue a AMBIENTE; `panel-pruebas`
+  # es siempre de pruebas. Ver panel-cloudflare.yml.
+  SUBDOMINIO_CLOUDFLARE: mi-cuenta
+
 jobs:
   publicar:
+    # Automatico solo si las pruebas pasaron y fue un push a main.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      PROYECTO_REF: ${{ inputs.proyecto == 'produccion' && secrets.SUPABASE_REF_PRODUCCION || secrets.SUPABASE_REF_PRUEBAS }}
-      SUPABASE_DB_PASSWORD: ${{ inputs.proyecto == 'produccion' && secrets.SUPABASE_PASSWORD_PRODUCCION || secrets.SUPABASE_PASSWORD_PRUEBAS }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # En la corrida automatica, EXACTAMENTE el codigo que se probo.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - uses: supabase/setup-cli@v1
         with:
           version: latest
 
-      - name: Revisar que esten los secretos
+      - name: Elegir el proyecto
+        env:
+          ELEGIDO: ${{ inputs.proyecto || 'segun-ambiente' }}
+          REF_PRUEBAS: ${{ secrets.SUPABASE_REF_PRUEBAS }}
+          REF_PRODUCCION: ${{ secrets.SUPABASE_REF_PRODUCCION }}
+          PASS_PRUEBAS: ${{ secrets.SUPABASE_PASSWORD_PRUEBAS }}
+          PASS_PRODUCCION: ${{ secrets.SUPABASE_PASSWORD_PRODUCCION }}
         run: |
-          if [ -z "$PROYECTO_REF" ] || [ -z "$SUPABASE_ACCESS_TOKEN" ] || [ -z "$SUPABASE_DB_PASSWORD" ]; then
-            echo "::error::Faltan secretos para '${{ inputs.proyecto }}'. Ver el encabezado de este archivo."
+          ambiente=$(sed -n "s/^export const AMBIENTE: .* = '\(pruebas\|produccion\)';.*/\1/p" packages/compartido/src/configuracion.ts)
+          destino="$ELEGIDO"
+          [ "$destino" = "segun-ambiente" ] && destino="$ambiente"
+          case "$destino" in
+            pruebas)    ref="$REF_PRUEBAS";    pass="$PASS_PRUEBAS" ;;
+            produccion) ref="$REF_PRODUCCION"; pass="$PASS_PRODUCCION" ;;
+            *) echo "::error::No se pudo leer AMBIENTE en configuracion.ts"; exit 1 ;;
+          esac
+          if [ -z "$ref" ] || [ -z "$pass" ] || [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo "::error::Faltan secretos para '$destino'. Ver el encabezado de este archivo."
             exit 1
           fi
+          # GITHUB_ENV (y no "outputs"): GitHub vacia los outputs que llevan secretos.
+          {
+            echo "DESTINO=$destino"
+            echo "AMBIENTE=$ambiente"
+            echo "PROYECTO_REF=$ref"
+            echo "SUPABASE_DB_PASSWORD=$pass"
+          } >> "$GITHUB_ENV"
+          echo "Destino: $destino (AMBIENTE = $ambiente)"
 
       - name: Conectar con el proyecto
         run: supabase link --project-ref "$PROYECTO_REF" --password "$SUPABASE_DB_PASSWORD"
@@ -79,6 +127,12 @@ jobs:
             supabase functions deploy "$funcion" --project-ref "$PROYECTO_REF"
           done
 
+      - name: Configurar el acceso al panel (Auth)
+        env:
+          CORREO_USUARIO: ${{ secrets.CORREO_USUARIO }}
+          CORREO_CONTRASENA_APP: ${{ secrets.CORREO_CONTRASENA_APP }}
+        run: node .github/scripts/configurar-auth.mjs
+
       - name: Resumen
         run: |
-          echo "Listo. Migraciones y funciones publicadas en ${{ inputs.proyecto }}." >> "$GITHUB_STEP_SUMMARY"
+          echo "Listo. Migraciones, funciones y acceso publicados en **$DESTINO**." >> "$GITHUB_STEP_SUMMARY"

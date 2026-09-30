@@ -14,7 +14,7 @@
 #    Contrasenas de aplicaciones -> crear una llamada "Resumen asistencia".
 #
 #  SECRETOS (Settings -> Secrets and variables -> Actions):
-#    SUPABASE_DB_URL        el mismo del respaldo semanal
+#    (la base se conecta sola, como el respaldo semanal)
 #    CORREO_USUARIO         el Gmail del sistema (ej. correo-del-sistema@example.com)
 #    CORREO_CONTRASENA_APP  la contrasena de aplicacion de 16 letras
 #    CORREO_JEFE            a quien se manda (varios: separados por coma)
@@ -40,15 +40,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Conexion a la base (la del AMBIENTE)
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF_PRUEBAS: ${{ secrets.SUPABASE_REF_PRUEBAS }}
+          REF_PRODUCCION: ${{ secrets.SUPABASE_REF_PRODUCCION }}
+          PASS_PRUEBAS: ${{ secrets.SUPABASE_PASSWORD_PRUEBAS }}
+          PASS_PRODUCCION: ${{ secrets.SUPABASE_PASSWORD_PRODUCCION }}
+        run: node .github/scripts/url-base-de-datos.mjs
+
       - name: ¿Estan los secretos?
         id: listo
         env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           CORREO_USUARIO: ${{ secrets.CORREO_USUARIO }}
           CORREO_CONTRASENA_APP: ${{ secrets.CORREO_CONTRASENA_APP }}
           CORREO_JEFE: ${{ secrets.CORREO_JEFE }}
         run: |
-          if [ -z "$SUPABASE_DB_URL" ] || [ -z "$CORREO_USUARIO" ] || [ -z "$CORREO_CONTRASENA_APP" ] || [ -z "$CORREO_JEFE" ]; then
+          if [ -z "$CORREO_USUARIO" ] || [ -z "$CORREO_CONTRASENA_APP" ] || [ -z "$CORREO_JEFE" ]; then
             echo "::notice::Resumen diario apagado: faltan secretos (ver el encabezado de este archivo)."
             echo "si=no" >> "$GITHUB_OUTPUT"
           else
@@ -57,8 +66,6 @@ jobs:
 
       - name: Armar el resumen
         if: steps.listo.outputs.si == 'si'
-        env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           psql "$SUPABASE_DB_URL" -At -v ON_ERROR_STOP=1 -f supabase/resumen-diario.sql > resumen.txt
           echo "fecha=$(TZ=America/Matamoros date -d yesterday +%d/%m/%Y)" >> "$GITHUB_ENV"

@@ -54,10 +54,10 @@ if (!/^https?:\/\/[^\s]+$/.test(url)) salirCon('Esa no parece una direccion. Cop
 const llave = (process.env.SUPABASE_LLAVE_SECRETA ?? (await preguntar('Llave SECRETA (service_role / secret): '))).trim();
 if (!llave) salirCon('Falta la llave secreta.');
 
-const correo = (await preguntar('Correo de la persona: ')).trim().toLowerCase();
+const correo = (process.env.CORREO_ADMIN ?? (await preguntar('Correo de la persona: '))).trim().toLowerCase();
 if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)) salirCon('Ese correo no parece valido.');
 
-const nombre = (await preguntar('Nombre completo: ')).trim();
+const nombre = (process.env.NOMBRE_ADMIN ?? (await preguntar('Nombre completo: '))).trim();
 if (nombre.length < 3) salirCon('Escribe el nombre completo.');
 rl.close();
 
@@ -122,6 +122,31 @@ if (fila.estado >= 300) {
     `La cuenta se creo, pero no se pudo darle permiso de administrador (${fila.estado}): ${fila.texto.slice(0, 200)}\n` +
       '¿Ya se aplicaron las migraciones a este proyecto? (Actions -> "Publicar en Supabase")',
   );
+}
+
+// Desde GitHub Actions ("Crear administrador"), la contrasena va SOLO al
+// resumen de la corrida, no al registro de pasos. Es temporal: deja de servir
+// en cuanto la persona entra al panel y se pone una propia.
+if (process.env.GITHUB_STEP_SUMMARY) {
+  const { appendFileSync } = await import('node:fs');
+  appendFileSync(
+    process.env.GITHUB_STEP_SUMMARY,
+    [
+      '## Acceso creado',
+      '',
+      '| | |',
+      '|---|---|',
+      `| Panel | ${process.env.PANEL_URL ?? ''} |`,
+      `| Correo | ${correo} |`,
+      `| Contraseña temporal | \`${contrasena}\` |`,
+      '',
+      'Entra **ya**: al hacerlo, el panel pide ponerse una propia y ésta deja de servir. ' +
+        'Después puedes borrar esta corrida (botón ··· → Delete workflow run).',
+      '',
+    ].join('\n'),
+  );
+  console.log('Listo. La contrasena temporal esta en el RESUMEN de esta corrida (no en este registro).');
+  process.exit(0);
 }
 
 console.log(`

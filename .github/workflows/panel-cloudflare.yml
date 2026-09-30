@@ -6,15 +6,22 @@
 #  `wrangler` (29-09-2026: se dejo Netlify porque se acabaron sus creditos
 #  gratis). Cloudflare no compila nada: solo sirve los archivos.
 #
-#  Corre solo cuando cambia algo que usa el panel (mismas rutas que la regla
-#  "ignore" que tenia Netlify), o a mano desde Actions -> "Publicar el panel"
-#  -> Run workflow (por ejemplo, tras cambiar un secreto).
+#  DOS DIRECCIONES (30-09-2026):
+#    https://panel.mi-cuenta.workers.dev          -> la del jefe.
+#        Habla con el Supabase que diga AMBIENTE (configuracion.ts).
+#    https://panel-pruebas.mi-cuenta.workers.dev  -> SIEMPRE pruebas,
+#        para seguir probando cambios sin tocar produccion.
+#  Mientras AMBIENTE = 'pruebas', las dos muestran lo mismo.
+#
+#  A que Supabase se conecta se deduce solo: la direccion sale del Reference
+#  ID y la llave PUBLICA se pide a la API de Supabase. No hay que copiar nada.
+#
+#  Corre solo cuando cambia algo que usa el panel, o a mano desde Actions ->
+#  "Publicar el panel" -> Run workflow.
 #
 #  Secretos (Settings -> Secrets and variables -> Actions):
-#    PANEL_SUPABASE_URL            "Project URL" del Supabase al que apunta el
-#                                  panel (pruebas ahora; produccion al entregar)
-#    PANEL_SUPABASE_LLAVE_PUBLICA  su llave "publishable" (o "anon public").
-#                                  NUNCA la secreta: la compilacion se niega.
+#    SUPABASE_ACCESS_TOKEN, SUPABASE_REF_PRUEBAS, SUPABASE_REF_PRODUCCION
+#        (los mismos de "Publicar en Supabase")
 #    CLOUDFLARE_API_TOKEN          token de Cloudflare con permiso de Workers
 #    CLOUDFLARE_ACCOUNT_ID         el Account ID de la cuenta de Cloudflare
 #
@@ -46,30 +53,60 @@ jobs:
   publicar:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      matrix:
+        sitio: [panel, panel-pruebas]
     env:
       # El panel no necesita Electron: sin esto se bajarian ~100 MB de mas.
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
     steps:
-      - name: Revisar que esten los secretos
+      - uses: actions/checkout@v4
+
+      - name: A que Supabase se conecta
         env:
-          URL: ${{ secrets.PANEL_SUPABASE_URL }}
-          LLAVE: ${{ secrets.PANEL_SUPABASE_LLAVE_PUBLICA }}
-          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CUENTA: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        # Sin esto, un secreto olvidado haria que el panel se armara con los
-        # datos de desarrollo que trae el repositorio.
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF_PRUEBAS: ${{ secrets.SUPABASE_REF_PRUEBAS }}
+          REF_PRODUCCION: ${{ secrets.SUPABASE_REF_PRODUCCION }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           falta=""
-          [ -n "$URL" ]    || falta="$falta PANEL_SUPABASE_URL"
-          [ -n "$LLAVE" ]  || falta="$falta PANEL_SUPABASE_LLAVE_PUBLICA"
-          [ -n "$TOKEN" ]  || falta="$falta CLOUDFLARE_API_TOKEN"
-          [ -n "$CUENTA" ] || falta="$falta CLOUDFLARE_ACCOUNT_ID"
+          for s in SUPABASE_ACCESS_TOKEN REF_PRUEBAS REF_PRODUCCION CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
+            [ -n "${!s}" ] || falta="$falta $s"
+          done
           if [ -n "$falta" ]; then
+            # Sin esto, un secreto olvidado haria que el panel se armara con
+            # los datos de desarrollo que trae el repositorio.
             echo "::error::Faltan secretos en GitHub:$falta (ver docs/manual-tecnico.md, 'Publicar el panel')"
             exit 1
           fi
 
-      - uses: actions/checkout@v4
+          ambiente=$(sed -n "s/^export const AMBIENTE: .* = '\(pruebas\|produccion\)';.*/\1/p" packages/compartido/src/configuracion.ts)
+          [ "${{ matrix.sitio }}" = "panel-pruebas" ] && ambiente=pruebas
+          case "$ambiente" in
+            pruebas)    ref="$REF_PRUEBAS" ;;
+            produccion) ref="$REF_PRODUCCION" ;;
+            *) echo "::error::No se pudo leer AMBIENTE en configuracion.ts"; exit 1 ;;
+          esac
+
+          # La llave PUBLICA (publishable o, si no hay, la anon). Nunca la
+          # secreta: y aunque llegara, escribir-entorno.mjs se niega a usarla.
+          llave=$(curl -sf -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$ref/api-keys" | node -e '
+              let d = ""; process.stdin.on("data", (c) => (d += c)).on("end", () => {
+                const llaves = JSON.parse(d);
+                const k = llaves.find((x) => x.type === "publishable") ?? llaves.find((x) => x.name === "anon");
+                process.stdout.write(k?.api_key ?? "");
+              });')
+          if [ -z "$llave" ]; then
+            echo "::error::No se pudo obtener la llave publica de Supabase ($ambiente). Revisa SUPABASE_ACCESS_TOKEN."
+            exit 1
+          fi
+          {
+            echo "SUPABASE_URL=https://$ref.supabase.co"
+            echo "SUPABASE_LLAVE_PUBLICA=$llave"
+          } >> "$GITHUB_ENV"
+          echo "${{ matrix.sitio }} -> $ambiente"
 
       - uses: actions/setup-node@v4
         with:
@@ -80,9 +117,6 @@ jobs:
         run: npm ci
 
       - name: Armar el panel
-        env:
-          SUPABASE_URL: ${{ secrets.PANEL_SUPABASE_URL }}
-          SUPABASE_LLAVE_PUBLICA: ${{ secrets.PANEL_SUPABASE_LLAVE_PUBLICA }}
         run: npm run panel:compilar
 
       - name: Subir a Cloudflare
@@ -90,4 +124,4 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx --yes wrangler@4 deploy
+        run: npx --yes wrangler@4 deploy --name "${{ matrix.sitio }}"
