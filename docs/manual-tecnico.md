@@ -195,8 +195,8 @@ guarda (90 días) un ZIP con:
 corrida verde → Artifacts → descargar y subir al Drive de la facultad (carpeta
 con acceso restringido: son datos personales).
 
-Si una corrida sale en rojo: casi siempre el secreto `SUPABASE_DB_URL` cambió
-(por ejemplo, se cambió la contraseña de la base). Actualizarlo.
+Si una corrida sale en rojo: casi siempre cambió la contraseña de la base
+y falta actualizar `SUPABASE_PASSWORD_PRODUCCION` (o `_PRUEBAS`) en GitHub.
 
 ### Restaurar en un proyecto nuevo
 
@@ -215,9 +215,9 @@ Si una corrida sale en rojo: casi siempre el secreto `SUPABASE_DB_URL` cambió
    coincide, el script las reutiliza.
 4. Subir las Edge Functions: Actions → "Publicar en Supabase" (con los secretos
    del proyecto nuevo).
-5. El proyecto nuevo tiene **otra dirección**: actualizar los secretos del
-   panel en GitHub (`PANEL_SUPABASE_URL`, `PANEL_SUPABASE_LLAVE_PUBLICA`) y
-   volver a publicarlo (ver "Publicar el panel"), y el kiosco
+5. El proyecto nuevo tiene **otra dirección**: actualizar
+   `SUPABASE_REF_PRODUCCION` / `SUPABASE_PASSWORD_PRODUCCION` en GitHub (el
+   panel, los respaldos y el acceso se arman solos con ellos), y el kiosco
    (`PROYECTOS_SUPABASE` en `configuracion.ts`, publicar versión nueva). Los kioscos conservan su
    gafete: la tabla `dispositivos` se restauró con sus huellas.
 
@@ -298,34 +298,38 @@ Cloudflare** cada vez que cambia algo del panel en `main` (workflow
 `.github/workflows/panel-cloudflare.yml`). Cloudflare no compila nada: sólo
 sirve los archivos, gratis y sin límite de visitas.
 
-- **Dirección:** <https://panel.mi-cuenta.workers.dev>
+| Dirección | Habla con |
+|---|---|
+| <https://panel.mi-cuenta.workers.dev> | La base que diga `AMBIENTE` (la del jefe) |
+| <https://panel-pruebas.mi-cuenta.workers.dev> | **Siempre** pruebas |
+
+Mientras `AMBIENTE` sea `'pruebas'`, las dos muestran lo mismo.
+
 - **Cuenta:** Cloudflare, se entra **con Google** (Gmail del sistema).
-- **Configuración:** `apps/panel/wrangler.jsonc` (nombre y "recargar en una
-  sección entrega el panel") y `apps/panel/public/_headers` (cabeceras de
-  seguridad).
+- **A qué Supabase se conecta:** se deduce solo. La dirección sale del
+  Reference ID y la llave **pública** se le pide a la API de Supabase. No hay
+  que copiar ninguna llave.
+- **Configuración:** `apps/panel/wrangler.jsonc` y `apps/panel/public/_headers`
+  (cabeceras de seguridad).
 
-### Publicar a mano
+**Publicar a mano:** GitHub → Actions → **"Publicar el panel" → Run workflow**.
 
-GitHub → **Actions → "Publicar el panel" → Run workflow**. Hace falta tras
-cambiar un secreto (por ejemplo, al pasar a producción), porque eso no es un
-cambio de código.
-
-### Los secretos (GitHub → Settings → Secrets and variables → Actions)
+**Secretos que usa:** `SUPABASE_ACCESS_TOKEN`, `SUPABASE_REF_PRUEBAS`,
+`SUPABASE_REF_PRODUCCION` (los de "Publicar en Supabase"), y:
 
 | Secreto | Qué es | De dónde sale |
 |---|---|---|
-| `PANEL_SUPABASE_URL` | A qué Supabase se conecta el panel | Supabase → Project Settings → Data API → Project URL |
-| `PANEL_SUPABASE_LLAVE_PUBLICA` | Su llave **pública** (`sb_publishable_…` o `anon`) | Supabase → Project Settings → API Keys. **Nunca la secreta**: la compilación se niega |
 | `CLOUDFLARE_API_TOKEN` | Permiso para subir el panel | Cloudflare → 👤 → Profile → API Tokens → plantilla "Edit Cloudflare Workers", sin fecha de fin |
 | `CLOUDFLARE_ACCOUNT_ID` | Qué cuenta de Cloudflare | Cloudflare → Workers & Pages → Account details |
 
 Si falta alguno, la publicación sale en rojo y dice cuál; el panel en línea se
-queda como estaba.
+queda como estaba. (Los secretos `PANEL_SUPABASE_URL` y
+`PANEL_SUPABASE_LLAVE_PUBLICA` ya no se usan desde el 30-09-2026; se pueden
+borrar.)
 
-### Si el token de Cloudflare se filtra o deja de servir
-
-Cloudflare → 👤 → Profile → API Tokens → en el token, **Roll** (da uno nuevo)
-o borrarlo y crear otro igual. Pegar el nuevo en `CLOUDFLARE_API_TOKEN`.
+**Si el token de Cloudflare se filtra o deja de servir:** Cloudflare → 👤 →
+Profile → API Tokens → en el token, **Roll** (da uno nuevo) o borrarlo y crear
+otro igual. Pegar el nuevo en `CLOUDFLARE_API_TOKEN`.
 
 ## 9. Supabase
 
@@ -334,7 +338,7 @@ o borrarlo y crear otro igual. Pegar el nuevo en `CLOUDFLARE_API_TOKEN`.
   dos veces por semana). Si pasa: supabase.com → el proyecto → **Restore**.
   Los kioscos siguen registrando sin conexión y envían al volver.
 - **Cambiar la contraseña de la base**: Project Settings → Database. Después
-  actualizar en GitHub los secretos `SUPABASE_PASSWORD_*` y `SUPABASE_DB_URL`.
+  actualizar en GitHub el secreto `SUPABASE_PASSWORD_*` de ese proyecto.
 - **Cambios a la base**: **nunca a mano** en el tablero de producción
   (CLAUDE.md 16). Se escribe una migración nueva en `supabase/migrations/`,
   se prueba en local, y se publica con Actions → "Publicar en Supabase":
@@ -416,7 +420,7 @@ contraseña, el otro le da una temporal desde Accesos.
 | Muchos "Foto no guardada" | Disco lleno o Windows sin cifrado | Liberar espacio; revisar el perfil de Windows |
 | "Hora dudosa" en todos | Pila del BIOS agotada o zona horaria mal | Cambiar la pila; hora automática en Windows |
 | El panel no se actualiza tras un cambio | Falló "Publicar el panel" | GitHub → Actions → "Publicar el panel" → abrir la corrida en rojo y leer el error (casi siempre un secreto) |
-| El panel abre pero no deja entrar a nadie | Secretos del panel apuntan a otro Supabase | Revisar `PANEL_SUPABASE_URL` / `PANEL_SUPABASE_LLAVE_PUBLICA` y volver a publicar |
+| El panel abre pero no deja entrar a nadie | Nadie tiene cuenta en esa base (producción recién encendida) | Actions → "Crear administrador" (PASOS-FINALES 3.3) |
 | El jefe no puede entrar al modo administrador del kiosco | No ha puesto su usuario del kiosco, o el kiosco no ha sincronizado | Panel → Mi cuenta; esperar unos minutos con internet |
 | "Registros que la oficina no aceptó" | Persona inexistente en el panel, kiosco revocado | Arreglar en el panel y "Volver a enviarlos" |
 | Una corrida de Actions en rojo | Secreto vencido o mal copiado | Abrir la corrida, leer el primer error |
