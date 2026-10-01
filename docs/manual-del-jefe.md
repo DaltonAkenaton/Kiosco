@@ -288,6 +288,25 @@ valor choca con otra regla (por ejemplo, una tolerancia mayor que los minutos
 de "retardo mayor"), el panel no lo deja guardar y explica por qué. Un cambio
 llega a los kioscos en unos minutos y los reportes se recalculan solos.
 
+### Respaldo (una copia de todos los datos)
+
+**Configuración → Respaldo → Descargar respaldo**: baja al momento un Excel con
+**todos los datos** del sistema, una hoja por cosa (registros, personal,
+horarios, ausencias, correcciones…). Sin PIN ni contraseñas. Queda en la
+**Bitácora** quién lo bajó y cuándo.
+
+**Cuándo:** por ejemplo, **una vez al mes**. Guárdalo en el Drive de la
+facultad, en una carpeta a la que sólo entren quienes deben: **son datos
+personales**. No lo dejes en Descargas ni lo mandes por WhatsApp.
+
+Además, el sistema hace **solo** un respaldo completo cada lunes y jueves, sin
+que tengas que hacer nada (manual técnico, sección 7).
+
+| Qué | Dónde está su respaldo |
+|---|---|
+| Registros, personal, horarios, ausencias, correcciones, configuración | **Panel** (este botón) y **automático** cada lunes y jueves |
+| **Las fotos** | **Sólo en el kiosco**: ⚙ Administrador → **Guardar en memoria USB**. El respaldo del panel **no** las trae, porque las fotos nunca salen del kiosco |
+
 ### Accesos
 
 Quién puede entrar al panel.

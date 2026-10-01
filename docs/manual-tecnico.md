@@ -296,6 +296,26 @@ guarda respaldos de más de 90 días.
 es una de dos: cambió la contraseña de la base y falta actualizar el secreto
 `SUPABASE_PASSWORD_PRODUCCION`, o **venció el token de Supabase** (sección 8).
 
+### El respaldo desde el panel
+
+Panel → **Configuración → Respaldo → Descargar respaldo** (sólo
+administradores). Baja el mismo Excel que el respaldo de GitHub (una hoja por
+tabla, sin PIN ni contraseñas), en el momento, sin entrar a GitHub. Queda en
+la Bitácora.
+
+**Sirve aunque GitHub falle** (token vencido, tareas apagadas, cuenta
+perdida). Lo que **no** trae son los archivos SQL para reconstruir la base
+completa: esos sólo salen del respaldo de GitHub, porque necesitan conectarse
+directo a la base de datos, y una página web no puede.
+
+### Qué se respalda dónde
+
+| Qué | Respaldo |
+|---|---|
+| Todos los datos (registros, personal, horarios, ausencias…) en **Excel** | GitHub (automático, lunes y jueves) **y** panel (botón, cuando se quiera) |
+| La base completa para **restaurarla** (SQL) | Sólo GitHub |
+| **Las fotos** | Sólo el kiosco: ⚙ Administrador → Guardar en memoria USB (sección 5) |
+
 ### Restaurar en un proyecto nuevo de Supabase
 
 Esto sólo hace falta si se perdió el proyecto de Supabase completo (lo

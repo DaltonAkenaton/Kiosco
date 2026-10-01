@@ -131,7 +131,8 @@ y todos sepan usarlo, ya se puede dejar el método viejo.
 | Cada cuándo | Qué | Dónde |
 |---|---|---|
 | Cada día (si quieres) | Ver la asistencia en el panel | Manual del jefe, sección 3 |
-| Cada mes | GitHub → Actions: que los respaldos estén en verde | Manual técnico, sección 8 |
+| Cada mes | Panel → Configuración → Respaldo → **Descargar respaldo**, y guardarlo en el Drive de la facultad | Manual del jefe, sección 4, "Respaldo" |
+| Cada mes | GitHub → Actions: que los respaldos automáticos estén en verde | Manual técnico, sección 8 |
 | Cada semestre | Festivos y vacaciones del calendario escolar | Paso 8 |
 | Cuando alguien olvide su PIN | Empleados → **PIN nuevo** | Manual del jefe, sección 6 |
 | Cuando algo falle | La tabla "Cuando algo pasa" | Manual del jefe, sección 6 |
