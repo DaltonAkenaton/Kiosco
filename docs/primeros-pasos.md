@@ -86,15 +86,17 @@ kiosco le pide elegir uno propio.
 
 ## 7. Asigna los horarios
 
-En el panel: **Horarios**. Para cada persona: qué turno (matutino, vespertino
+En el panel: **Horarios** → en el renglón de cada persona, **Poner horario**:
+qué turno (matutino, vespertino
 o nocturno) y qué días. Si algún día entra a otra hora (por ejemplo, el sábado
 a las 7), también se pone ahí. Si los turnos de la facultad son a otras horas,
-primero se ajustan los **Turnos**.
+primero se ajustan los **Turnos**. La lista de Excel del paso 6 no trae horarios:
+se ponen aquí, uno por persona.
 
 **Quien no tenga horario no tendrá retardos ni faltas:** sólo se verán sus
 registros.
 
-*Manual del jefe, sección 4, "Horarios".*
+*Manual del jefe, sección 4, "Horarios" (trae el paso a paso).*
 
 ## 8. Registra festivos y vacaciones
 

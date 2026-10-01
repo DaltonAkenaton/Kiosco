@@ -201,6 +201,29 @@ Cada cambio te pide un **motivo** y queda en la **Bitácora**.
   día X": los días anteriores se siguen calculando con el horario viejo.
 - Quien **no tiene horario** no tiene retardos ni faltas: sólo se ven sus registros.
 
+**Paso a paso: ponerle horario a una persona**
+
+1. Panel → **Horarios**. Abajo está la tabla **"Horario de cada persona"**.
+2. En su renglón, pica **Poner horario** (o **Cambiar horario** si ya tenía).
+3. **Turno**: elige matutino, vespertino o nocturno.
+4. **A partir del**: el día desde el que vale. Para alguien nuevo, el día que
+   empieza a trabajar.
+5. **Qué días trabaja**: marca la casilla de cada día (por ejemplo, lunes a
+   viernes y sábado).
+6. Si **un día entra a otra hora** (por ejemplo, el sábado de 7:00 a 13:00):
+   en ese día marca **otra hora** y escribe la entrada y la salida.
+7. Escribe el **motivo** (por ejemplo, "alta" o "cambió al turno
+   vespertino") y pica **Guardar horario**.
+
+Al **importar la lista de Excel** no se ponen los horarios: después de
+importar, pasa a **Horarios** y ponle el suyo a cada persona. Al dar de alta a
+**una** persona, el botón **Siguiente: asignar su horario** te trae directo
+aquí.
+
+**Si los turnos de la facultad son a otras horas:** en **Turnos**, pica
+**Cambiar** en el turno (o **+ Nuevo turno**) y pon su hora de entrada y de
+salida. Hazlo **antes** de poner los horarios de las personas.
+
 ### Incidencias y días festivos
 
 Una incidencia es algo fuera de lo normal. Hay dos familias, y cuentan distinto:
