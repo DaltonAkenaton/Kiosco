@@ -57,7 +57,7 @@ import { COLORES } from './tema';
 //
 //  PASAR A PRODUCCION = cambiar 'pruebas' por 'produccion', commit, y
 //  publicar la version (docs/PASOS-FINALES.md, paso 4).
-export const AMBIENTE: 'pruebas' | 'produccion' = 'pruebas';
+export const AMBIENTE: 'pruebas' | 'produccion' = 'produccion';
 
 /** La "Project URL" de cada proyecto de Supabase. Son publicas: no son llaves. */
 export const PROYECTOS_SUPABASE = {
