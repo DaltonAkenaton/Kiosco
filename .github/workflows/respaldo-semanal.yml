@@ -75,6 +75,8 @@ jobs:
           mkdir -p respaldo/csv
           # Sin hashes de PIN, de tokens ni de contrasenas: el CSV se abre en
           # cualquier computadora y no tiene por que llevarlos.
+          # MISMA LISTA que el boton del panel (apps/panel/src/app/servicios/
+          # respaldo.ts, TABLAS_DEL_RESPALDO): si se agrega una tabla, en los dos.
           declare -A consultas=(
             [empleados]="select id, usuario, numero_empleado, nombre, apellido_paterno, apellido_materno, pin_temporal, activo, anonimizado_en, creado_en, actualizado_en from empleados order by nombre"
             [marcas]="select m.id, m.empleado_id, e.usuario, m.tipo, m.origen, (m.hora_estimada at time zone 'America/Matamoros') as hora_local, m.hora_estimada, m.dispositivo_id, m.foto_estado, array_to_string(m.banderas, ' ') as banderas, m.en_cuarentena, m.recibido_en from marcas m left join empleados e on e.id = m.empleado_id order by m.hora_estimada"

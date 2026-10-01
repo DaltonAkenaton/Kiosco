@@ -1220,6 +1220,52 @@ await entrarComo(ID_ADMIN);
 await bd.query('reset role');
 
 // ============================================================================
+console.log('\n--- respaldo desde el panel (0027) ---');
+// El panel baja cada tabla con SUS permisos (RLS y columnas de 0024). Se
+// prueba con la MISMA lista de tablas y columnas que usa el panel: si un dia
+// alguien agrega ahi una columna sin permiso (un hash), esto lo detecta.
+{
+  const { TABLAS_DEL_RESPALDO } = await import('../apps/panel/src/app/servicios/respaldo.ts');
+  await bd.query(`select set_config('request.jwt.claims', '', true)`);
+
+  await entrarComo(ID_ADMIN);
+  await bd.query(`select registrar_descarga_respaldo('Respaldo mensual de prueba')`);
+  await bd.query('reset role');
+  const { rows: [anotado] } = await bd.query(`
+    select actor, motivo, datos_despues from bitacora_auditoria
+     where tabla = 'respaldo' order by id desc limit 1`);
+  comprobar('la descarga queda en la bitácora, con quién y por qué',
+    anotado?.actor === ID_ADMIN && anotado?.motivo === 'Respaldo mensual de prueba', JSON.stringify(anotado));
+
+  await entrarComo(ID_ADMIN);
+  await debeFallar('sin motivo no hay respaldo', `select registrar_descarga_respaldo('corto')`);
+  for (const t of TABLAS_DEL_RESPALDO) {
+    const columnas = t.columnas === '*' ? '*' : t.columnas;
+    try {
+      await bd.query('savepoint lectura');
+      await bd.query(`select ${columnas} from ${t.tabla} order by ${t.orden.join(', ')} limit 1`);
+      await bd.query('release savepoint lectura');
+      comprobar(`el administrador puede leer "${t.tabla}" para el respaldo`, true);
+    } catch (e) {
+      await bd.query('rollback to savepoint lectura');
+      comprobar(`el administrador puede leer "${t.tabla}" para el respaldo`, false, e.message);
+    }
+  }
+  for (const [tabla, columna] of [['empleados', 'pin_hash'], ['administradores', 'contrasena_kiosco_hash'], ['dispositivos', 'token_hash']]) {
+    const t = TABLAS_DEL_RESPALDO.find((x) => x.tabla === tabla);
+    comprobar(`el respaldo NO pide "${columna}" de ${tabla}`, t && t.columnas !== '*' && !t.columnas.includes(columna));
+  }
+
+  await entrarComo(ID_SUPERVISOR);
+  await debeFallar('un supervisor NO puede descargar el respaldo',
+    `select registrar_descarga_respaldo('Respaldo mensual de prueba')`, 'administrador');
+  await bd.query('reset role');
+  await bd.query('set local role anon');
+  await debeFallar('sin sesión, ni siquiera se puede llamar', `select registrar_descarga_respaldo('Respaldo mensual de prueba')`);
+}
+await bd.query('reset role');
+
+// ============================================================================
 //  Resultado
 // ============================================================================
 // Todo corrio dentro de una transaccion que ahora se deshace: la base local

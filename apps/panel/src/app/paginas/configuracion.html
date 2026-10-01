@@ -51,6 +51,40 @@
   </section>
 }
 
+@if (sesion.esAdmin() && !cargando()) {
+  <section class="mt-8" aria-labelledby="titulo-respaldo">
+    <h2 id="titulo-respaldo" class="text-xl font-bold">Respaldo</h2>
+    <article class="bg-superficie border-borde mt-2 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-2xl border-2 px-5 py-4">
+      <div class="max-w-2xl">
+        <p class="font-semibold">
+          Una copia de todos los datos, en Excel
+          <panel-ayuda titulo="¿Qué trae el respaldo?" [texto]="AYUDA_RESPALDO" alinear="izquierda" />
+        </p>
+        <p class="text-texto-suave text-sm">
+          Registros, personal, horarios, ausencias, correcciones y configuración: una hoja por cada cosa. Las fotos no
+          vienen aquí (sólo están en el kiosco). Recomendado: una vez al mes, y guardarlo en el Drive de la facultad.
+        </p>
+      </div>
+      <button type="button" class="boton-principal shrink-0" (click)="abrirRespaldo()">Descargar respaldo</button>
+    </article>
+  </section>
+}
+
+@if (respaldoAbierto()) {
+  <panel-dialogo titulo="Descargar respaldo" textoBoton="Descargar"
+                 ejemploMotivo="Ej.: respaldo mensual de octubre" [ocupado]="respaldando()" [error]="errorRespaldo()"
+                 (confirmar)="descargarRespaldo($event)" (cancelar)="respaldoAbierto.set(false)">
+    <p>Se baja un archivo de Excel con <b>todos los datos del sistema</b>, una hoja por tabla. No trae PIN ni contraseñas.</p>
+    <p class="rounded-xl px-4 py-3 font-semibold" style="background-color: rgb(245 158 11 / 0.16)">
+      Son datos personales de todo el personal. Guárdalo en una carpeta con acceso restringido (por ejemplo, el Drive
+      de la facultad) y no lo dejes en Descargas ni lo mandes por WhatsApp.
+    </p>
+    @if (respaldando()) {
+      <p class="text-texto-suave text-base" aria-live="polite">{{ avanceRespaldo() }}</p>
+    }
+  </panel-dialogo>
+}
+
 @if (editando(); as o) {
   @let p = palabras(o);
   <panel-dialogo [titulo]="p.nombre" textoBoton="Guardar" ejemploMotivo="Ej.: acuerdo con la dirección del 23 de septiembre"

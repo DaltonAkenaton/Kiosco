@@ -42,6 +42,7 @@ const TABLAS: Record<string, string> = {
   turnos: 'Turno',
   asignaciones_turno: 'Horario',
   dias_festivos: 'Día festivo',
+  respaldo: 'Respaldo',
 };
 
 /** Columnas que no dicen nada a una persona. */
@@ -214,6 +215,9 @@ export class Bitacora implements OnInit {
       if (r.accion === 'UPDATE') return `Foto del registro de ${quien}`;
       return `${tipo} de ${quien}${d['origen'] === 'manual' ? ' (a mano)' : ''}`;
     }
+
+    // Alguien se llevo una copia de todos los datos (Configuracion -> Respaldo, 0027).
+    if (r.tabla === 'respaldo') return 'Descargó el respaldo completo (Excel con todos los datos)';
 
     const cosa = TABLAS[r.tabla] ?? r.tabla;
     const verbo = r.accion === 'INSERT' ? 'nuevo' : r.accion === 'UPDATE' ? 'cambio' : 'borrado';

@@ -16,6 +16,8 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Ayuda } from '../componentes/ayuda';
 import { Dialogo, mensajeDeError } from '../componentes/dialogo';
 import { Avisos } from '../servicios/avisos';
+import { descargarExcel } from '../servicios/escribir-excel';
+import { armarRespaldo } from '../servicios/respaldo';
 import { Sesion } from '../servicios/sesion';
 import { PALABRAS_CONFIGURACION as PALABRAS, fecha, hora } from '../textos';
 
@@ -80,6 +82,17 @@ export class Configuracion implements OnInit {
 
   protected readonly fecha = fecha;
   protected readonly hora = hora;
+
+  // Respaldo (0027): una copia de todas las tablas en Excel, en el momento.
+  protected readonly respaldoAbierto = signal(false);
+  protected readonly respaldando = signal(false);
+  protected readonly avanceRespaldo = signal('');
+  protected readonly errorRespaldo = signal<string | null>(null);
+  protected readonly AYUDA_RESPALDO =
+    'Trae lo mismo que el respaldo automático que se hace cada lunes y jueves: una hoja de Excel por tabla ' +
+    '(registros, personal, horarios, ausencias, correcciones, bitácora, configuración, kioscos), sin PIN ni ' +
+    'contraseñas. NO trae las fotos: nunca salen del kiosco; se respaldan desde el kiosco, en el modo ' +
+    'administrador, con "Guardar en memoria USB". Queda anotado en la bitácora quién lo descargó y cuándo.';
 
   protected readonly porGrupo = computed(() => {
     const grupos = new Map<string, Opcion[]>();
@@ -205,6 +218,42 @@ export class Configuracion implements OnInit {
       }
     }
     return null;
+  }
+
+  protected abrirRespaldo(): void {
+    this.errorRespaldo.set(null);
+    this.avanceRespaldo.set('');
+    this.respaldoAbierto.set(true);
+  }
+
+  /**
+   * Primero se anota en la bitacora (si no se pudo anotar, no se baja nada);
+   * despues se baja cada tabla y se arma el Excel.
+   */
+  protected async descargarRespaldo(motivo: string): Promise<void> {
+    this.respaldando.set(true);
+    this.errorRespaldo.set(null);
+    this.avanceRespaldo.set('Anotando en la bitácora…');
+    try {
+      const { error } = await this.sesion.bd.rpc('registrar_descarga_respaldo', { p_motivo: motivo });
+      if (error) {
+        this.errorRespaldo.set(mensajeDeError(error));
+        return;
+      }
+      const hojas = await armarRespaldo(this.sesion.bd, this.sesion.zona(), (tabla, numero, total) =>
+        this.avanceRespaldo.set(`Bajando ${tabla.replaceAll('_', ' ')} (${numero} de ${total})…`),
+      );
+      const hoy = new Intl.DateTimeFormat('sv-SE', { timeZone: this.sesion.zona() }).format(new Date());
+      descargarExcel(`respaldo-${hoy}.xlsx`, hojas);
+      this.respaldoAbierto.set(false);
+      this.avisos.exito('Respaldo descargado. Guárdalo en un lugar seguro y bórralo de Descargas.');
+    } catch (e) {
+      this.errorRespaldo.set(
+        `No se pudo completar el respaldo. Revisa el internet y vuelve a intentar. (${e instanceof Error ? e.message : String(e)})`,
+      );
+    } finally {
+      this.respaldando.set(false);
+    }
   }
 
   protected valor(evento: Event): string {

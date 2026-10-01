@@ -240,6 +240,23 @@ app.whenReady().then(async () => {
     await capturar('4-configuracion');
 
     // ====================================================================
+    console.log('\n--- respaldo desde el panel (0027) ---');
+    const motivoRespaldo = `Respaldo de prueba ${Date.now()}`;
+    await picar('Descargar respaldo');
+    comprobar('el respaldo avisa que son datos personales', (await texto()).includes('Son datos personales de todo el personal'));
+    await escribir('panel-dialogo input[placeholder^="Ej."]', motivoRespaldo);
+    descargados.length = 0;
+    await picar('Descargar');
+    for (let i = 0; i < 30 && !descargados.some((d) => /^respaldo-\d{4}-\d{2}-\d{2}\.xlsx$/.test(d)); i++) await esperar(500);
+    comprobar('descarga el respaldo en Excel (respaldo-AAAA-MM-DD.xlsx)',
+      descargados.some((d) => /^respaldo-\d{4}-\d{2}-\d{2}\.xlsx$/.test(d)), descargados.join(','));
+    await esperar(500);
+    comprobar('y avisa que se descargó', (await texto()).includes('Respaldo descargado'));
+    const { rows: [resp] } = await bd.query(
+      `select count(*)::int n from bitacora_auditoria where tabla = 'respaldo' and motivo = $1`, [motivoRespaldo]);
+    comprobar('la descarga del respaldo queda en la bitácora', resp.n === 1);
+
+    // ====================================================================
     console.log('\n--- registro manual ---');
     // El dia de la prueba: hoy, o AYER si se corre de madrugada (antes de las
     // 06:10 una entrada de hoy a las 06:05 estaria en el futuro y el panel,
@@ -443,6 +460,7 @@ app.whenReady().then(async () => {
     comprobar('la bitacora muestra los cambios con su motivo',
       bitacora.includes(motivoAlta) && bitacora.includes('No hubo luz en la manana (prueba)'));
     comprobar('y nunca un hash de PIN', !/\$2[aby]\$/.test(bitacora));
+    comprobar('la descarga del respaldo se lee con palabras', bitacora.includes('Descargó el respaldo completo'));
     comprobar('ni fechas en formato de maquina (2026-09-27T06:39...)', !/\d{4}-\d{2}-\d{2}T\d{2}:/.test(bitacora));
     // Lo normal: solo lo que hicieron personas. La marca manual SI (la hizo el jefe).
     const { rows: [{ n: deKioscos }] } = await bd.query(
