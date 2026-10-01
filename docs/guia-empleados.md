@@ -28,7 +28,7 @@ Tus **4 números secretos**. Nadie más debe saberlos.
 
 Te saluda por tu nombre y dice qué va a registrar:
 
-> **Hola, Dalton — Registrando ENTRADA 06:02**
+> **Hola, María — Registrando ENTRADA 06:02**
 
 - Si está bien, **no hagas nada**: se guarda solo en 5 segundos
   (o teclea **1** — *Sí, registrar*).
