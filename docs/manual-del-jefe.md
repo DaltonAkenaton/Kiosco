@@ -44,8 +44,8 @@
    y entras directo. El enlace sirve una sola vez y por poco tiempo.
 2. Si el correo no llega, pídele a otro administrador que te dé una
    contraseña temporal en **Accesos → Contraseña nueva**.
-3. Si nadie puede entrar, quien da soporte la cambia desde la página de
-   Supabase (manual técnico, "Nadie puede entrar al panel").
+3. Si nadie puede entrar, quien da soporte te da una contraseña temporal
+   desde GitHub (manual técnico, "Nadie puede entrar al panel").
 
 En ningún caso se pierde información: sólo cambia la contraseña.
 
@@ -140,9 +140,14 @@ Cómo se decide cada cosa (se ajusta en **Configuración**):
 
 ### Resumen diario por correo
 
-Si se configuró, cada mañana (lunes a sábado) te llega un correo con lo de
-ayer: retardos, faltas, quién no registró salida, qué hay que revisar en el
-kiosco y si algún kiosco o cámara está fallando.
+Cada mañana (lunes a sábado) llega un correo con lo de ayer: retardos, faltas,
+quién no registró salida, qué hay que revisar en el kiosco y si algún kiosco o
+cámara está fallando.
+
+Llega al **correo del sistema** (el Gmail de la hoja de credenciales), no al
+tuyo, para no llenarte la bandeja: ábrelo cuando quieras revisar. Lo mismo lo
+ves en el panel en cualquier momento. Si prefieres recibirlo en tu correo,
+pide a soporte que lo cambie (manual técnico, "Resumen diario").
 
 ---
 
@@ -184,13 +189,6 @@ kiosco y si algún kiosco o cámara está fallando.
 
 Cada cambio te pide un **motivo** y queda en la **Bitácora**.
 
-**Datos de demostración (sólo en el sistema de pruebas):** con la opción
-"Permitir datos de demostración" en 1 (Configuración), aparece el botón
-**🧪 Generar datos de demostración**: crea 5 personas inventadas (marcadas
-**DEMO**, una de ellas velador) con 1 a 3 semanas de registros, algunos con
-retardo, falta, sin salida o foto tapada. Sirve para ver cómo se comporta el
-sistema. En el sistema real esa opción debe quedar en **0**.
-
 ### Horarios
 
 - **Turnos**: plantillas (Matutino 06–14, Vespertino 14–22, Nocturno 22–06).
@@ -230,7 +228,21 @@ Formas de registrarla:
 
 Los registros de entrada y salida **nunca se tocan**: la incidencia sólo cambia
 cómo se califica el día. Si te equivocas, **Quitar** la regresa a como estaba.
-- **+ Agregar día festivo**: ese día nadie tiene falta.
+- **+ Agregar día festivo**: ese día nadie tiene falta. Es de un día a la vez:
+  para periodos largos, usa vacaciones (abajo).
+
+**Vacaciones de la universidad** (diciembre, Semana Santa, verano):
+- **Si descansan todos:** **+ Registrar incidencia** → tipo **Vacaciones** →
+  **Todos los que tenían turno esos días** → fecha de inicio y de fin. Un solo
+  registro cubre a todo el personal y todo el periodo.
+- **Si unos descansan y otros se quedan de guardia:** registra las vacaciones
+  **persona por persona**, sólo a los que se van. Los que se quedan siguen con
+  su horario normal.
+- Si alguien con vacaciones sí vino a trabajar, **sus horas cuentan** igual.
+
+**Consejo:** al empezar cada semestre, con el **calendario escolar de la UAT**
+en la mano, registra de una vez los días festivos y los periodos vacacionales.
+Así nadie amanece con faltas que no son.
 
 ### Kioscos
 
@@ -354,5 +366,7 @@ panel.
 | Se robaron o cambiaron la PC | Kioscos → **Dar de baja este kiosco**. Después, alta de la PC nueva. |
 | Alguien dice que no llegó tarde | Mira el registro; si hay duda, ve la foto en el kiosco y márcala **Conservar**. |
 | Una persona pide sus datos | Empleados → **Sus datos (ARCO)**. |
+| Vienen vacaciones o un día festivo | **Ausencias**: el festivo con **+ Agregar día festivo**; el periodo vacacional con **+ Registrar incidencia** → Vacaciones (sección 4, "Vacaciones de la universidad"). |
+| Aparecen faltas en días que no se trabajó | Faltó registrar ese festivo o esas vacaciones: regístralos ahora y las faltas desaparecen solas. |
 
 Soporte técnico: ver el [manual técnico](manual-tecnico.md).

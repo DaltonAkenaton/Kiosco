@@ -1,183 +1,261 @@
-y# Manual técnico
+# Manual técnico
 
-> Para quien instala, mantiene o repara el sistema. Supone saber usar Windows y
-> una terminal, no programar. Para el **por qué** de cada decisión, ver el
-> [curso interno](curso/README.md). Para la puesta en marcha inicial (cuentas y
-> credenciales), ver [PASOS-FINALES.md](PASOS-FINALES.md).
+> **Para quién es:** para quien instala, mantiene o repara el sistema. No hace
+> falta saber programar: basta con saber usar Windows, copiar y pegar, y
+> seguir pasos con calma. La sección 15 es la única que sí es para
+> programadores.
+>
+> **Cómo leerlo:** no hace falta leerlo de corrido. Busca en el índice lo que
+> te pasó y ve directo ahí. Si una palabra no la conoces, está en la sección
+> "Palabras que vas a encontrar".
+>
+> Para el **por qué** de cada decisión, ver el curso interno (`docs/curso/`).
+> Para la puesta en marcha desde cero (crear las cuentas), ver
+> `docs/PASOS-FINALES.md`.
 
 ## Índice
 
-1. [Las piezas](#1-las-piezas)
-2. [Instalar un kiosco](#instalar-un-kiosco)
-3. [Dar de alta el kiosco y la contraseña de recuperación](#3-dar-de-alta-el-kiosco-y-la-contraseña-de-recuperación)
-4. [Dónde guarda sus datos el kiosco](#4-dónde-guarda-sus-datos-el-kiosco)
-5. [Cambiar o retirar una PC](#5-cambiar-o-retirar-una-pc)
-6. [Recuperar fotos de una PC muerta](#6-recuperar-fotos-de-una-pc-muerta)
-7. [Respaldos y cómo restaurar](#7-respaldos-y-cómo-restaurar)
-8. [Publicar una versión nueva del kiosco](#publicar-una-versión-nueva-del-kiosco)
-9. [Supabase: pausas, contraseñas, cambios a la base](#9-supabase)
-10. [Problemas comunes](#10-problemas-comunes)
-11. [Trabajar en el código](#11-trabajar-en-el-código)
+- Palabras que vas a encontrar
+1. Las piezas del sistema
+2. Instalar un kiosco
+3. Dar de alta el kiosco y la contraseña de recuperación
+4. Dónde guarda sus datos el kiosco
+5. Cambiar o retirar una PC
+6. Recuperar fotos de una PC que ya no prende
+7. Respaldos y cómo restaurar
+8. **Fechas de vencimiento y tareas periódicas** (léela aunque no leas nada más)
+9. Publicar una versión nueva del kiosco
+10. Publicar el panel
+11. Supabase: la base de datos en internet
+12. El resumen diario por correo
+13. Datos de demostración (sólo en pruebas)
+14. Problemas comunes
+15. Trabajar en el código (para programadores)
 
 ---
 
-## 1. Las piezas
+## Palabras que vas a encontrar
 
-| Pieza | Qué es | Dónde vive | Se actualiza con |
+Muchas pantallas de los servicios que usa el sistema están en inglés. Esta
+tabla dice qué significa cada palabra **aquí**, en este sistema.
+
+| Palabra | Qué es, en palabras simples |
+|---|---|
+| **Kiosco** | La computadora del pasillo donde el personal registra su entrada y salida, y el programa que corre en ella. |
+| **Panel** | La página web donde el jefe ve la asistencia y administra todo. Se abre en cualquier navegador. |
+| **Supabase** | El servicio de internet donde vive la **base de datos**: el "archivero" central con todos los registros, el personal y la configuración. |
+| **Cloudflare** | El servicio que tiene "colgada" la página del panel en internet. |
+| **GitHub** | El servicio donde se guarda el **código** del sistema (las instrucciones con las que está hecho) y que hace tareas automáticas. |
+| **Repositorio** | Una "carpeta" en GitHub. Hay una con el código (`codigo-del-sistema`, privada) y dos con los instaladores del kiosco (públicas). |
+| **Actions** | La pestaña de GitHub con las **tareas automáticas**: probar el sistema, publicar el panel, hacer respaldos, mandar el resumen diario. Cada tarea se puede correr también a mano con el botón **Run workflow** ("correr esta tarea"). |
+| **Corrida** (*run*) | Cada vez que una tarea de Actions se ejecuta. Sale con **palomita verde** si salió bien o con **tache rojo** si falló. |
+| **Secreto** (*secret*) | Una contraseña que se le da a GitHub para que sus tareas automáticas puedan entrar a Supabase, Cloudflare o al Gmail. Se guarda en GitHub → Settings → Secrets and variables → Actions. Una vez guardado **nadie lo puede volver a ver**, sólo reemplazar. |
+| **Token** | Un tipo de contraseña que no es para personas, sino para que un programa entre a otro. Algunos **vencen** (ver sección 8). |
+| **Ambiente: pruebas / producción** | Hay dos bases de datos separadas. **Producción** es la de verdad, con el personal real. **Pruebas** es una copia para ensayar sin riesgo. Nunca se ensaya en producción. |
+| **Versión / Release** | Cada instalador nuevo del kiosco tiene un número (por ejemplo 1.0.0, 1.0.1). En GitHub, cada versión publicada se llama *Release*. |
+| **Migración** | Un archivo con instrucciones para cambiar la forma de la base de datos (por ejemplo, agregar una columna). Se aplican en orden y nunca a mano. |
+| **Hash / huella** | Un "código de barras" que se calcula a partir de una foto. Si alguien altera la foto, la huella ya no coincide. A internet sólo viaja la huella, nunca la foto. |
+| **Cifrar** | Guardar algo "con candado": aunque alguien copie el archivo, no lo puede abrir sin la llave. |
+
+---
+
+## 1. Las piezas del sistema
+
+```
+   PASILLO                                    OFICINA DEL JEFE
+┌───────────────┐   internet    ┌───────────┐   internet   ┌──────────────┐
+│   KIOSCO      │ ────────────► │ SUPABASE  │ ◄─────────── │ PANEL        │
+│ cámara + PIN  │  registros,   │ (base de  │              │ (navegador,  │
+│ fotos (aquí)  │  NUNCA fotos  │  datos)   │              │  Cloudflare) │
+└───────────────┘               └───────────┘              └──────────────┘
+                                      ▲
+                                      │ publica, respalda, avisa
+                               ┌──────────────┐
+                               │ GITHUB       │
+                               │ (código y    │
+                               │  tareas      │
+                               │  automáticas)│
+                               └──────────────┘
+```
+
+| Pieza | Qué es | Dónde vive | Cómo se actualiza |
 |---|---|---|---|
-| **Kiosco** | App de escritorio (Electron + Angular) | PC del pasillo, `.exe` | Instalador nuevo o actualización automática |
-| **Panel** | Página web (Angular) | Cloudflare | `git push` a `main` (GitHub lo arma y lo sube solo) |
-| **Nube** | Base de datos, reglas y Edge Functions | Supabase | Actions → "Publicar en Supabase" |
-| **Automatizaciones** | Pruebas, respaldos, resumen diario, instalador | GitHub Actions | Solas |
+| **Kiosco** | Programa de escritorio | La PC del pasillo | Solo: baja e instala las versiones nuevas (sección 9) |
+| **Panel** | Página web | Cloudflare | Solo: GitHub lo vuelve a publicar cada vez que cambia el código (sección 10) |
+| **Base de datos** | Registros, personal, reglas | Supabase | Solo: GitHub la actualiza cuando cambia el código (sección 11) |
+| **Tareas automáticas** | Pruebas, respaldos, resumen diario, instaladores | GitHub → Actions | Corren solas |
 
-Las fotos **nunca** salen del kiosco. A la nube sólo llega su huella (hash).
+Las fotos **nunca** salen del kiosco. A internet sólo llega su huella.
+
+**Si se va el internet**, el kiosco sigue funcionando normal: guarda todo y lo
+manda cuando vuelve. **Si se cae Supabase o GitHub**, igual. El único momento
+en que algo se pierde es si la PC se destruye con registros que todavía no
+había alcanzado a mandar (por eso manda cada pocos segundos).
 
 ---
 
-## Instalar un kiosco
+## 2. Instalar un kiosco
 
-### Requisitos de la PC
+### Lo que necesita la PC
 
-- Windows 10 u 11, 64 bits. 4 GB de RAM bastan.
-- Cámara USB (fija, a la altura de la cara, **sin ventana detrás**).
+- Windows 10 u 11, de 64 bits. Con 4 GB de memoria RAM basta.
+- Cámara USB, fija, a la altura de la cara y **sin ventana detrás** (con luz
+  de frente la foto sale bien; con luz atrás, la cara sale negra).
 - Teclado numérico USB (recomendado: funciona con guantes o manos húmedas).
-- Bocinas (sonidos distintos para entrada, salida y error).
-- Internet (puede fallar: el kiosco sigue funcionando sin él).
-- **No-break (UPS)** recomendado.
+- Bocinas: hay un sonido distinto para entrada, salida y error.
+- Internet. Puede fallar: el kiosco sigue funcionando sin él.
+- **No-break** (UPS) recomendado, para que un apagón corto no la apague.
 
 ### Preparar Windows
 
-1. **Cuenta estándar** (no administrador) para el kiosco, por ejemplo
-   `kiosco`. El instalador no pide permisos de administrador.
-2. **Energía**: Configuración → Sistema → Inicio/apagado y suspensión →
-   pantalla y suspensión en **Nunca**.
-3. **Windows Update → Horas activas**: de 5:00 a 23:00 (o las que cubran los
-   turnos), para que no se reinicie a la hora de checar. El turno nocturno
-   (22–06) hace que no haya hueco perfecto: elegir la hora con menos gente.
-4. **Inicio de sesión automático** en la cuenta `kiosco` (con `netplwiz`,
-   desmarcar "Los usuarios deben escribir su nombre y contraseña").
-5. **Opcional — modo kiosco de Windows**: con Windows Pro/Enterprise/Education,
-   Configuración → Cuentas → Otros usuarios → **Configurar un quiosco**
-   (Assigned Access) para que la cuenta sólo abra esta app. Con Windows Home no
-   existe; la app ya se protege sola (pantalla completa, no se deja cerrar con
-   Alt+F4, vuelve a abrirse si se cierra). Si la PC es **compartida** (lo
-   normal en esta facultad), **no** usar Assigned Access: ver abajo.
+1. **Una cuenta de Windows sin permisos de administrador** para el kiosco, por
+   ejemplo llamada `kiosco`. El instalador no necesita permisos especiales.
+2. **Que la pantalla no se apague:** Configuración → Sistema → Inicio/apagado y
+   suspensión → pantalla y suspensión en **Nunca**.
+3. **Que Windows no se reinicie a la hora de checar:** Configuración → Windows
+   Update → **Horas activas** → de 5:00 a 23:00 (o las que cubran los turnos).
+   Como hay turno de noche (22:00 a 06:00), no existe una hora perfecta:
+   elige la de menos gente.
+4. **Que entre solo a la cuenta del kiosco al prender:** tecla Windows + R →
+   escribir `netplwiz` → Enter → desmarcar "Los usuarios deben escribir su
+   nombre y contraseña".
+5. **Opcional, sólo si la PC es exclusiva para checar:** con Windows Pro,
+   Enterprise o Education existe el "modo quiosco" de Windows (Configuración →
+   Cuentas → Otros usuarios → **Configurar un quiosco**), que hace que esa
+   cuenta sólo pueda abrir este programa. Con Windows Home no existe, y no
+   pasa nada: el programa ya se protege solo. Si la PC es **compartida** (lo
+   normal en esta facultad), **no** se usa: ver lo siguiente.
 
-### ¿PC sólo para checar, o compartida?
+### ¿La PC es sólo para checar, o la usan para otras cosas?
 
-Lo decide el ajuste **"La PC del kiosco se usa para otras cosas"** del panel
-(Configuración → Kioscos). Viene en **Sí**.
+Se decide en el panel: Configuración → Kioscos → **"La PC del kiosco se usa
+para otras cosas"**. Viene en **Sí** (compartida).
 
-| | PC compartida (**Sí**, por defecto) | PC sólo para checar (**No**) |
+| | PC compartida (**Sí**, así viene) | PC sólo para checar (**No**) |
 |---|---|---|
-| Al prender Windows | No se abre sola: se abre con su **icono** | Se abre sola |
-| Para quitarla de en medio | **Minimizar** (vuelve desde la barra de tareas o picando su icono; suelta la cámara mientras tanto) o **Cerrar kiosco** / Alt+F4 (antes de salir manda lo pendiente) | No se deja cerrar; sólo `Ctrl+Alt+Shift+Q`. "Usar esta PC" la aparta 15 min |
-| Versiones nuevas | Se instalan **al cerrar** el kiosco | Se instalan de madrugada (2–5 h) |
-| Panel → Kioscos | Cerrado = normal, sin alerta | Sin reportarse = alerta |
+| Al prender Windows | No se abre sola: se abre con su **icono** del escritorio | Se abre sola |
+| Para usar la PC en otra cosa | **Minimizar** (vuelve desde la barra de tareas o con su icono) o **Cerrar kiosco**. Antes de cerrarse manda lo pendiente | No se deja cerrar. Sólo con `Ctrl + Alt + Shift + Q` |
+| Versiones nuevas | Se instalan **al cerrar** el kiosco | Se instalan de madrugada (2:00 a 5:00) |
+| En el panel, página Kioscos | "Cerrado" es normal, no es alerta | Si deja de reportarse, es alerta |
 
-Deja el **icono en el escritorio** a la vista: es la forma de abrirlo.
+Deja el **icono del escritorio** a la vista: es la forma de abrirlo.
 
 ### Instalar
 
-1. Copiar `ControlDeAsistencia-Instalador-X.Y.Z.exe` a la PC (USB o descarga
-   desde GitHub → Releases).
-2. Doble clic. Windows SmartScreen puede avisar "Windows protegió su PC"
-   (el `.exe` no está firmado con certificado de pago): **Más información →
-   Ejecutar de todas formas**.
-3. Se instala en el perfil del usuario y crea el icono en el escritorio (un
-   reloj con palomita). Si la PC es sólo para checar, además **se abre sola al
-   encender**.
-4. Probar: la cámara se ve, el reloj marca la hora de Nuevo Laredo.
+1. Conseguir el instalador: GitHub → repositorio
+   `versiones-kiosco` → a la derecha, **Releases** (versiones) →
+   la más reciente → descargar el archivo
+   `ControlDeAsistencia-Instalador-X.Y.Z.exe`. También se puede llevar en USB.
+2. Doble clic. Windows puede avisar **"Windows protegió su PC"**: es porque el
+   instalador no tiene una firma comprada (cuesta dinero cada año), no porque
+   tenga virus. Picar **Más información → Ejecutar de todas formas**.
+3. Se instala solo y crea el icono en el escritorio (un reloj con palomita).
+4. Comprobar: la cámara se ve y el reloj marca la hora de Nuevo Laredo.
+5. Seguir con la sección 3 (darlo de alta).
 
-**Cerrar la app para mantenimiento:** `Ctrl + Alt + Shift + Q`. Se vuelve a
-abrir con el acceso directo o reiniciando.
+**Cerrar el programa para darle mantenimiento:** `Ctrl + Alt + Shift + Q`.
+Se vuelve a abrir con su icono o reiniciando la PC.
 
-**Desinstalar** (Panel de control → Programas) **no borra los datos**: la
-base y las fotos se quedan en la carpeta de datos (sección 4), a propósito.
+**Desinstalar** (Panel de control → Programas) **no borra los datos**: los
+registros y las fotos se quedan en su carpeta (sección 4), a propósito, para
+que nadie los pierda por accidente.
 
 ---
 
 ## 3. Dar de alta el kiosco y la contraseña de recuperación
 
-1. Panel → **Kioscos → + Dar de alta un kiosco** → nombre ("Entrada edificio
-   A") y ubicación → da un código de 8 letras que vale **15 minutos**.
-2. En el kiosco, barra de abajo → **Dar de alta** → escribir el código (hace
-   falta un teclado con letras) → **Dar de alta**.
-3. En segundos: el kiosco baja la lista del personal y aparece en el panel.
-4. En el kiosco → **⚙ Administrador** → entrar con el usuario **del kiosco**
-   del jefe (se pone en el panel, **Mi cuenta**; tarda unos minutos en llegar).
-5. El kiosco avisa en amarillo que falta la **contraseña de recuperación de las
-   fotos**. Definirla y **anotarla en la hoja de credenciales**. Sugerencia:
-   usar la misma para todos los kioscos.
+"Dar de alta" es presentarle el kiosco al sistema, para que la base de datos
+acepte lo que mande. Un kiosco sin alta no puede mandar registros.
 
-> **Sin contraseña de recuperación, reinstalar Windows = perder las fotos.**
-> La llave que cifra las fotos está protegida por Windows (DPAPI) y por esa
-> contraseña. Windows la pierde si se reinstala o se recrea el perfil; la
-> contraseña no.
+1. En el panel: **Kioscos → + Dar de alta un kiosco** → nombre (por ejemplo
+   "Entrada edificio A") y ubicación. El panel da un **código de 8 letras**
+   que sirve **15 minutos** y una sola vez.
+2. En el kiosco, en la barra de abajo → **Dar de alta** → escribir el código
+   (hace falta un teclado con letras) → **Dar de alta**.
+3. En unos segundos, el kiosco baja la lista del personal y aparece en el panel.
+4. En el kiosco → **⚙ Administrador** → entrar con el usuario y contraseña
+   **del kiosco** del jefe. Esos se ponen en el panel, en **Mi cuenta**, y
+   tardan unos minutos en llegar al kiosco.
+5. El kiosco avisa en amarillo que falta la **contraseña de recuperación de
+   las fotos**. Inventarla, escribirla y **anotarla en la hoja de
+   credenciales**. Sugerencia: la misma para todos los kioscos.
 
-Si el código "no sirve": se escribió mal, ya se usó o pasaron los 15 minutos.
-Generar otro. Tras 10 códigos equivocados en una hora, el servidor pide esperar.
+> **Por qué importa la contraseña de recuperación:** las fotos se guardan con
+> candado. La llave de ese candado la guarda Windows, escondida, atada a esa
+> PC y a esa cuenta. Si se reinstala Windows, Windows "olvida" la llave y las
+> fotos quedan cerradas para siempre. La contraseña de recuperación es una
+> **copia de la llave en papel**: con ella se vuelven a abrir.
+> **Sin esa contraseña, reinstalar Windows = perder las fotos.**
+
+**Si el código "no sirve":** se escribió mal, ya se usó o pasaron los 15
+minutos. Generar otro. Después de 10 códigos equivocados en una hora, el
+sistema pide esperar (para que nadie pueda adivinarlos).
 
 ---
 
 ## 4. Dónde guarda sus datos el kiosco
 
+Para abrir la carpeta: tecla Windows + R → escribir
+`%APPDATA%\Control de Asistencia` → Enter.
+
 ```
 C:\Users\<usuario>\AppData\Roaming\Control de Asistencia\
-├── kiosco.db (+ -wal, -shm)   registros, lista del personal, bandeja de salida
-├── fotos\AAAA\MM\<uuid>.jpg.enc   fotos CIFRADAS (el nombre no dice de quién son)
-├── llave-fotos.json            la llave de las fotos, envuelta (no sirve sola)
+├── kiosco.db (+ -wal, -shm)        registros, lista del personal, pendientes
+├── fotos\AAAA\MM\<código>.jpg.enc  fotos CON CANDADO (el nombre no dice de quién son)
+├── llave-fotos.json                la llave de las fotos, envuelta (no sirve sola)
 ├── llave-fotos.<fecha>.ilegible.json   llaves anteriores apartadas (NO borrar)
-└── credencial-kiosco.json      el "gafete" del kiosco ante la nube, cifrado
+└── credencial-kiosco.json          el "gafete" del kiosco ante la base, con candado
 ```
 
-(Para llegar: tecla Windows + R → `%APPDATA%\Control de Asistencia` → Enter.)
-
-- Las fotos se borran solas a los **30 días** (Configuración del panel), salvo
-  las marcadas "Conservar".
-- Los registros se envían a la nube en cuanto hay internet; en la PC se quedan
-  como respaldo.
+- Las fotos se borran solas a los **30 días** (se cambia en el panel,
+  Configuración), salvo las marcadas "Conservar".
+- Los registros se mandan a internet en cuanto hay conexión. En la PC se
+  quedan también, como respaldo.
 - **Nunca** borrar esta carpeta sin haber hecho antes lo de la sección 5.
 
 ---
 
 ## 5. Cambiar o retirar una PC
 
-**Antes de retirar una PC que funciona** (CLAUDE.md 5.1):
+**Antes de retirar una PC que todavía funciona:**
 
-1. Conectarla a internet y esperar a que la barra diga **0 pendientes**
-   (así todos los registros ya están en la nube).
-2. **⚙ Administrador → 💾 Guardar en memoria USB** con el rango de fechas de
-   los últimos 30 días (y todas las marcadas "Conservar"). Guardar la USB con
-   la hoja de credenciales.
-3. Para conservar las fotos en la PC nueva, además: cerrar la app
-   (`Ctrl+Alt+Shift+Q`) y copiar **toda** la carpeta de datos (sección 4) a la
-   USB.
-4. Panel → Kioscos → **Dar de baja este kiosco** (la PC vieja).
+1. Conectarla a internet y esperar a que la barra de abajo diga
+   **0 pendientes** (así todo ya llegó a la base).
+2. **⚙ Administrador → Guardar en memoria USB**, con las fechas de los
+   últimos 30 días (y todas las marcadas "Conservar"). Guardar esa USB junto
+   con la hoja de credenciales.
+3. Si además quieres que las fotos sigan viéndose en la PC nueva: cerrar el
+   programa (`Ctrl + Alt + Shift + Q`) y copiar **toda** la carpeta de datos
+   (sección 4) a la USB.
+4. En el panel: Kioscos → **Dar de baja este kiosco** (el de la PC vieja).
 
 **En la PC nueva:**
 
-1. Instalar (sección 2). **Si se copió la carpeta de datos**: antes de abrir la
-   app por primera vez, pegarla en `%APPDATA%\` (reemplazando si ya existía).
-2. Abrir la app. Como es otra PC, Windows no puede abrir ni el gafete ni la
-   llave: el kiosco pide **alta** (código nuevo del panel) y aparta la llave
-   vieja sin borrarla.
-3. Dar de alta con un código nuevo.
+1. Instalar (sección 2). **Si copiaste la carpeta de datos:** antes de abrir el
+   programa por primera vez, pegarla en `%APPDATA%\` (reemplazar si pregunta).
+2. Abrir el programa. Como es otra PC, Windows no puede abrir ni el gafete ni
+   la llave de las fotos (es a propósito: así nadie se lleva un kiosco
+   copiando archivos). El kiosco pide **alta** y aparta la llave vieja sin
+   borrarla.
+3. Darlo de alta con un código nuevo (sección 3).
 4. **⚙ Administrador** → aparece "N fotos guardadas con un candado anterior" →
    escribir la **contraseña de recuperación** → **Recuperar las fotos**.
 
-## 6. Recuperar fotos de una PC muerta
+---
 
-Si la PC ya no arranca pero el disco sirve:
+## 6. Recuperar fotos de una PC que ya no prende
 
-1. Sacar el disco y conectarlo a otra PC (adaptador USB), o arrancar con una USB
-   de Windows.
-2. Copiar `\Users\<usuario>\AppData\Roaming\Control de Asistencia\` completo.
+Si la PC ya no arranca pero el disco duro sirve:
+
+1. Sacar el disco y conectarlo a otra PC (con un adaptador USB para discos), o
+   arrancar la PC con una USB de instalación de Windows.
+2. Copiar la carpeta completa
+   `\Users\<usuario>\AppData\Roaming\Control de Asistencia\`.
 3. Seguir "En la PC nueva" de la sección 5.
 
-Los **registros** no se pierden aunque el disco muera: los que ya habían
-llegado a la nube están en el panel. Sólo se pierde lo que estaba "pendiente"
-sin internet. Por eso el kiosco sincroniza cada pocos segundos.
+Los **registros de asistencia** no se pierden aunque el disco muera: los que
+ya habían llegado a la base están en el panel. Sólo se pierde lo que estaba
+"pendiente" por falta de internet.
 
 ---
 
@@ -185,256 +263,337 @@ sin internet. Por eso el kiosco sincroniza cada pocos segundos.
 
 ### Qué se respalda solo
 
-GitHub → Actions → **"Respaldo de la base de datos"** corre lunes y jueves y
-guarda (90 días) un ZIP con:
+GitHub hace un respaldo de la base de datos **cada lunes y jueves** (tarea
+**"Respaldo de la base de datos"** en Actions) y lo guarda **90 días**. Es un
+archivo ZIP con:
 
-- `excel/` — una hoja por tabla (marcas, empleados, correcciones…), se abre en Excel.
-- `sql/` — `1-roles.sql`, `2-estructura.sql`, `3-datos.sql` para restaurar.
+- `respaldo-AAAA-MM-DD.xlsx`: **el que se abre**. Un Excel con una hoja por
+  tabla (registros, personal, correcciones…). La hoja **marcas** son las
+  entradas y salidas, con la hora de Nuevo Laredo.
+- carpeta `csv/`: lo mismo en texto separado por comas, para otros programas.
+  (Si se abre un `.csv` en Excel y sale todo en una columna, es normal: usar
+  el `.xlsx`.)
+- carpeta `sql/`: tres archivos para restaurar la base completa en otra
+  (`1-roles.sql`, `2-estructura.sql`, `3-datos.sql`).
+- `LEEME.txt`: qué es cada cosa.
 
-**Tarea semanal (manual, 2 minutos):** cada lunes, Actions → la última
-corrida verde → Artifacts → descargar y subir al Drive de la facultad (carpeta
-con acceso restringido: son datos personales).
+**Lo único obligatorio (una vez al mes, 2 minutos):** GitHub → Actions →
+"Respaldo de la base de datos" y comprobar que las corridas recientes estén en
+**verde**. Si arriba aparece un aviso de que la tarea se desactivó, picar
+**Enable workflow** (sección 8). Así, el día que se necesite un respaldo, lo
+habrá.
 
-Si una corrida sale en rojo: casi siempre cambió la contraseña de la base
-y falta actualizar `SUPABASE_PASSWORD_PRODUCCION` (o `_PRUEBAS`) en GitHub.
+**Para descargar un respaldo:** abrir la corrida verde más reciente → abajo,
+**Artifacts** → `respaldo-N` → se baja un ZIP. Tiene datos personales: no
+dejarlo en Descargas al terminar.
 
-### Restaurar en un proyecto nuevo
+**Opcional, para más seguridad:** de vez en cuando (por ejemplo, cada mes, en
+la misma revisión), descargar el ZIP y subirlo al Drive de la facultad, a una
+carpeta con acceso restringido. Protege contra perder la cuenta de GitHub y
+guarda respaldos de más de 90 días.
 
-1. Crear un proyecto de Supabase nuevo (PASOS-FINALES paso 3).
-2. En la PC, con [PostgreSQL](https://www.postgresql.org/download/) instalado
-   (sólo hace falta `psql`), desde la carpeta `sql/` del respaldo:
+**Si una corrida sale en rojo:** abrirla y leer el primer error. Casi siempre
+es una de dos: cambió la contraseña de la base y falta actualizar el secreto
+`SUPABASE_PASSWORD_PRODUCCION`, o **venció el token de Supabase** (sección 8).
+
+### Restaurar en un proyecto nuevo de Supabase
+
+Esto sólo hace falta si se perdió el proyecto de Supabase completo (lo
+borraron, la cuenta se perdió, etc.). Es trabajo de alguien con experiencia;
+mejor hacerlo con calma y primero en pruebas.
+
+1. Crear un proyecto de Supabase nuevo (`docs/PASOS-FINALES.md`, paso 3).
+2. En GitHub, actualizar los secretos `SUPABASE_REF_PRODUCCION` y
+   `SUPABASE_PASSWORD_PRODUCCION` con los datos del proyecto nuevo.
+3. En una PC con [PostgreSQL](https://www.postgresql.org/download/) instalado
+   (sólo hace falta el programa `psql`), desde la carpeta `sql/` del respaldo:
    ```
    psql --single-transaction -v ON_ERROR_STOP=1 ^
      --file 1-roles.sql --file 2-estructura.sql ^
      --command "SET session_replication_role = replica" --file 3-datos.sql ^
      --dbname "<cadena de conexión del proyecto NUEVO>"
    ```
-3. Las **cuentas del panel** (Supabase Auth) no van en el respaldo: crear el
-   primer administrador con `npm run supabase:primer-admin` y los demás desde
-   **Accesos**. Las filas de `administradores` sí se restauran; si el correo
-   coincide, el script las reutiliza.
-4. Subir las Edge Functions: Actions → "Publicar en Supabase" (con los secretos
-   del proyecto nuevo).
-5. El proyecto nuevo tiene **otra dirección**: actualizar
-   `SUPABASE_REF_PRODUCCION` / `SUPABASE_PASSWORD_PRODUCCION` en GitHub (el
-   panel, los respaldos y el acceso se arman solos con ellos), y el kiosco
-   (`PROYECTOS_SUPABASE` en `configuracion.ts`, publicar versión nueva). Los kioscos conservan su
-   gafete: la tabla `dispositivos` se restauró con sus huellas.
+   (La cadena de conexión está en Supabase → el proyecto → botón **Connect** →
+   *Session pooler*.)
+4. GitHub → Actions → **Publicar en Supabase** → Run workflow → produccion.
+   Esto sube las funciones y configura el acceso y el correo.
+5. Las **cuentas para entrar al panel** no van en el respaldo. Crear la
+   primera con Actions → **Crear administrador**, y las demás desde el panel,
+   en **Accesos**.
+6. El proyecto nuevo tiene **otra dirección de internet**. El panel se arregla
+   solo (vuelve a publicarse con el siguiente cambio, o a mano: Actions →
+   "Publicar el panel" → Run workflow). Los kioscos **no**: hay que cambiar la
+   dirección en `packages/compartido/src/configuracion.ts`
+   (`PROYECTOS_SUPABASE`) y publicar una versión nueva (sección 9). Eso ya es
+   trabajo de programador. Los kioscos conservan su alta, porque la tabla de
+   kioscos se restauró.
 
 ---
 
-## Publicar una versión nueva del kiosco
+## 8. Fechas de vencimiento y tareas periódicas
 
-Los kioscos **se actualizan solos**: cada 2 horas preguntan si hay versión
-nueva, la descargan en silencio y la instalan **de madrugada (2:00–5:00)** si
-nadie los ha usado en 5 minutos. Tarda menos de un minuto y el kiosco vuelve a
-abrirse solo. No se pierde ningún dato. Para instalarla en el momento:
-**⚙ Administrador → Instalar la versión nueva** (el botón aparece cuando ya hay
-una descargada).
+Algunas contraseñas de programa (tokens) **vencen solas**. Cuando una vence,
+**el kiosco y el panel siguen funcionando normal**, pero alguna tarea
+automática deja de hacerse **sin que nadie se entere**, salvo que alguien
+revise GitHub → Actions y vea taches rojos. Por eso hay que tener estas fechas
+anotadas (en la hoja de credenciales y en un recordatorio del calendario del
+Gmail del sistema, un mes antes).
+
+| Qué | Vence | Qué deja de funcionar si vence | Cómo se renueva |
+|---|---|---|---|
+| **Token de Supabase** (secreto `SUPABASE_ACCESS_TOKEN`) | **25-09-2027** (dura 1 año; Supabase no deja más) | Casi todas las tareas automáticas: **respaldos**, **resumen diario**, publicar el panel, publicar la base y el botón **Crear administrador** | Abajo, "Renovar el token de Supabase" |
+| **Token de versiones** (secreto `TOKEN_VERSIONES`) | **No vence** (se creó así; GitHub muestra un aviso amarillo por eso, y está bien: sólo puede subir instaladores a los dos repositorios de versiones) | — | Sólo si se filtra: borrarlo y crear otro igual (sección 9, "Prepararlo", paso 2) |
+| **Token de Cloudflare** (secreto `CLOUDFLARE_API_TOKEN`) | **No vence** | — | Sólo si se filtra (sección 10) |
+| **Contraseña de aplicación de Gmail** (secreto `CORREO_CONTRASENA_APP`) | **No vence**, pero Google la **anula si se cambia la contraseña del Gmail** | El resumen diario y el correo de "¿Olvidaste tu contraseña?" del panel | Sección 11, "Si cambia la contraseña del Gmail" |
+| **Verificación en dos pasos de GitHub** | Obligatoria desde el **12-11-2026** | Si no se activa, GitHub limita la cuenta del sistema | GitHub → foto de perfil → Settings → Password and authentication |
+| **Tareas programadas de GitHub** (respaldos y resumen diario) | GitHub las **apaga** si el repositorio pasa **60 días sin cambios** (y nadie va a cambiar el código después de la entrega). Antes manda un correo al Gmail del sistema | Los **respaldos** y el **resumen diario** dejan de hacerse | Abrir el correo de GitHub, o ir a Actions → la tarea → botón **Enable workflow**. Se puede hacer antes de que pase: ver "Tareas periódicas" |
+
+### Renovar el token de Supabase
+
+1. Entrar a <https://supabase.com> con el Gmail del sistema.
+2. Arriba a la derecha, el icono de la cuenta → **Account preferences** →
+   **Access Tokens** → **Generate new token**.
+3. Nombre: `GitHub`. Vencimiento: el más largo que deje. **Generate token**.
+4. Supabase muestra el token **una sola vez**: copiarlo.
+5. GitHub → repositorio `codigo-del-sistema` → Settings → Secrets and variables
+   → Actions → `SUPABASE_ACCESS_TOKEN` → el lápiz (editar) → pegar → **Update
+   secret**.
+6. Comprobar: Actions → "Publicar en Supabase" → Run workflow → produccion.
+   Debe salir verde.
+7. En Supabase, borrar el token viejo. Anotar la **nueva fecha de
+   vencimiento** en la hoja de credenciales y en el calendario.
+
+### Tareas periódicas
+
+| Cada cuándo | Qué | Dónde se explica |
+|---|---|---|
+| Cada semana (recomendado) | Revisar el correo del Gmail del sistema: ahí llegan los avisos de GitHub, Supabase y Google (tareas desactivadas, tokens por vencer) | Sección 8 |
+| Cada mes (**obligatorio**) | GitHub → Actions → "Respaldo de la base de datos" y "Resumen diario por correo": que estén en verde; si arriba aparece el aviso de que la tarea se desactivó, picar **Enable workflow**. Opcional: bajar el respaldo y subirlo al Drive | Esta sección y la 7 |
+| Cada semestre | Registrar en el panel los días festivos y vacaciones del calendario escolar de la UAT | Manual del jefe, sección 4 |
+| Cada año | Renovar el token de Supabase | Arriba |
+| Antes de retirar una PC | Guardar las fotos en USB y dar de baja el kiosco | Sección 5 |
+
+---
+
+## 9. Publicar una versión nueva del kiosco
+
+Los kioscos **se actualizan solos**. Cada 2 horas preguntan si hay versión
+nueva y, si la hay, la descargan sin molestar a nadie. La instalan:
+
+- en una PC **compartida**: la siguiente vez que se cierra el kiosco;
+- en una PC **sólo para checar**: de madrugada (2:00 a 5:00), si nadie lo ha
+  usado en 5 minutos.
+
+Tarda menos de un minuto, el kiosco vuelve a abrirse solo y no se pierde
+ningún dato. Para instalarla en ese momento: **⚙ Administrador → Instalar la
+versión nueva** (el botón aparece cuando ya hay una descargada).
 
 ### Dónde viven las versiones
 
-En **repositorios públicos aparte, sólo con instaladores** (sin código), en la
-cuenta del sistema. Uno por ambiente, para que un kiosco de pruebas nunca baje
-una versión de producción:
+En **repositorios públicos aparte que sólo tienen instaladores** (sin código),
+en la cuenta del sistema. Uno por ambiente, para que un kiosco de pruebas
+nunca baje una versión de producción:
 
 | Ambiente | Repositorio |
 |---|---|
 | pruebas | `cuenta-del-sistema/versiones-kiosco-pruebas` |
 | producción | `cuenta-del-sistema/versiones-kiosco` |
 
-Públicos porque un kiosco no puede llevar una contraseña para descargar de uno
-privado (todo lo que va dentro del `.exe` es público). El código sigue en el
-repositorio privado. Qué ambiente es cada instalador lo decide `AMBIENTE` en
-`packages/compartido/src/configuracion.ts`: la misma palabra decide la base de
-datos y el repositorio de versiones.
+Son públicos porque el kiosco no puede llevar una contraseña para descargar de
+uno privado: todo lo que va dentro del instalador se considera público. El
+código sigue en el repositorio privado.
 
-### Prepararlo (una sola vez)
+### Prepararlo (una sola vez; ya está hecho)
 
 1. En GitHub, con la cuenta del sistema: **New repository** →
    `versiones-kiosco-pruebas`, **Public**, sin nada más. Lo mismo
    con `versiones-kiosco`.
-2. Un token para que la Action pueda publicar ahí: foto de perfil → Settings →
+2. Un token para que GitHub pueda publicar ahí: foto de perfil → Settings →
    Developer settings → **Personal access tokens → Fine-grained tokens →
    Generate new token**.
-   - Nombre: `publicar-versiones-kiosco`. Vencimiento: el más largo posible
-     (y anotar la fecha en la hoja de credenciales: al vencer, las
-     publicaciones fallan hasta generar otro).
+   - Nombre: `publicar-versiones-kiosco`.
+   - Vencimiento (*Expiration*): **No expiration** (sin vencimiento). Es
+     seguro porque sólo tiene permiso sobre los dos repositorios de versiones.
    - **Repository access → Only select repositories** → los dos de versiones.
    - **Permissions → Contents: Read and write**. Nada más.
 3. En el repositorio del código (`codigo-del-sistema`): Settings → Secrets and
    variables → Actions → **New repository secret** → nombre `TOKEN_VERSIONES`,
    valor: el token.
 
-### Publicar
+### Publicar una versión (trabajo de programador)
 
-1. Cambiar `"version"` en `apps/kiosco-main/package.json` (ej. `0.2.0`).
-2. ```
-   git commit -am "Version 0.2.0"
-   git tag v0.2.0
+1. Cambiar el número en `apps/kiosco-main/package.json`, en `"version"`
+   (por ejemplo, de `1.0.0` a `1.0.1`).
+2. En la terminal:
+   ```
+   git commit -am "Version 1.0.1"
+   git tag v1.0.1
    git push && git push --tags
    ```
-3. GitHub arma el instalador y lo publica en el repositorio del ambiente
-   (Actions → "Instalador del kiosco", ~10 min).
-4. Listo: en las siguientes horas cada kiosco lo baja, y lo instala esa
-   madrugada. En el panel, **Kioscos** muestra la versión de cada uno.
+3. GitHub arma el instalador y lo publica en el repositorio de versiones
+   (Actions → "Instalador del kiosco", unos 10 minutos).
+4. Listo: en las siguientes horas cada kiosco lo baja y lo instala. En el
+   panel, página **Kioscos**, se ve qué versión tiene cada uno.
 
-**La primera vez** un kiosco necesita tener instalada una versión que ya sepa
-actualizarse (0.1.6 o posterior): esa se instala a mano, como siempre. De ahí
-en adelante, solas.
-
-**Si una versión sale mal:** publicar otra con número mayor que corrija (los
-kioscos no bajan a una versión menor). Para detener todo mientras tanto, poner
-`ACTUALIZACIONES.activas: false` sólo sirve en versiones nuevas; lo más rápido
-es borrar la versión mala en Releases del repositorio de versiones antes de que
-los kioscos la bajen.
+**Si una versión sale mal:** lo más rápido es **borrarla** en Releases del
+repositorio de versiones antes de que los kioscos la bajen. Después, publicar
+otra con un número mayor que corrija el problema (los kioscos nunca regresan a
+un número menor).
 
 ---
 
-## Publicar el panel
+## 10. Publicar el panel
 
-El panel es una página de puros archivos. **GitHub la arma y la sube a
-Cloudflare** cada vez que cambia algo del panel en `main` (workflow
-`.github/workflows/panel-cloudflare.yml`). Cloudflare no compila nada: sólo
-sirve los archivos, gratis y sin límite de visitas.
+El panel es una página web hecha de puros archivos. **GitHub la arma y la sube
+a Cloudflare solo**, cada vez que cambia algo del panel en el código. Cloudflare
+sólo la sirve, gratis y sin límite de visitas.
 
-| Dirección | Habla con |
+| Dirección | Con qué base habla |
 |---|---|
-| <https://panel.mi-cuenta.workers.dev> | La base que diga `AMBIENTE` (la del jefe) |
-| <https://panel-pruebas.mi-cuenta.workers.dev> | **Siempre** pruebas |
+| <https://panel.mi-cuenta.workers.dev> | **Producción** (la del jefe) |
+| <https://panel-pruebas.mi-cuenta.workers.dev> | **Siempre pruebas** (para ensayar) |
 
-Mientras `AMBIENTE` sea `'pruebas'`, las dos muestran lo mismo.
+- **Cuenta:** Cloudflare, se entra **con Google** (el Gmail del sistema).
+- **A qué base se conecta:** lo deduce solo, con los secretos de Supabase. No
+  hay que copiar ninguna llave.
+- **Volver a publicarlo a mano** (por ejemplo, si una publicación falló):
+  GitHub → Actions → **"Publicar el panel"** → Run workflow.
 
-- **Cuenta:** Cloudflare, se entra **con Google** (Gmail del sistema).
-- **A qué Supabase se conecta:** se deduce solo. La dirección sale del
-  Reference ID y la llave **pública** se le pide a la API de Supabase. No hay
-  que copiar ninguna llave.
-- **Configuración:** `apps/panel/wrangler.jsonc` y `apps/panel/public/_headers`
-  (cabeceras de seguridad).
-
-**Publicar a mano:** GitHub → Actions → **"Publicar el panel" → Run workflow**.
-
-**Secretos que usa:** `SUPABASE_ACCESS_TOKEN`, `SUPABASE_REF_PRUEBAS`,
-`SUPABASE_REF_PRODUCCION` (los de "Publicar en Supabase"), y:
+**Secretos que usa:** los de Supabase (`SUPABASE_ACCESS_TOKEN`,
+`SUPABASE_REF_PRUEBAS`, `SUPABASE_REF_PRODUCCION`) y estos dos:
 
 | Secreto | Qué es | De dónde sale |
 |---|---|---|
-| `CLOUDFLARE_API_TOKEN` | Permiso para subir el panel | Cloudflare → 👤 → Profile → API Tokens → plantilla "Edit Cloudflare Workers", sin fecha de fin |
-| `CLOUDFLARE_ACCOUNT_ID` | Qué cuenta de Cloudflare | Cloudflare → Workers & Pages → Account details |
+| `CLOUDFLARE_API_TOKEN` | El permiso para subir el panel | Cloudflare → icono de la cuenta → Profile → API Tokens → plantilla "Edit Cloudflare Workers", sin fecha de fin |
+| `CLOUDFLARE_ACCOUNT_ID` | El número de la cuenta de Cloudflare | Cloudflare → Workers & Pages → Account details |
 
-Si falta alguno, la publicación sale en rojo y dice cuál; el panel en línea se
-queda como estaba. (Los secretos `PANEL_SUPABASE_URL` y
-`PANEL_SUPABASE_LLAVE_PUBLICA` ya no se usan desde el 30-09-2026; se pueden
-borrar.)
+Si falta alguno, la publicación sale en rojo y dice cuál. Mientras tanto, el
+panel en línea **se queda como estaba**: nunca se queda sin panel.
 
-**Si el token de Cloudflare se filtra o deja de servir:** Cloudflare → 👤 →
-Profile → API Tokens → en el token, **Roll** (da uno nuevo) o borrarlo y crear
-otro igual. Pegar el nuevo en `CLOUDFLARE_API_TOKEN`.
+**Si el token de Cloudflare se filtró o dejó de servir:** Cloudflare → icono
+de la cuenta → Profile → API Tokens → en ese token, **Roll** (da uno nuevo) →
+pegarlo en el secreto `CLOUDFLARE_API_TOKEN`.
 
-## 9. Supabase
+---
 
-- **Pausa por inactividad**: el plan gratuito pausa un proyecto tras 7 días sin
-  uso. No debería pasar (los kioscos reportan cada minuto y el respaldo corre
-  dos veces por semana). Si pasa: supabase.com → el proyecto → **Restore**.
-  Los kioscos siguen registrando sin conexión y envían al volver.
-- **Cambiar la contraseña de la base**: Project Settings → Database. Después
-  actualizar en GitHub el secreto `SUPABASE_PASSWORD_*` de ese proyecto.
-- **Cambios a la base**: **nunca a mano** en el tablero de producción
-  (CLAUDE.md 16). Se escribe una migración nueva en `supabase/migrations/`,
-  se prueba en local, y se publica con Actions → "Publicar en Supabase":
-  primero **pruebas**, luego **produccion**.
-- **El access token de Supabase vence** (el primero, el **25-09-2027**). Al
-  vencer sólo falla Actions → "Publicar en Supabase" (el kiosco, el panel, los
-  respaldos y el correo no lo usan). Renovarlo: Supabase → tu icono → Account
-  preferences → Access Tokens → generar uno nuevo → pegarlo en GitHub en el
-  secreto `SUPABASE_ACCESS_TOKEN`.
-- **La llave `service_role`** no se guarda en ningún lado. Si se filtró:
-  Project Settings → API → regenerarla (las Edge Functions toman la nueva solas).
+## 11. Supabase: la base de datos en internet
 
-### Correo del panel ("¿Olvidaste tu contraseña?")
+### Cosas que pueden pasar
 
-El panel manda un correo con un enlace para cambiar la contraseña. Para que
-funcione en **cada** proyecto (pruebas y producción) hay que hacer tres cosas
-en supabase.com, una sola vez:
+- **El proyecto se "pausa":** el plan gratuito de Supabase pausa un proyecto
+  que pasa 7 días sin uso. No debería pasar (los kioscos se reportan cada
+  minuto y los respaldos corren dos veces por semana). Si pasa:
+  supabase.com → el proyecto → **Restore**. Mientras tanto los kioscos siguen
+  registrando y mandan todo al volver.
+- **Cambiar la contraseña de la base:** Supabase → el proyecto → Project
+  Settings → Database → **Reset password**. Después actualizar en GitHub el
+  secreto `SUPABASE_PASSWORD_PRODUCCION` (o `_PRUEBAS`). Si no, los respaldos
+  salen en rojo.
+- **La llave secreta (`service_role`)** no se guarda en ningún lado, a
+  propósito: las tareas de GitHub se la piden a Supabase cuando la necesitan.
+  Si alguna vez apareció escrita en algún archivo: Supabase → Project
+  Settings → API → **regenerarla**.
+- **Cambios a la forma de la base:** **nunca a mano** en supabase.com. Se hacen
+  con una migración nueva en el código (trabajo de programador) y GitHub la
+  publica sola.
 
-1. **A dónde regresa el enlace.** Authentication → URL Configuration:
-   - *Site URL*: la dirección del panel, `https://panel.mi-cuenta.workers.dev`.
-   - *Redirect URLs* → Add URL: `https://panel.mi-cuenta.workers.dev/**`.
+### El correo de "¿Olvidaste tu contraseña?" del panel
 
-   Sin esto, el enlace del correo lleva a una página que no existe.
-2. **Quién manda el correo.** El correo que trae Supabase de fábrica sólo
-   llega a los miembros del equipo de Supabase y muy pocas veces por hora: no
-   sirve para el jefe. Se usa el **Gmail del sistema**:
-   - En la cuenta de Google del sistema: Seguridad → activar **Verificación en
-     dos pasos** → buscar **Contraseñas de aplicaciones** → crear una llamada
-     "Supabase". Google muestra 16 letras: es la contraseña que va abajo
-     (anotarla en la hoja de credenciales, **nunca** en el repositorio).
-   - En Supabase: Authentication → Emails → **SMTP Settings** → *Enable custom
-     SMTP*:
-     | Campo | Valor |
-     |---|---|
-     | Sender email | el Gmail del sistema |
-     | Sender name | `Control de Asistencia` |
-     | Host | `smtp.gmail.com` |
-     | Port | `465` |
-     | Username | el Gmail del sistema |
-     | Password | la contraseña de aplicación de 16 letras |
-3. **El texto en español.** Authentication → Emails → Templates → **Reset
-   password**: asunto `Cambiar la contraseña del panel de asistencia` y como
-   cuerpo pegar el contenido de `supabase/plantillas/recuperar-contrasena.html`.
+Se configura **solo**: la tarea "Publicar en Supabase" le pone a la base la
+dirección del panel, el texto del correo en español y el envío con el Gmail
+del sistema (si existen los secretos `CORREO_USUARIO` y
+`CORREO_CONTRASENA_APP`). No hay que entrar a supabase.com.
 
 **Probarlo:** en el panel, "¿Olvidaste tu contraseña?" con tu propio correo.
-Si no llega: revisar spam; Supabase → Logs → Auth dice el error de SMTP
-(casi siempre la contraseña de aplicación mal copiada).
+Si no llega: revisar la carpeta de spam; luego Supabase → el proyecto →
+**Logs → Auth**, que dice el error (casi siempre la contraseña de aplicación).
 
-En local no hace falta nada: los correos los "recibe" Mailpit en
-http://127.0.0.1:54324 y `config.toml` ya tiene la plantilla.
+**Si cambia la contraseña del Gmail del sistema:** Google anula todas las
+contraseñas de aplicación. Hay que crear otra (cuenta de Google → Seguridad →
+Contraseñas de aplicaciones → nombre `Supabase` → **Crear**), copiar las 16
+letras sin espacios, pegarlas en el secreto `CORREO_CONTRASENA_APP` y correr
+Actions → "Publicar en Supabase" → produccion.
 
 ### Nadie puede entrar al panel
 
 Si todos los administradores olvidaron su contraseña y el correo no llega:
 
-- **La llave maestra:** en la PC de soporte, `npm run supabase:primer-admin`
-  con el correo de esa persona (pide la URL y la llave secreta del proyecto,
-  que están en la hoja de credenciales). Si la cuenta ya existe, le pone una
-  **contraseña temporal nueva** y la deja **activa como administrador**, aunque
-  estuviera dada de baja. Al entrar, el panel le pide ponerse una propia.
-- **Sin la PC de soporte:** supabase.com → el proyecto → Authentication →
-  **Users** → buscar el correo → los tres puntos → **Send password recovery**
-  (manda el mismo correo del panel).
+- **La llave maestra:** GitHub → Actions → **Crear administrador** → Run
+  workflow → el correo y nombre de esa persona. Si la cuenta ya existe, le pone
+  una **contraseña temporal nueva** y la deja **activa como administrador**.
+  La contraseña temporal aparece en el **resumen** de la corrida (al abrirla,
+  arriba). Al entrar al panel, pide ponerse una propia. Después se puede
+  borrar esa corrida (los tres puntos → Delete workflow run).
+- **Otra forma:** supabase.com → el proyecto → Authentication → **Users** →
+  buscar el correo → los tres puntos → **Send password recovery** (manda el
+  mismo correo del panel).
 
-**Ningún dato se pierde** en ninguno de estos casos: la cuenta de acceso y los
-registros de asistencia son cosas separadas. Por eso conviene que siempre haya
-**al menos dos administradores** (el jefe y soporte): si uno olvida la
+**Ningún dato se pierde** en ninguno de estos casos: la cuenta para entrar y
+los registros de asistencia son cosas separadas. Por eso conviene que siempre
+haya **al menos dos administradores** (el jefe y soporte): si uno olvida su
 contraseña, el otro le da una temporal desde Accesos.
 
 ---
 
-## 10. Problemas comunes
+## 12. El resumen diario por correo
 
-| Síntoma | Causa probable | Solución |
-|---|---|---|
-| El kiosco dice "sin conexión" | Sin internet, o Supabase pausado | Revisar la red; ver sección 9 |
-| Kiosco "dado de baja" / pide alta | Se revocó en el panel, o se copió a otra PC | Generar código nuevo y dar de alta |
-| "Cámara no disponible" | Cable suelto, otra app usa la cámara | Reconectar; cerrar otras apps. Se sigue registrando |
-| Muchos "Foto no guardada" | Disco lleno o Windows sin cifrado | Liberar espacio; revisar el perfil de Windows |
-| "Hora dudosa" en todos | Pila del BIOS agotada o zona horaria mal | Cambiar la pila; hora automática en Windows |
-| El panel no se actualiza tras un cambio | Falló "Publicar el panel" | GitHub → Actions → "Publicar el panel" → abrir la corrida en rojo y leer el error (casi siempre un secreto) |
-| El panel abre pero no deja entrar a nadie | Nadie tiene cuenta en esa base (producción recién encendida) | Actions → "Crear administrador" (PASOS-FINALES 3.3) |
-| El jefe no puede entrar al modo administrador del kiosco | No ha puesto su usuario del kiosco, o el kiosco no ha sincronizado | Panel → Mi cuenta; esperar unos minutos con internet |
-| "Registros que la oficina no aceptó" | Persona inexistente en el panel, kiosco revocado | Arreglar en el panel y "Volver a enviarlos" |
-| Una corrida de Actions en rojo | Secreto vencido o mal copiado | Abrir la corrida, leer el primer error |
-| No llega el correo de "¿Olvidaste tu contraseña?" | SMTP sin configurar o contraseña de aplicación mal copiada | Sección 9, "Correo del panel"; Supabase → Logs → Auth |
-| El enlace del correo abre una página rara o de error | Falta la dirección del panel en Redirect URLs | Sección 9, "Correo del panel", paso 1 |
+Lo manda la tarea **"Resumen diario por correo"**, cada mañana de lunes a
+sábado, con lo del día anterior: retardos, faltas, quién no registró salida,
+qué revisar en el kiosco y si algún kiosco o cámara falla. Usa tres secretos:
+`CORREO_USUARIO` y `CORREO_CONTRASENA_APP` (desde dónde se manda) y
+`CORREO_JEFE` (a quién le llega).
 
-Registro de la app (para soporte): el kiosco escribe en la consola de Electron;
-en desarrollo se ve en la terminal de `npm run kiosco:dev`.
+Al entregar el sistema, `CORREO_JEFE` es el **mismo Gmail del sistema**, para
+no llenarle la bandeja al jefe. Para que le llegue a otra persona: GitHub →
+Settings → Secrets and variables → Actions → `CORREO_JEFE` → el lápiz →
+escribir el correo → **Update secret**. Varios correos van separados por coma.
+
+Si falta alguno de los tres secretos, o venció el token de Supabase, el
+resumen **no se manda** (y la corrida sale en rojo).
 
 ---
 
-## 11. Trabajar en el código
+## 13. Datos de demostración (sólo en pruebas)
 
-Requisitos: Node 24, Docker Desktop, Git.
+Para enseñar el sistema o probar los reportes sin personal real: en el panel
+de **pruebas**, Configuración → "Permitir datos de demostración" en **1**. En
+Empleados aparece el botón **Generar datos de demostración**: crea 5 personas
+inventadas (marcadas **DEMO**, una de ellas velador) con 1 a 3 semanas de
+registros, algunos con retardo, falta, sin salida o foto tapada.
+
+En **producción** esa opción viene en **0** y debe quedarse así: si se
+prende, las personas inventadas se mezclan con el personal real en los
+reportes.
+
+---
+
+## 14. Problemas comunes
+
+| Lo que pasa | Por qué suele pasar | Qué hacer |
+|---|---|---|
+| El kiosco dice "sin conexión" | No hay internet, o Supabase se pausó | Revisar el internet de la PC; si está bien, sección 11 |
+| El kiosco dice "dado de baja" o pide alta | Lo dieron de baja en el panel, o se copió a otra PC | Generar un código nuevo en el panel y darlo de alta (sección 3) |
+| "Cámara no disponible" | Cable suelto, u otro programa está usando la cámara | Reconectar la cámara; cerrar otros programas. Mientras, se sigue registrando |
+| Muchos registros con "Foto no guardada" | Disco lleno | Liberar espacio en el disco |
+| "Hora dudosa" en todos los registros | La pila del BIOS se acabó, o la zona horaria está mal | Cambiar la pila; en Windows, poner hora y zona automáticas |
+| El panel no muestra un cambio reciente | Falló "Publicar el panel" | GitHub → Actions → abrir la corrida en rojo y leer el error (casi siempre un secreto) |
+| El panel abre pero no deja entrar a nadie | Nadie tiene cuenta, u olvidaron todas las contraseñas | Sección 11, "Nadie puede entrar al panel" |
+| El jefe no puede entrar al ⚙ Administrador del kiosco | No ha puesto su usuario del kiosco, o el kiosco no se ha actualizado | Panel → Mi cuenta; esperar unos minutos con internet |
+| El kiosco muestra "Registros que la oficina no aceptó" | La persona no existe en el panel, o el kiosco estaba dado de baja | Arreglar la causa en el panel y, en el kiosco, "Volver a enviarlos" |
+| Varias tareas de Actions en rojo a la vez | **Venció el token de Supabase** | Sección 8, "Renovar el token de Supabase" |
+| Una tarea de Actions en rojo | Un secreto mal copiado, vencido o cambiado | Abrir la corrida y leer el primer error |
+| No llega el correo de "¿Olvidaste tu contraseña?" | Cambió la contraseña del Gmail, o el correo cayó en spam | Sección 11, "El correo de ¿Olvidaste tu contraseña?" |
+| No llega el resumen diario | Falta un secreto `CORREO_*`, venció el token de Supabase, o GitHub apagó la tarea por inactividad | Secciones 12 y 8 |
+| No hay respaldos recientes en Actions | GitHub apagó la tarea por 60 días sin cambios, o venció el token de Supabase | Sección 8: **Enable workflow** o renovar el token |
+
+---
+
+## 15. Trabajar en el código (para programadores)
+
+Lo que hay que saber antes de cambiar algo: `docs/curso/estado-actual.md` y
+`docs/decisiones.md`.
+
+Requisitos: Node 24, Docker Desktop y Git.
 
 ```
 npm install                    # una vez
@@ -452,18 +611,24 @@ Datos de prueba (sólo existen en local): 20 empleados con PIN `1234`; panel
 Pruebas (todas deben pasar antes de publicar):
 
 ```
-npm run probar                    # kiosco (188+)
+npm run probar                    # kiosco
 npm run probar:sincronizacion     # kiosco <-> nube local
 npm run supabase:probar           # esquema, RLS, reportes, ARCO
 npm run supabase:funciones:probar # Edge Functions
 npm run panel:probar              # el panel usado como el jefe (con panel:servir corriendo)
 ```
 
-Antes de `npm run probar`, correr `node --check apps/kiosco-main/probar-autenticacion.cjs`:
-si el archivo no carga, Electron deja ventanas de error en pantalla.
+Antes de `npm run probar`, correr
+`node --check apps/kiosco-main/probar-autenticacion.cjs`: si el archivo no
+carga, Electron deja ventanas de error en pantalla.
 
 Si el servidor local de Edge Functions no toma un cambio:
 `docker restart supabase_edge_runtime_kiosko-asistencia`.
 
-Lo que hay que saber antes de cambiar algo: [docs/curso/estado-actual.md](curso/estado-actual.md)
-y [docs/decisiones.md](curso/decisiones.md).
+Al subir a `main`, GitHub corre las pruebas; si pasan, publica la base y el
+panel solos. `npm run supabase:primer-admin` hace lo mismo que la tarea "Crear
+administrador", pero pide la llave secreta de Supabase en la PC: preferir la
+tarea de GitHub.
+
+Registro del programa (para depurar): el kiosco escribe en la consola de
+Electron; en desarrollo se ve en la terminal de `npm run kiosco:dev`.

@@ -44,6 +44,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Node 24: arma el Excel con el mismo escritor del panel (ver abajo).
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
       - uses: supabase/setup-cli@v1
         with:
           version: latest
@@ -65,9 +70,9 @@ jobs:
           supabase db dump --db-url "$SUPABASE_DB_URL" -f respaldo/sql/2-estructura.sql
           supabase db dump --db-url "$SUPABASE_DB_URL" --data-only --use-copy -f respaldo/sql/3-datos.sql
 
-      - name: Una hoja CSV por tabla (para abrir en Excel)
+      - name: Un CSV por tabla
         run: |
-          mkdir -p respaldo/excel
+          mkdir -p respaldo/csv
           # Sin hashes de PIN, de tokens ni de contrasenas: el CSV se abre en
           # cualquier computadora y no tiene por que llevarlos.
           declare -A consultas=(
@@ -87,22 +92,28 @@ jobs:
             [bitacora_auditoria]="select * from bitacora_auditoria order by creado_en"
           )
           for tabla in "${!consultas[@]}"; do
-            # El BOM al principio hace que Excel respete los acentos.
-            printf '\xEF\xBB\xBF' > "respaldo/excel/$tabla.csv"
             psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -q \
-              -c "\copy (${consultas[$tabla]}) to stdout with csv header" >> "respaldo/excel/$tabla.csv"
+              -c "\copy (${consultas[$tabla]}) to stdout with csv header" > "respaldo/csv/$tabla.csv"
           done
-          ls -la respaldo/excel
+          ls -la respaldo/csv
+
+      # El CSV usa comas y el Excel en espanol espera punto y coma: al abrirlo
+      # salia todo en una columna. Por eso, ademas, un .xlsx de verdad.
+      - name: Todo en un Excel (una hoja por tabla)
+        run: node --no-warnings .github/scripts/respaldo-a-excel.mjs respaldo/csv "respaldo/respaldo-$(date -u +%Y-%m-%d).xlsx"
 
       - name: Instrucciones dentro del respaldo
         run: |
           cat > respaldo/LEEME.txt <<'FIN'
           RESPALDO DEL SISTEMA DE CONTROL DE ASISTENCIA
           ==============================================
-          excel/   Una hoja por tabla. Se abren con doble clic en Excel.
-                   "marcas.csv" son las entradas y salidas (hora_local = Nuevo Laredo).
+          respaldo-AAAA-MM-DD.xlsx
+                   ESTE es el que se abre: doble clic, Excel. Una hoja por tabla.
+                   La hoja "marcas" son las entradas y salidas
+                   (hora_local = hora de Nuevo Laredo).
+          csv/     Lo mismo en texto separado por comas, para otros programas.
           sql/     Para RESTAURAR la base completa en un proyecto de Supabase nuevo.
-                   Paso a paso: docs/manual-tecnico.md, seccion "Restaurar un respaldo".
+                   Paso a paso: manual tecnico, seccion 7.
 
           Las FOTOS no estan aqui: nunca salen del kiosco (CLAUDE.md 5.1).
           Contiene datos personales: guardalo en un lugar con acceso restringido.
