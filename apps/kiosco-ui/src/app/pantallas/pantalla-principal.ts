@@ -1074,7 +1074,15 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
    */
   protected async confirmarRegistro(): Promise<void> {
     const pendiente = this.pendiente();
-    if (!pendiente) return;
+    /**
+     * Si ya se esta guardando, este es un segundo intento: un doble clic, o
+     * la cuenta regresiva llegando a cero en el mismo instante del clic. Sin
+     * esta linea, el segundo llegaba al proceso principal con el pase ya
+     * canjeado, volvia con error y TAPABA el exito con "no se registro nada"
+     * (auditoria 01-10-2026). La marca no se duplicaba, pero la persona,
+     * creyendo que no quedo, volvia a checar.
+     */
+    if (!pendiente || this.paso() === 'guardando') return;
 
     this.detenerCuentaRegresiva();
     // Si habia duda, su espera de 30 s se cancela: ya se eligio.
@@ -1321,7 +1329,8 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
    */
   protected responderDuda(tipo: 'entrada' | 'salida'): void {
     const pendiente = this.pendiente();
-    if (!pendiente) return;
+    // Ya eligio y se esta guardando: un segundo clic no cambia lo elegido.
+    if (!pendiente || this.paso() === 'guardando') return;
     this.pendiente.set({ ...pendiente, tipo, duda: null });
     void this.confirmarRegistro();
   }
