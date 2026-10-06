@@ -12,7 +12,7 @@
  *  dar de baja uno (revocar), ambos solo el rol admin.
  */
 
-import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { Ayuda } from '../componentes/ayuda';
 import { Dialogo, mensajeDeError } from '../componentes/dialogo';
 import { Avisos } from '../servicios/avisos';
@@ -63,7 +63,7 @@ const TEXTOS_DE_ACTIVIDAD: Record<string, (quien: string, d: Record<string, unkn
 export class Kioscos implements OnInit, OnDestroy {
   protected readonly sesion = inject(Sesion);
   private readonly avisos = inject(Avisos);
-  private readonly pendientes = inject(Pendientes);
+  protected readonly pendientes = inject(Pendientes);
   protected readonly zona = this.sesion.zona;
   protected readonly cargando = signal(true);
 
@@ -124,7 +124,7 @@ export class Kioscos implements OnInit, OnDestroy {
    * que nunca digan cosas distintas. Las reglas (minutos de camara caida,
    * PC compartida, camara que falla a ratos) viven en la base.
    */
-  protected readonly alertas = computed(() => this.pendientes.deKioscos().map((p) => p.texto));
+  protected readonly alertas = this.pendientes.deKioscos;
 
   async ngOnInit(): Promise<void> {
     await this.cargar();

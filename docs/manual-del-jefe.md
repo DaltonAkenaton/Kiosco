@@ -72,6 +72,12 @@ de **personas que ya estaban dadas de baja**. Cada aviso tiene su botón: **Ver
 en Kioscos** o **Ver cuáles** (pone solo el filtro para verlos). El aviso se va
 solo cuando se arregla lo que lo causa.
 
+¿Ya lo revisaste? Pica **✓ Ya lo vi** y se esconde (también el número del
+menú). Vuelve a salir **sólo si empeora**: si la cámara se desconecta otra
+vez, si se vuelve a caer, o si llega un registro nuevo. Se recuerda en esa
+computadora: si otro administrador entra desde la suya, él lo sigue viendo
+hasta que también lo marque.
+
 En el menú de arriba, un **número rojo** junto a *Asistencia* o *Kioscos* dice
 cuántos avisos hay ahí. Se ve desde cualquier página.
 

@@ -30,6 +30,8 @@
           <button type="button" class="underline underline-offset-4" (click)="verPendiente(p)">
             {{ p.donde === 'kioscos' ? 'Ver en Kioscos' : 'Ver cuáles' }}
           </button>
+          <button type="button" class="boton-secundario !px-3 !py-1 text-sm" (click)="pendientes.yaLoVi(p)"
+                  title="Esconder este aviso. Vuelve a salir sólo si la situación empeora.">✓ Ya lo vi</button>
         </li>
       }
     </ul>

@@ -224,6 +224,22 @@ app.whenReady().then(async () => {
       /la cámara se desconectó \d+ veces desde el/.test(await texto()));
     comprobar('y el menú muestra el número junto a "Kioscos"', (await insignia('Kioscos')) >= 1, String(await insignia('Kioscos')));
 
+    // "Ya lo vi": se esconde (y baja el numero) hasta que empeore.
+    const antesDeVer = await insignia('Kioscos');
+    await js(`[...document.querySelectorAll('li')].find((li) => /se desconectó \\d+ veces/.test(li.textContent))
+      ?.querySelector('button')?.click()`);
+    await esperar(500);
+    comprobar('"Ya lo vi" esconde el aviso y baja el número del menú',
+      !/la cámara se desconectó \d+ veces/.test(await texto()) && (await insignia('Kioscos')) === antesDeVer - 1,
+      `${antesDeVer} -> ${await insignia('Kioscos')}`);
+    await ir('/kioscos');
+    comprobar('y sigue escondido al volver a la página', !/la cámara se desconectó \d+ veces/.test(await texto()));
+    await bd.query(`insert into eventos_dispositivo (id, dispositivo_id, tipo, detalle, ocurrido_en)
+      values (gen_random_uuid(), '00000000-0000-4000-8000-00000000d001', 'camara_desconectada', '{}', now())`);
+    await picar('↻ Actualizar');
+    await esperar(1000);
+    comprobar('si la cámara se desconecta OTRA vez, el aviso vuelve', /la cámara se desconectó \d+ veces/.test(await texto()));
+
     // Alguien dado de baja que registro en un kiosco sin internet (0028).
     const { rows: [deBaja] } = await bd.query(
       `insert into empleados (usuario, nombre, apellido_paterno, pin_hash)
