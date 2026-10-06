@@ -306,7 +306,9 @@ try {
   const { rows: [bitPin] } = await bd.query(
     `select motivo, datos_despues ->> 'pin_hash' as h from bitacora_auditoria
       where tabla = 'empleados' and registro_id = $1 order by creado_en desc limit 1`, [EMPLEADO]);
-  comprobar('queda en la bitacora, sin el hash', /PIN propio/.test(bitPin?.motivo ?? '') && bitPin.h === '[oculto]', bitPin?.motivo);
+  // Desde la 0028, un hash que CAMBIO se anota "[nuevo]" (el hash sigue sin guardarse).
+  comprobar('queda en la bitacora, sin el hash', /PIN propio/.test(bitPin?.motivo ?? '') && bitPin.h === '[nuevo]',
+    `${bitPin?.motivo} / ${bitPin?.h}`);
   const repetidoPin = await llamar('recibir-registros', { cambiosDePin: [cambioPin] }, TOKEN);
   const { rows: [{ n: nPin }] } = await bd.query('select count(*)::int as n from cambios_pin where id = $1', [cambioPin.id]);
   comprobar('mandarlo otra vez no duplica (y cuenta como aceptado)', nPin === 1 && repetidoPin.cuerpo?.aceptados?.includes(cambioPin.id));
