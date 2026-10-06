@@ -18,6 +18,7 @@ import { Component, OnDestroy, OnInit, computed, effect, inject } from '@angular
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { Avisos } from '../servicios/avisos';
 import { Inactividad } from '../servicios/inactividad';
+import { Pendientes } from '../servicios/pendientes';
 import { Sesion } from '../servicios/sesion';
 
 @Component({
@@ -47,7 +48,13 @@ import { Sesion } from '../servicios/sesion';
 
         <nav class="contenedor menu-principal flex gap-1 overflow-x-auto pb-2">
           @for (s of secciones(); track s.ruta) {
-            <a [routerLink]="s.ruta" routerLinkActive="activo" class="enlace-menu">{{ s.nombre }}</a>
+            <a [routerLink]="s.ruta" routerLinkActive="activo" class="enlace-menu">
+              {{ s.nombre }}
+              <!-- Cuantas cosas hay que atender ahi (servicios/pendientes.ts). -->
+              @if (s.pendientes > 0) {
+                <span class="insignia-pendientes" [attr.aria-label]="s.pendientes + ' para atender'">{{ s.pendientes }}</span>
+              }
+            </a>
           }
         </nav>
       </header>
@@ -83,6 +90,7 @@ export class Marco implements OnInit, OnDestroy {
   protected readonly sesion = inject(Sesion);
   protected readonly inactividad = inject(Inactividad);
   protected readonly avisos = inject(Avisos);
+  private readonly pendientes = inject(Pendientes);
   private readonly router = inject(Router);
 
   constructor() {
@@ -95,28 +103,30 @@ export class Marco implements OnInit, OnDestroy {
 
   /** Accesos y Bitacora solo para el rol admin: la base tampoco se los deja a un supervisor. */
   protected readonly secciones = computed(() => [
-    { ruta: '/asistencia', nombre: 'Asistencia' },
-    { ruta: '/reportes', nombre: 'Reportes' },
-    { ruta: '/empleados', nombre: 'Empleados' },
-    { ruta: '/horarios', nombre: 'Horarios' },
-    { ruta: '/ausencias', nombre: 'Incidencias' },
-    { ruta: '/kioscos', nombre: 'Kioscos' },
-    { ruta: '/configuracion', nombre: 'Configuración' },
+    { ruta: '/asistencia', nombre: 'Asistencia', pendientes: this.pendientes.deAsistencia().length },
+    { ruta: '/reportes', nombre: 'Reportes', pendientes: 0 },
+    { ruta: '/empleados', nombre: 'Empleados', pendientes: 0 },
+    { ruta: '/horarios', nombre: 'Horarios', pendientes: 0 },
+    { ruta: '/ausencias', nombre: 'Incidencias', pendientes: 0 },
+    { ruta: '/kioscos', nombre: 'Kioscos', pendientes: this.pendientes.deKioscos().length },
+    { ruta: '/configuracion', nombre: 'Configuración', pendientes: 0 },
     ...(this.sesion.esAdmin()
       ? [
-          { ruta: '/accesos', nombre: 'Accesos' },
-          { ruta: '/bitacora', nombre: 'Bitácora' },
+          { ruta: '/accesos', nombre: 'Accesos', pendientes: 0 },
+          { ruta: '/bitacora', nombre: 'Bitácora', pendientes: 0 },
         ]
       : []),
-    { ruta: '/mi-cuenta', nombre: 'Mi cuenta' },
+    { ruta: '/mi-cuenta', nombre: 'Mi cuenta', pendientes: 0 },
   ]);
 
   ngOnInit(): void {
     this.inactividad.iniciar(() => void this.salir('inactividad'));
+    this.pendientes.iniciar();
   }
 
   ngOnDestroy(): void {
     this.inactividad.detener();
+    this.pendientes.detener();
   }
 
   protected async salir(motivo: 'inactividad' | null = null): Promise<void> {

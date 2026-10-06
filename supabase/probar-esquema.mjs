@@ -424,8 +424,9 @@ const { rows: [bitPin] } = await bd.query(`
    where tabla = 'empleados' and registro_id = '${empleado.id}'
    order by id desc limit 1
 `);
+// Desde la 0028, un hash que CAMBIO se anota "[nuevo]" (sigue sin guardarse el hash).
 comprobar('el reseteo de PIN queda en la bitacora, con el hash oculto',
-  bitPin?.datos_despues?.pin_hash === '[oculto]' &&
+  bitPin?.datos_despues?.pin_hash === '[nuevo]' &&
   bitPin?.datos_despues?.pin_temporal === true);
 
 // El codigo de enrolamiento no lo ve NI SIQUIERA un administrador.
@@ -707,7 +708,7 @@ await bd.query('reset role');
   const { rows: [cred] } = await bd.query(
     `select datos_despues ->> 'contrasena_kiosco_hash' as h from bitacora_auditoria
       where tabla = 'administradores' and accion = 'UPDATE' order by id desc limit 1`);
-  comprobar('la bitacora tampoco guarda el hash de la contrasena del kiosco', cred?.h === '[oculto]', cred?.h);
+  comprobar('la bitacora tampoco guarda el hash de la contrasena del kiosco', cred?.h === '[nuevo]', cred?.h);
 }
 
 // ============================================================================
@@ -1264,6 +1265,124 @@ console.log('\n--- respaldo desde el panel (0027) ---');
   await debeFallar('sin sesión, ni siquiera se puede llamar', `select registrar_descarga_respaldo('Respaldo mensual de prueba')`);
 }
 await bd.query('reset role');
+
+console.log('\n--- avisos del panel y registros tras la baja (0028) ---');
+{
+  await bd.query('reset role');
+  const crear = async (usuario) => (await bd.query(
+    `insert into empleados (usuario, nombre, apellido_paterno, pin_hash)
+     values ($1, 'Prueba', 'Baja', extensions.crypt('1234', extensions.gen_salt('bf', 4))) returning id`,
+    [usuario])).rows[0].id;
+  const { rows: [k] } = await bd.query(
+    `insert into dispositivos (nombre, token_hash) values ('Kiosco avisos', 'hash-avisos') returning id`);
+  const marcarEn = async (empleadoId, horaSql, origen = 'kiosco') => (await bd.query(
+    `insert into marcas (id, empleado_id, dispositivo_id, tipo, origen, hora_dispositivo, hora_estimada, monotonico_ms, arranque_id)
+     values (gen_random_uuid(), $1, $2, 'entrada', $3, ${horaSql}, ${horaSql}, 0, gen_random_uuid())
+     returning id, banderas`, [empleadoId, k.id, origen])).rows[0];
+  const bajaDe = async (id) => (await bd.query('select dado_de_baja_en b from empleados where id = $1', [id])).rows[0].b;
+
+  // (a) La fecha de baja
+  const ana = await crear('abaja');
+  await bd.query('update empleados set activo = false where id = $1', [ana]);
+  comprobar('(a) al dar de baja se anota cuándo', (await bajaDe(ana)) !== null);
+  await bd.query('update empleados set nombre = $2 where id = $1', [ana, 'Ana']);
+  comprobar('(a) otra edición no mueve la fecha de baja', (await bajaDe(ana)) !== null);
+
+  // (b) La bandera: sólo después de la baja y sólo del kiosco
+  const despues = await marcarEn(ana, `now() + interval '5 minutes'`);
+  comprobar('(b) registro del kiosco DESPUÉS de la baja: sale con "empleado_de_baja"',
+    despues.banderas.includes('empleado_de_baja'), JSON.stringify(despues.banderas));
+  const antes = await marcarEn(ana, `now() - interval '2 hours'`);
+  comprobar('(b) registro hecho ANTES de la baja (llegó tarde por falta de internet): sin bandera',
+    !antes.banderas.includes('empleado_de_baja'), JSON.stringify(antes.banderas));
+  const aMano = await marcarEn(ana, `now() + interval '6 minutes'`, 'manual');
+  comprobar('(b) captura a mano del jefe: sin bandera (lo hizo a propósito)',
+    !aMano.banderas.includes('empleado_de_baja'), JSON.stringify(aMano.banderas));
+
+  // (c) Reactivar borra la fecha; sus registros ya no se marcan
+  await bd.query('update empleados set activo = true where id = $1', [ana]);
+  comprobar('(c) al reactivarla, la fecha de baja se borra', (await bajaDe(ana)) === null);
+  const otraVez = await marcarEn(ana, `now() + interval '7 minutes'`);
+  comprobar('(c) y sus registros ya no llevan la bandera', !otraVez.banderas.includes('empleado_de_baja'));
+
+  // (d) Avisos: camara que falla a ratos (3 desconexiones en 7 dias, por defecto)
+  const evento = (dias) => bd.query(
+    `insert into eventos_dispositivo (id, dispositivo_id, tipo, detalle, ocurrido_en)
+     values (gen_random_uuid(), $1, 'camara_desconectada', '{}', now() - make_interval(days => $2))`, [k.id, dias]);
+  await evento(1); await evento(2); await evento(30); // la de hace 30 dias no cuenta
+  const avisos = async () => {
+    await entrarComo(ID_ADMIN);
+    const { rows } = await bd.query('select * from avisos_del_panel()');
+    await bd.query('reset role');
+    return rows;
+  };
+  let lista = await avisos();
+  comprobar('(d) 2 desconexiones recientes (y una vieja): todavía no es aviso',
+    !lista.some((a) => a.tipo === 'camara_inestable' && a.dispositivo_id === k.id));
+  await evento(3);
+  lista = await avisos();
+  const inestable = lista.find((a) => a.tipo === 'camara_inestable' && a.dispositivo_id === k.id);
+  comprobar('(d) 3 desconexiones en 7 días: aviso de cámara que falla a ratos, con cuántas',
+    inestable?.cantidad === 3 && inestable?.dispositivo === 'Kiosco avisos', JSON.stringify(inestable));
+
+  // (e) Camara caida: solo despues de los minutos configurados
+  await bd.query(`update dispositivos set camara_ok = false where id = $1`, [k.id]);
+  lista = await avisos();
+  comprobar('(e) cámara recién caída: todavía no es aviso (un parpadeo no alarma)',
+    !lista.some((a) => a.tipo === 'camara_caida' && a.dispositivo_id === k.id));
+  await bd.query(`update dispositivos set camara_caida_desde = now() - interval '20 minutes' where id = $1`, [k.id]);
+  lista = await avisos();
+  comprobar('(e) caída hace 20 min (el aviso es a los 15): sí es aviso',
+    lista.some((a) => a.tipo === 'camara_caida' && a.dispositivo_id === k.id));
+
+  // (f) Registros de personas dadas de baja, hasta que se anulan
+  const beto = await crear('bbaja');
+  await bd.query('update empleados set activo = false where id = $1', [beto]);
+  const deBeto = await marcarEn(beto, `now() + interval '1 minute'`);
+  lista = await avisos();
+  const antesDeAnular = lista.find((a) => a.tipo === 'registros_de_baja')?.cantidad ?? 0;
+  comprobar('(f) los registros tras la baja salen en los avisos', antesDeAnular >= 2, String(antesDeAnular));
+  await entrarComo(ID_ADMIN);
+  await bd.query(`select corregir_marca($1, 'anular', 'Prueba 0028: no trabajó')`, [deBeto.id]);
+  await bd.query('reset role');
+  lista = await avisos();
+  const trasAnular = lista.find((a) => a.tipo === 'registros_de_baja')?.cantidad ?? 0;
+  comprobar('(f) al anular uno, deja de contarse', trasAnular === antesDeAnular - 1, `${antesDeAnular} -> ${trasAnular}`);
+
+  // (g) Quien puede verlos
+  await entrarComo('33333333-3333-3333-3333-333333333333'); // con sesion, pero no es administrador
+  const { rows: ajeno } = await bd.query('select * from avisos_del_panel()');
+  comprobar('(g) alguien con sesión que NO es administrador: cero avisos', ajeno.length === 0, String(ajeno.length));
+  await bd.query('reset role');
+  await bd.query('set local role anon');
+  await debeFallar('(g) sin sesión ni siquiera se puede llamar', 'select * from avisos_del_panel()');
+  await entrarComo(ID_ADMIN);
+  const { rows: [col] } = await bd.query('select dado_de_baja_en from empleados where id = $1', [beto]);
+  comprobar('(g) el panel puede leer la fecha de baja', col?.dado_de_baja_en !== null);
+  await bd.query('reset role');
+
+  // (h) Bitacora: un cambio de PIN se nota, sin guardar el hash
+  await bd.query(`update empleados set pin_hash = extensions.crypt('9876', extensions.gen_salt('bf', 4)) where id = $1`, [beto]);
+  const { rows: [pin] } = await bd.query(`
+    select datos_antes ->> 'pin_hash' a, datos_despues ->> 'pin_hash' d from bitacora_auditoria
+     where tabla = 'empleados' and registro_id = $1 order by id desc limit 1`, [beto]);
+  comprobar('(h) cambio de PIN en la bitácora: "[oculto]" → "[nuevo]", nunca el hash',
+    pin?.a === '[oculto]' && pin?.d === '[nuevo]', JSON.stringify(pin));
+  await bd.query(`update empleados set nombre = 'Beto' where id = $1`, [beto]);
+  const { rows: [otro] } = await bd.query(`
+    select datos_despues ->> 'pin_hash' d from bitacora_auditoria
+     where tabla = 'empleados' and registro_id = $1 order by id desc limit 1`, [beto]);
+  comprobar('(h) otro cambio (el nombre) no dice que el PIN cambió', otro?.d === '[oculto]', JSON.stringify(otro));
+
+  // (i) La camara que cae y vuelve no ensucia la bitacora
+  const cuenta = async () => (await bd.query(
+    `select count(*)::int n from bitacora_auditoria where tabla = 'dispositivos' and registro_id = $1`, [k.id])).rows[0].n;
+  const antesCamara = await cuenta();
+  await bd.query('update dispositivos set camara_ok = true where id = $1', [k.id]);
+  await bd.query('update dispositivos set camara_ok = false where id = $1', [k.id]);
+  comprobar('(i) la cámara que cae y vuelve no deja renglones en la bitácora', (await cuenta()) === antesCamara,
+    `${antesCamara} -> ${await cuenta()}`);
+}
 
 // ============================================================================
 //  Resultado

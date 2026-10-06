@@ -204,8 +204,19 @@ C:\Users\<usuario>\AppData\Roaming\Control de Asistencia\
 ├── fotos\AAAA\MM\<código>.jpg.enc  fotos CON CANDADO (el nombre no dice de quién son)
 ├── llave-fotos.json                la llave de las fotos, envuelta (no sirve sola)
 ├── llave-fotos.<fecha>.ilegible.json   llaves anteriores apartadas (NO borrar)
-└── credencial-kiosco.json          el "gafete" del kiosco ante la base, con candado
+├── credencial-kiosco.json          el "gafete" del kiosco ante la base, con candado
+└── diagnostico\kiosco-AAAA-MM-DD.log   el "diario" del kiosco, uno por día (desde la 1.0.2)
 ```
+
+**El diario (`diagnostico\`)**: lo que el kiosco anota mientras trabaja
+(cámara desconectada o reconectada, sin internet, errores, versiones nuevas).
+Texto simple, se abre con el Bloc de notas; la hora es de Nuevo Laredo. Se
+guardan **14 días** y los viejos se borran solos; cada día tiene un tope de
+5 MB para no llenar el disco. **No lleva fotos, PIN, tokens ni contraseñas.**
+Para mandarlo sin ir a la facultad: el jefe entra a **⚙ Administrador →
+🩺 Guardar diagnóstico**, lo guarda en una memoria USB y lo manda por correo.
+La carpeta trae además un `resumen.txt` con la versión, la conexión y el
+estado de la cámara en ese momento.
 
 - Las fotos se borran solas a los **30 días** (se cambia en el panel,
   Configuración), salvo las marcadas "Conservar".
@@ -593,7 +604,9 @@ reportes.
 |---|---|---|
 | El kiosco dice "sin conexión" | No hay internet, o Supabase se pausó | Revisar el internet de la PC; si está bien, sección 11 |
 | El kiosco dice "dado de baja" o pide alta | Lo dieron de baja en el panel, o se copió a otra PC | Generar un código nuevo en el panel y darlo de alta (sección 3) |
-| "Cámara no disponible" | Cable suelto, u otro programa está usando la cámara | Reconectar la cámara; cerrar otros programas. Mientras, se sigue registrando |
+| "Sin cámara" | Cable suelto, u otro programa está usando la cámara | Reconectar la cámara; cerrar otros programas. Mientras, se sigue registrando. El motivo exacto queda en el diario (sección 4) |
+| El panel avisa "la cámara se desconectó N veces" | Cable flojo, puerto USB dañado o cámara por descomponerse | Probar otro puerto y otro cable; si sigue, cambiar la cámara. El diario dice a qué horas pasó |
+| Algo raro que nadie sabe explicar | — | Pedir el diario: ⚙ Administrador → 🩺 Guardar diagnóstico (sección 4) |
 | Muchos registros con "Foto no guardada" | Disco lleno | Liberar espacio en el disco |
 | "Hora dudosa" en todos los registros | La pila del BIOS se acabó, o la zona horaria está mal | Cambiar la pila; en Windows, poner hora y zona automáticas |
 | El panel no muestra un cambio reciente | Falló "Publicar el panel" | GitHub → Actions → abrir la corrida en rojo y leer el error (casi siempre un secreto) |

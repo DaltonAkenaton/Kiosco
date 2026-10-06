@@ -65,6 +65,16 @@ un clic accidental.
 
 ### Asistencia (la pantalla principal)
 
+Arriba, en rojo, **⚠ Para atender**: lo que conviene revisar, aunque estés en
+otra cosa. Por ejemplo: una cámara que lleva rato sin funcionar, una cámara
+que **se desconecta a ratos** (señal de que se va a descomponer), o registros
+de **personas que ya estaban dadas de baja**. Cada aviso tiene su botón: **Ver
+en Kioscos** o **Ver cuáles** (pone solo el filtro para verlos). El aviso se va
+solo cuando se arregla lo que lo causa.
+
+En el menú de arriba, un **número rojo** junto a *Asistencia* o *Kioscos* dice
+cuántos avisos hay ahí. Se ve desde cualquier página.
+
 Lista de todos los registros. Filtra por fecha, persona, **turno**, kiosco y
 **Revisión** (los filtros se recuerdan mientras la pestaña esté abierta):
 
@@ -77,12 +87,15 @@ Las etiquetas de cada registro:
 
 | Etiqueta | Qué significa | ¿Qué hago? |
 |---|---|---|
-| Sin cámara / Sin foto | La cámara no funcionaba. | Nada, si es raro. Si le pasa seguido a la misma persona, revisa. |
-| Foto tapada | La foto salió negra: alguien tapó la cámara. | Ve la foto en el kiosco. |
+| ✖ Sin foto (en rojo) | La cámara no funcionaba: desconectada, tapada o descompuesta. | Si es raro, nada. Si le pasa seguido a la misma persona, revisa: desconectar la cámara es la trampa más fácil. |
+| ✖ Foto tapada (en rojo) | La foto salió negra: alguien tapó la cámara. | Ve la foto en el kiosco. |
+| ⚠ Falta en el kiosco / ⚠ Alterada | Alguien tocó los archivos de las fotos. | Lo más grave: avisa a soporte. |
+| Borrada por antigüedad (en gris) | Pasaron los días de Configuración y la foto se borró sola. | Nada: es lo normal. |
 | Foto no guardada | La cámara sí servía, pero la computadora no pudo guardar la foto. | Avisa a soporte. |
 | Hora dudosa | La hora de la computadora parecía movida. | Compara con los demás registros de ese día. |
 | Captura manual | La registró un administrador a mano. | Nada: ya tiene su motivo. |
 | En cuarentena | Llegó de un kiosco dado de baja. | Revísalo antes de tomarlo en cuenta. |
+| Persona dada de baja | La persona ya estaba dada de baja cuando registró. Pasa cuando el kiosco estaba sin internet y todavía no se enteraba de la baja. | Decide tú: si sí trabajó, déjalo; si no, **Corregir → Anular**. |
 
 **+ Registrar a mano**: para cuando no hubo luz, se cayó el kiosco o alguien
 olvidó su PIN. Pide persona, entrada o salida, fecha, hora y el **motivo**.
@@ -269,8 +282,15 @@ Así nadie amanece con faltas que no son.
 
 ### Kioscos
 
-Arriba, **⚠ Para atender**: kioscos sin conexión, cámaras caídas, registros
-sin enviar, relojes movidos.
+Arriba, **⚠ Para atender**: kioscos sin conexión, cámaras caídas, cámaras que
+**se desconectan a ratos** (conviene revisar el cable o tener otra cámara a la
+mano antes de que falle del todo) y fotos que faltan. Son los mismos avisos de
+Asistencia. La página se actualiza sola cada minuto; con **↻ Actualizar** lo
+ves al momento.
+
+¿Cuándo avisa? Se ajusta en **Configuración → Cámara**: "Minutos de cámara
+caída para avisar" (15) y "Desconexiones de cámara para avisar" (3 en 7
+días).
 
 - **+ Dar de alta un kiosco**: nombre y ubicación. Da un **código de 8
   letras** que dura 15 minutos. En el kiosco, abajo, se pica **Dar de alta** y
@@ -322,7 +342,16 @@ Quién puede entrar al panel.
 ### Bitácora
 
 Todo cambio hecho en el sistema: quién, cuándo, qué había antes, qué quedó y
-por qué. Nunca muestra PIN ni contraseñas.
+por qué. Nunca muestra PIN ni contraseñas (de un PIN sólo dice "cambió").
+
+Para encontrar algo, usa los filtros:
+
+- **Qué tipo de cambio**: altas, bajas, cambios de PIN, registros anulados,
+  capturas a mano, Configuración, horarios, kioscos, accesos.
+- **Quién lo hizo** y **Sobre qué persona** (todo lo que le pasó a alguien:
+  su alta, sus PIN, sus correcciones, su baja).
+- **Desde / Hasta** y **Buscar en el motivo** (por ejemplo, "prueba").
+- **Quitar filtros** vuelve a mostrar todo.
 
 ### Mi cuenta
 
@@ -361,6 +390,14 @@ Lo que también puedes ver ahí:
   queda quién los descartó, cuántos y por qué.
 - **Fotos guardadas con un candado anterior**: pasa si se reinstaló Windows.
   Escribe la **contraseña de recuperación** (hoja de credenciales).
+- **↻ Sincronizar ahora**: el kiosco habla con la oficina solo, cada minuto.
+  Si acabas de cambiar algo en el panel (una baja, un PIN) y no quieres
+  esperar, pica este botón. Sin internet no puede hacer nada, pero tampoco se
+  pierde nada.
+- **🩺 Guardar diagnóstico**: guarda en una memoria USB el "diario" del
+  kiosco (lo que le pasó en las últimas dos semanas: cámara desconectada, sin
+  internet, errores). Si algo falla, mándaselo a quien da soporte. No lleva
+  fotos, PIN ni contraseñas.
 
 ### La contraseña de recuperación, en palabras simples
 
@@ -403,7 +440,9 @@ panel.
 | Un kiosco dado de baja sigue registrando | Sus registros **no llegan al panel** (a propósito: ya no se confía en él). Se quedan guardados en esa PC. Si la baja fue un error: dale de alta de nuevo con un código y, en ese kiosco, **⚙ Administrador → Registros que la oficina no aceptó → Volver a enviarlos**. (Lo que registró **antes** de la baja y no alcanzó a subir llega solo, marcado "en cuarentena" para revisarlo.) |
 | Se fue la luz / no hay kiosco | El personal te avisa por WhatsApp; tú **Registrar a mano** con motivo "sin luz". |
 | No hay internet | Nada: el kiosco guarda todo y lo manda al volver. En Kioscos verás "por enviar". |
-| El kiosco dice "cámara no disponible" | Se sigue registrando, marcado "sin foto". Revisa el cable de la cámara. |
+| El kiosco dice "Sin cámara" | Se sigue registrando, marcado "sin foto". Revisa el cable de la cámara. |
+| El panel avisa "la cámara se desconectó N veces" | La cámara falla a ratos: revisa que el cable no esté flojo; si sigue, cámbiala. Es mejor cambiarla antes de que muera. |
+| Di de baja a alguien y aun así registró | El kiosco estaba sin internet y no se había enterado. El registro llega marcado **Persona dada de baja** y sale en **⚠ Para atender**: anúlalo si no cuenta. |
 | Un kiosco aparece "sin conexión" mucho rato | Revisa que la PC esté prendida y con internet. Si no, soporte. |
 | Se robaron o cambiaron la PC | Kioscos → **Dar de baja este kiosco**. Después, alta de la PC nueva. |
 | Alguien dice que no llegó tarde | Mira el registro; si hay duda, ve la foto en el kiosco y márcala **Conservar**. |

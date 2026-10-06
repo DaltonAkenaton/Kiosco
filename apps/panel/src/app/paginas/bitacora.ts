@@ -12,9 +12,15 @@
  *  o salida de los kioscos tambien entra a la bitacora (~240 por semana con
  *  20 personas); sin el filtro, en unos dias tapaban las bajas, los PIN y los
  *  cambios de Configuracion, que es lo que de verdad se audita.
+ *
+ *  MAS FILTROS (06-10-2026, pedido tras la instalacion): fechas, quien lo
+ *  hizo, sobre que persona, que tipo de cambio y buscar en el motivo. Todos
+ *  se aplican EN LA BASE (no en la pagina): la bitacora crece para siempre y
+ *  traerla entera para filtrar aqui seria cada vez mas lento.
  */
 
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, WritableSignal, inject, signal } from '@angular/core';
+import { diaSiguiente, inicioDelDiaLocal } from '@kiosko/compartido';
 import { Ayuda } from '../componentes/ayuda';
 import { CargandoTabla, RENGLONES_CARGANDO } from '../componentes/cargando-tabla';
 import { Sesion } from '../servicios/sesion';
@@ -56,11 +62,31 @@ const COLUMNAS: Record<string, string> = {
   debe_cambiar_contrasena: 'contraseña temporal', hora_inicio: 'entrada', hora_fin: 'salida',
   tolerancia_minutos: 'tolerancia', minutos_para_falta: 'minutos para retardo mayor', vigente_hasta: 'vigente hasta',
   revocado_en: 'dado de baja el', revocado_por: 'dado de baja por', anonimizado_en: 'datos suprimidos el',
+  dado_de_baja_en: 'dado de baja el',
   ubicacion: 'ubicación', empleado_id: 'persona', turno_id: 'turno', vigente_desde: 'vigente desde',
 };
 
 /** Por paginas: la bitacora crece para siempre. */
 const POR_PAGINA = 200;
+
+/**
+ * "Qué tipo de cambio": cada opcion es un filtro de la base. Los que no son
+ * una tabla entera miran DENTRO del cambio (datos_antes / datos_despues).
+ */
+const TIPOS: { valor: string; nombre: string }[] = [
+  { valor: 'altas', nombre: 'Altas de personal' },
+  { valor: 'bajas', nombre: 'Bajas de personal' },
+  { valor: 'pin', nombre: 'Cambios de PIN' },
+  { valor: 'anulaciones', nombre: 'Registros anulados o corregidos' },
+  { valor: 'a_mano', nombre: 'Registros capturados a mano' },
+  { valor: 'configuracion', nombre: 'Cambios de Configuración' },
+  { valor: 'horarios', nombre: 'Horarios y turnos' },
+  { valor: 'kioscos', nombre: 'Kioscos (altas y bajas)' },
+  { valor: 'accesos', nombre: 'Accesos al panel' },
+];
+
+/** Columnas de hash: la base las guarda como "[oculto]", o "[nuevo]" si cambiaron (0028). */
+const HASHES = new Set(['pin_hash', 'contrasena_kiosco_hash', 'token_hash', 'codigo_hash']);
 
 @Component({
   selector: 'panel-bitacora',
@@ -80,6 +106,50 @@ const POR_PAGINA = 200;
           }
         </select>
       </label>
+      <label class="flex flex-col gap-1">
+        Qué tipo de cambio
+        <select class="campo" (change)="cambiar(tipo, valor($event))">
+          <option value="">Cualquiera</option>
+          @for (t of TIPOS; track t.valor) {
+            <option [value]="t.valor" [selected]="tipo() === t.valor">{{ t.nombre }}</option>
+          }
+        </select>
+      </label>
+      <label class="flex flex-col gap-1">
+        Quién lo hizo
+        <select class="campo" (change)="cambiar(actor, valor($event))">
+          <option value="">Cualquiera</option>
+          @for (a of administradores(); track a.id) {
+            <option [value]="a.id" [selected]="actor() === a.id">{{ a.nombre }}</option>
+          }
+          <option value="sistema" [selected]="actor() === 'sistema'">El sistema (un kiosco)</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1">
+        Sobre qué persona
+        <select class="campo" (change)="cambiar(empleado, valor($event))">
+          <option value="">Cualquiera</option>
+          @for (e of listaEmpleados(); track e.id) {
+            <option [value]="e.id" [selected]="empleado() === e.id">{{ e.nombre }}</option>
+          }
+        </select>
+      </label>
+      <label class="flex flex-col gap-1">
+        Desde
+        <input type="date" class="campo" [value]="desde()" (change)="cambiar(desde, valor($event))" />
+      </label>
+      <label class="flex flex-col gap-1">
+        Hasta
+        <input type="date" class="campo" [value]="hasta()" (change)="cambiar(hasta, valor($event))" />
+      </label>
+      <label class="flex flex-col gap-1">
+        Buscar en el motivo
+        <input type="search" class="campo" placeholder="Ej.: prueba" [value]="texto()"
+               (change)="cambiar(texto, valor($event))" />
+      </label>
+      @if (hayFiltros()) {
+        <button type="button" class="boton-secundario" (click)="quitarFiltros()">Quitar filtros</button>
+      }
       @if (!cargando()) {
         <span class="text-texto-suave pb-2">{{ renglones().length }} cambio(s){{ hayMas() ? ' (hay más abajo)' : '' }}</span>
       }
@@ -140,6 +210,15 @@ export class Bitacora implements OnInit {
   private readonly empleados = new Map<string, string>();
 
   protected readonly filtro = signal('personas');
+  protected readonly tipo = signal('');
+  protected readonly actor = signal('');
+  protected readonly empleado = signal('');
+  protected readonly desde = signal('');
+  protected readonly hasta = signal('');
+  protected readonly texto = signal('');
+  protected readonly TIPOS = TIPOS;
+  protected readonly administradores = signal<{ id: string; nombre: string }[]>([]);
+  protected readonly listaEmpleados = signal<{ id: string; nombre: string }[]>([]);
   protected readonly hayMas = signal(false);
   protected readonly cargandoMas = signal(false);
   protected readonly fecha = fecha;
@@ -159,11 +238,29 @@ export class Bitacora implements OnInit {
     ]);
     for (const a of admins.data ?? []) this.nombres.set(a.user_id, a.nombre);
     for (const e of empleados.data ?? []) this.empleados.set(e.id, `${e.nombre} ${e.apellido_paterno}`);
+    const porNombre = (a: { nombre: string }, b: { nombre: string }): number => a.nombre.localeCompare(b.nombre);
+    this.administradores.set([...this.nombres].map(([id, nombre]) => ({ id, nombre })).sort(porNombre));
+    this.listaEmpleados.set([...this.empleados].map(([id, nombre]) => ({ id, nombre })).sort(porNombre));
     await this.cargar(true);
   }
 
   protected cambiarFiltro(valor: string): void {
     this.filtro.set(valor);
+    void this.cargar(true);
+  }
+
+  protected cambiar(campo: WritableSignal<string>, valor: string): void {
+    if (campo() === valor.trim()) return;
+    campo.set(valor.trim());
+    void this.cargar(true);
+  }
+
+  protected hayFiltros(): boolean {
+    return !!(this.tipo() || this.actor() || this.empleado() || this.desde() || this.hasta() || this.texto());
+  }
+
+  protected quitarFiltros(): void {
+    for (const f of [this.tipo, this.actor, this.empleado, this.desde, this.hasta, this.texto]) f.set('');
     void this.cargar(true);
   }
 
@@ -179,8 +276,44 @@ export class Bitacora implements OnInit {
       .select('id, tabla, accion, datos_antes, datos_despues, actor, motivo, creado_en')
       .order('id', { ascending: false });
     const filtro = this.filtro();
-    if (filtro === 'personas') q = q.not('actor', 'is', null);
-    else if (filtro !== 'todo') q = q.eq('tabla', filtro);
+    // "Quién lo hizo" manda sobre "Mostrar": si se eligió a alguien, ya no
+    // hace falta esconder lo de los kioscos (y "el sistema" ES lo de los kioscos).
+    const actor = this.actor();
+    if (actor === 'sistema') q = q.is('actor', null);
+    else if (actor) q = q.eq('actor', actor);
+    else if (filtro === 'personas') q = q.not('actor', 'is', null);
+    if (filtro !== 'personas' && filtro !== 'todo') q = q.eq('tabla', filtro);
+
+    switch (this.tipo()) {
+      case 'altas': q = q.eq('tabla', 'empleados').eq('accion', 'INSERT'); break;
+      case 'bajas':
+        q = q.eq('tabla', 'empleados').eq('datos_antes->>activo', 'true').eq('datos_despues->>activo', 'false');
+        break;
+      case 'pin': q = q.eq('tabla', 'empleados').eq('datos_despues->>pin_hash', '[nuevo]'); break;
+      case 'anulaciones': q = q.eq('tabla', 'correcciones'); break;
+      case 'a_mano': q = q.eq('tabla', 'marcas').eq('datos_despues->>origen', 'manual'); break;
+      case 'configuracion': q = q.eq('tabla', 'configuracion'); break;
+      case 'horarios': q = q.in('tabla', ['turnos', 'turno_versiones', 'asignaciones_turno']); break;
+      case 'kioscos': q = q.eq('tabla', 'dispositivos'); break;
+      case 'accesos': q = q.eq('tabla', 'administradores'); break;
+    }
+
+    // Una persona: los cambios A ELLA (su renglon de empleados) y los que la
+    // MENCIONAN (sus registros, correcciones, horarios, incidencias).
+    const persona = this.empleado();
+    if (persona) {
+      q = q.or(`registro_id.eq.${persona},datos_despues->>empleado_id.eq.${persona},datos_antes->>empleado_id.eq.${persona}`);
+    }
+
+    // El dia se corta a medianoche de Nuevo Laredo, no de UTC (CLAUDE.md 6).
+    const zona = this.sesion.zona();
+    if (this.desde()) q = q.gte('creado_en', new Date(inicioDelDiaLocal(this.desde(), zona)).toISOString());
+    if (this.hasta()) q = q.lt('creado_en', new Date(inicioDelDiaLocal(diaSiguiente(this.hasta()), zona)).toISOString());
+
+    // Sin los comodines de PostgREST: que lo escrito se busque tal cual.
+    const texto = this.texto().replace(/[%*,()]/g, ' ').trim();
+    if (texto) q = q.ilike('motivo', `%${texto}%`);
+
     const { data, error } = await q.range(inicio, inicio + POR_PAGINA - 1);
 
     if (esta !== this.consulta) return;
@@ -235,7 +368,12 @@ export class Bitacora implements OnInit {
     const despues = r.datos_despues;
     return Object.keys(despues)
       .filter((k) => !IGNORAR.has(k) && JSON.stringify(antes[k]) !== JSON.stringify(despues[k]))
-      .map((k) => `${COLUMNAS[k] ?? k.replace(/_/g, ' ')}: ${this.enPalabras(k, antes[k])} → ${this.enPalabras(k, despues[k])}`)
+      .map((k) =>
+        // Un PIN o contraseña que cambio: se dice que cambio, nunca cual era (0028).
+        HASHES.has(k)
+          ? `${COLUMNAS[k] ?? k.replace(/_/g, ' ')}: cambió (por seguridad no se muestra)`
+          : `${COLUMNAS[k] ?? k.replace(/_/g, ' ')}: ${this.enPalabras(k, antes[k])} → ${this.enPalabras(k, despues[k])}`,
+      )
       .join(' · ');
   }
 

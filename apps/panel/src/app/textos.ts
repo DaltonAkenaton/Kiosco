@@ -29,9 +29,24 @@ export const AYUDA_BANDERAS: Record<string, string> = {
     'revises.',
   manual: 'No se hizo en el kiosco: lo capturó un administrador a mano, con un motivo.',
   cierre_automatico: 'La persona registró su entrada pero nunca su salida. El sistema no inventa la hora.',
+  empleado_de_baja:
+    'Esta persona ya estaba dada de baja cuando registró. Pasa cuando el kiosco estaba sin internet y no ' +
+    'se había enterado de la baja. El registro se guardó igual, para no perder nada: decide tú si cuenta ' +
+    '(déjalo) o no (Corregir → Anular).',
 };
 
-/** El estado de la foto de una marca, como lo ve el jefe. La foto NUNCA esta en el panel. */
+/**
+ * El estado de la foto de una marca, como lo ve el jefe. La foto NUNCA esta en el panel.
+ *
+ * COLORES (06-10-2026, tras instalar en la facultad): "Sin foto" iba en gris,
+ * igual que "Borrada por antigüedad", y el gris se lee como "nada que ver".
+ * Pero desconectar la camara es justo la trampa mas facil. Ahora:
+ *   - rojo con ✖   -> no hay foto que sirva (sin foto, tapada): revisar.
+ *   - rojo con ⚠   -> alguien toco los archivos (falta, alterada): lo mas grave.
+ *   - gris          -> solo "borrada por antigüedad", que es lo normal.
+ * Con simbolo y no solo color: hay quien no distingue bien el rojo.
+ * El ambar quedo fuera a proposito: es el color de SALIDA y se confundia.
+ */
 export const ESTADOS_DE_FOTO: Record<string, { texto: string; color: string; ayuda: string }> = {
   con_foto: {
     texto: 'En el kiosco',
@@ -48,14 +63,16 @@ export const ESTADOS_DE_FOTO: Record<string, { texto: string; color: string; ayu
       'ejemplo, por una queja). Está en el kiosco.',
   },
   obstruida: {
-    texto: 'Foto tapada',
-    color: 'var(--kiosko-atencion)',
+    texto: '✖ Foto tapada',
+    color: 'var(--kiosko-peligro)',
     ayuda: 'Se tomó, pero la cámara parecía tapada. Está en el kiosco por si quieres revisarla.',
   },
   sin_camara: {
-    texto: 'Sin foto',
-    color: 'var(--kiosko-texto-suave)',
-    ayuda: 'Cuando se registró, la cámara no funcionaba. El registro sí cuenta.',
+    texto: '✖ Sin foto',
+    color: 'var(--kiosko-peligro)',
+    ayuda:
+      'Cuando se registró, la cámara no funcionaba (desconectada, tapada con algo o descompuesta). El ' +
+      'registro sí cuenta, pero no hay foto que lo respalde. Si le pasa seguido a la misma persona, revisa.',
   },
   eliminada_por_antiguedad: {
     texto: 'Borrada por antigüedad',
@@ -65,14 +82,14 @@ export const ESTADOS_DE_FOTO: Record<string, { texto: string; color: string; ayu
       'para cuidar la privacidad. El registro no se borra.',
   },
   faltante: {
-    texto: 'Falta en el kiosco',
+    texto: '⚠ Falta en el kiosco',
     color: 'var(--kiosko-peligro)',
     ayuda:
       'La foto debería estar en el kiosco y no está. Puede que alguien la haya borrado. Avisa a quien le da ' +
       'soporte al sistema.',
   },
   alterada: {
-    texto: 'Alterada',
+    texto: '⚠ Alterada',
     color: 'var(--kiosko-peligro)',
     ayuda:
       'Alguien modificó la foto en el kiosco: ya no coincide con su huella. No la uses como prueba y avisa a ' +
@@ -180,6 +197,21 @@ export const PALABRAS_CONFIGURACION: Record<string, { nombre: string; explicacio
   minutos_camara_caida_alerta: {
     nombre: 'Minutos de cámara caída para avisar',
     explicacion: 'Tras cuántos minutos con la cámara sin funcionar se muestra una alerta aquí.',
+    seUsaEn: 'Este panel',
+  },
+  camara_desconexiones_alerta: {
+    nombre: 'Desconexiones de cámara para avisar',
+    explicacion: 'Una cámara que se va a descomponer no se muere de golpe: se desconecta y se vuelve a conectar cada vez más seguido. Si se desconecta esta cantidad de veces (o más) en los días de abajo, el panel avisa para revisarla o cambiarla antes de que falle del todo.',
+    seUsaEn: 'Este panel y el correo diario',
+  },
+  camara_dias_desconexiones: {
+    nombre: 'Días en que se cuentan las desconexiones',
+    explicacion: 'Cuántos días hacia atrás se cuentan las desconexiones de la cámara. Con 3 desconexiones y 7 días: si la cámara se desconectó 3 veces en la última semana, avisa.',
+    seUsaEn: 'Este panel y el correo diario',
+  },
+  dias_avisos_registros: {
+    nombre: 'Días de registros por revisar en los avisos',
+    explicacion: 'Los avisos de arriba de Asistencia (registros de personas dadas de baja, o en cuarentena) buscan tantos días hacia atrás. Lo más viejo ya no se avisa, pero sigue en Asistencia → Revisión.',
     seUsaEn: 'Este panel',
   },
   umbral_desfase_reloj_ms: {

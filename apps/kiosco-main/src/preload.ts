@@ -204,6 +204,12 @@ const api: ApiKiosco = {
     instalarActualizacion(token: string) {
       return ipcRenderer.invoke(CANALES.adminInstalarActualizacion, { token });
     },
+    sincronizarAhora(token: string) {
+      return ipcRenderer.invoke(CANALES.adminSincronizarAhora, { token });
+    },
+    guardarDiagnostico(token: string) {
+      return ipcRenderer.invoke(CANALES.adminGuardarDiagnostico, { token });
+    },
     alCerrarSesion(callback: () => void): () => void {
       const escucha = (): void => callback();
       ipcRenderer.on(CANALES.adminSesionCerrada, escucha);

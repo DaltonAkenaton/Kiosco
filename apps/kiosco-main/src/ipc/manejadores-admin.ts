@@ -43,7 +43,9 @@ import {
   descartarRechazados,
 } from '../datos/repositorio-sincronizacion';
 import { actualizacionLista, instalarActualizacionYReiniciar, versionActual } from '../actualizaciones';
-import { sincronizarPronto } from '../servicios/sincronizacion';
+import { sincronizarAhora, sincronizarPronto } from '../servicios/sincronizacion';
+import { copiarDiagnostico } from '../servicios/diagnostico';
+import { estadoActual } from './manejadores';
 import { registrarEvento } from '../datos/repositorio-eventos';
 import { contarFotosConLlaveAnterior, recuperarFotosConContrasena } from '../servicios/recuperacion-fotos';
 import { leerFoto } from '../servicios/fotos';
@@ -318,6 +320,56 @@ export function registrarManejadoresAdmin(): void {
       // Un momento para que la respuesta llegue a la pantalla antes de cerrar.
       setTimeout(() => instalarActualizacionYReiniciar(), 1500);
       return null;
+    }),
+  );
+
+  // "Sincronizar ahora": el jefe cambio algo en el panel (una baja, un PIN)
+  // y no quiere esperar el minuto. Cualquier rol: solo trae y manda datos.
+  ipcMain.handle(
+    CANALES.adminSincronizarAhora,
+    conSesion(EsquemaSoloToken, (): Promise<{ ok: boolean; pendientes: number }> => sincronizarAhora()),
+  );
+
+  // "Guardar diagnostico" (servicios/diagnostico.ts): copia el diario del
+  // kiosco a donde se elija, para mandarlo a quien da soporte. No lleva
+  // fotos ni PINes, asi que, a diferencia de las fotos, puede ir a cualquier
+  // carpeta. La ruta la elige Windows y nunca pasa por la pantalla.
+  ipcMain.handle(
+    CANALES.adminGuardarDiagnostico,
+    conSesion(EsquemaSoloToken, async (_datos, sesion): Promise<{ carpeta: string; archivos: number } | null> => {
+      const ventana = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+      const opciones: Electron.OpenDialogOptions = {
+        title: 'Elige la memoria USB (o la carpeta) donde guardar el diagnóstico',
+        buttonLabel: 'Guardar aquí',
+        properties: ['openDirectory', 'createDirectory'],
+      };
+      const eleccion = ventana ? await dialog.showOpenDialog(ventana, opciones) : await dialog.showOpenDialog(opciones);
+      const destino = eleccion.filePaths[0];
+      if (eleccion.canceled || !destino) return null;
+
+      const e = estadoActual();
+      const resumen = [
+        'DIAGNOSTICO DEL KIOSCO DE ASISTENCIA',
+        `Guardado: ${new Date().toISOString()} (UTC) por ${sesion.nombre}`,
+        `Kiosco: ${e.nombreKiosco ?? '(sin dar de alta)'}`,
+        `Version del programa: ${versionActual()}`,
+        `Conexion con la oficina: ${e.nube}`,
+        `Registros sin enviar: ${e.registrosPendientes}`,
+        `Camara: ${e.camaraDisponible ? 'funcionando' : 'NO disponible'}`,
+        `PC compartida: ${e.pcCompartida ? 'si' : 'no'}`,
+        `Desfase del reloj: ${e.desfaseRelojMs} ms`,
+        '',
+        'Los archivos kiosco-AAAA-MM-DD.log son el diario de cada dia (hora de Nuevo Laredo).',
+        'No contienen fotos, PINes ni contraseñas.',
+      ].join('\r\n'); // el Bloc de notas viejo de Windows no entiende un salto solo
+      try {
+        const r = copiarDiagnostico(destino, resumen);
+        console.info(`[admin] diagnostico guardado (${r.archivos} archivo(s))`);
+        return r;
+      } catch (fallo) {
+        console.error('[admin] no se pudo guardar el diagnostico:', (fallo as Error).message);
+        throw new ErrorParaMostrar('No se pudo escribir ahí. ¿La memoria sigue conectada? Prueba con otra carpeta.');
+      }
     }),
   );
 

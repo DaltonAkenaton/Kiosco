@@ -1065,6 +1065,42 @@ export const ACTUALIZACIONES = {
   },
 } as const;
 
+// ============================================================================
+//  DIAGNOSTICO: el registro de lo que pasa, en un archivo  (06-10-2026)
+// ============================================================================
+//  Antes, lo que el kiosco anotaba (camara caida, sin internet, errores) solo
+//  salia en la consola y se perdia al cerrarlo. En la PC de la facultad nadie
+//  ve esa consola: si algo fallaba, no habia como saber que paso.
+//
+//  Ahora se guarda en `<carpeta de datos>/diagnostico/kiosco-AAAA-MM-DD.log`.
+//  Para leerlo a distancia: en el modo administrador, "Guardar diagnostico"
+//  lo copia a una memoria USB y se manda por correo o WhatsApp.
+//
+//  NUNCA lleva PINes, tokens ni fotos (CLAUDE.md 16): el codigo no los manda
+//  a la consola, y por si acaso cada renglon se limpia antes de escribirse.
+export const DIAGNOSTICO = {
+  /** Encenderlo o apagarlo. Apagado, todo sigue igual que antes (solo consola). */
+  activo: true,
+
+  /** La carpeta, dentro de la carpeta de datos del kiosco. */
+  carpeta: 'diagnostico',
+
+  /**
+   * Cuantos dias de archivos se guardan. Dos semanas alcanzan para "desde
+   * cuando falla la camara" sin acumular basura: los viejos se borran solos.
+   */
+  diasQueSeGuardan: 14,
+
+  /**
+   * Tope por dia. Si algo se vuelve loco y escribe sin parar, el archivo deja
+   * de crecer en vez de llenar el disco (y con el disco lleno, adios fotos).
+   */
+  maxBytesPorDia: 5 * 1024 * 1024,
+
+  /** Un renglon mas largo se corta. Ningun mensaje normal se acerca a esto. */
+  maxCaracteresPorRenglon: 2000,
+} as const;
+
 export const CONFIG = {
   identificacion: IDENTIFICACION,
   seguridadPin: SEGURIDAD_PIN,
@@ -1080,6 +1116,7 @@ export const CONFIG = {
   exportacion: EXPORTACION,
   jornada: JORNADA,
   actualizaciones: ACTUALIZACIONES,
+  diagnostico: DIAGNOSTICO,
   ambiente: AMBIENTE,
 } as const;
 

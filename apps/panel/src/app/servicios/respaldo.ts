@@ -37,7 +37,7 @@ export const TABLAS_DEL_RESPALDO: TablaDelRespaldo[] = [
   { tabla: 'marcas', orden: ['hora_estimada', 'id'],
     columnas: 'id, empleado_id, tipo, origen, hora_estimada, dispositivo_id, foto_estado, banderas, en_cuarentena, recibido_en' },
   { tabla: 'empleados', orden: ['nombre', 'id'],
-    columnas: 'id, usuario, numero_empleado, nombre, apellido_paterno, apellido_materno, pin_temporal, activo, anonimizado_en, creado_en, actualizado_en' },
+    columnas: 'id, usuario, numero_empleado, nombre, apellido_paterno, apellido_materno, pin_temporal, activo, dado_de_baja_en, anonimizado_en, creado_en, actualizado_en' },
   { tabla: 'incidencias', columnas: '*', orden: ['fecha_inicio', 'id'] },
   { tabla: 'correcciones', columnas: '*', orden: ['creado_en', 'id'] },
   { tabla: 'turnos', columnas: '*', orden: ['nombre', 'id'] },

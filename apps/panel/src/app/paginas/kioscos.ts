@@ -16,6 +16,7 @@ import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular
 import { Ayuda } from '../componentes/ayuda';
 import { Dialogo, mensajeDeError } from '../componentes/dialogo';
 import { Avisos } from '../servicios/avisos';
+import { Pendientes } from '../servicios/pendientes';
 import { Sesion } from '../servicios/sesion';
 import { fecha, haceCuanto, hora } from '../textos';
 
@@ -62,6 +63,7 @@ const TEXTOS_DE_ACTIVIDAD: Record<string, (quien: string, d: Record<string, unkn
 export class Kioscos implements OnInit, OnDestroy {
   protected readonly sesion = inject(Sesion);
   private readonly avisos = inject(Avisos);
+  private readonly pendientes = inject(Pendientes);
   protected readonly zona = this.sesion.zona;
   protected readonly cargando = signal(true);
 
@@ -75,7 +77,6 @@ export class Kioscos implements OnInit, OnDestroy {
     'descartar registros que la oficina no aceptó, guardar fotos en una memoria USB o recuperar fotos ' +
     'con la contraseña de recuperación. Queda anotado quién, cuándo y (si lo pidió) el motivo.';
   protected readonly minutosSinConexion = signal(60);
-  protected readonly minutosCamara = signal(15);
   /**
    * PC compartida (ajuste "kiosco_pc_compartida", 0026): el kiosco se cierra
    * al terminar de checar, asi que "no se reporta" es lo normal y NO es alerta.
@@ -117,26 +118,13 @@ export class Kioscos implements OnInit, OnDestroy {
       'revisar y avisar a quien le da soporte al sistema.',
   };
 
-  /** Lo que hay que atender, en palabras. */
-  protected readonly alertas = computed(() => {
-    const lista: string[] = [];
-    const limiteMs = this.minutosSinConexion() * 60_000;
-    for (const k of this.kioscos()) {
-      if (!k.activo) continue;
-      if (!this.pcCompartida() && (!k.ultima_conexion || this.ahora() - new Date(k.ultima_conexion).getTime() > limiteMs)) {
-        lista.push(`${k.nombre}: no se reporta desde ${haceCuanto(k.ultima_conexion, this.ahora()).replace('hace ', 'hace ')}.`);
-      }
-      // La camara avisa cuando lleva caida mas que "Minutos de camara caida
-      // para avisar" (Configuracion). Un parpadeo de un minuto no es alerta.
-      if (k.camara_ok === false && k.camara_caida_desde &&
-          this.ahora() - new Date(k.camara_caida_desde).getTime() > this.minutosCamara() * 60_000) {
-        lista.push(`${k.nombre}: la cámara no funciona desde ${haceCuanto(k.camara_caida_desde, this.ahora())}. Los registros salen sin foto.`);
-      }
-      const fotos = this.fotosPorRevisar().get(k.id) ?? 0;
-      if (fotos > 0) lista.push(`${k.nombre}: ${fotos} foto(s) faltan o están alteradas.`);
-    }
-    return lista;
-  });
+  /**
+   * Lo que hay que atender, en palabras. Sale de `avisos_del_panel()` (0028)
+   * por el servicio Pendientes: la misma lista que el numero del menu, para
+   * que nunca digan cosas distintas. Las reglas (minutos de camara caida,
+   * PC compartida, camara que falla a ratos) viven en la base.
+   */
+  protected readonly alertas = computed(() => this.pendientes.deKioscos().map((p) => p.texto));
 
   async ngOnInit(): Promise<void> {
     await this.cargar();
@@ -150,8 +138,18 @@ export class Kioscos implements OnInit, OnDestroy {
     if (this.temporizador) clearInterval(this.temporizador);
   }
 
+  /** El boton "Actualizar": no esperar al minuto. */
+  protected readonly actualizando = signal(false);
+
+  protected async actualizar(): Promise<void> {
+    this.actualizando.set(true);
+    await Promise.all([this.cargar(), this.pendientes.actualizar()]);
+    this.actualizando.set(false);
+  }
+
   private async cargar(): Promise<void> {
     void this.cargarActividad();
+    void this.pendientes.actualizar();
     const [kioscos, fotos, config] = await Promise.all([
       this.sesion.bd
         .from('dispositivos')
@@ -164,7 +162,7 @@ export class Kioscos implements OnInit, OnDestroy {
       this.sesion.bd
         .from('configuracion')
         .select('clave, valor')
-        .in('clave', ['minutos_kiosco_sin_conexion_alerta', 'minutos_camara_caida_alerta', 'kiosco_pc_compartida']),
+        .in('clave', ['minutos_kiosco_sin_conexion_alerta', 'kiosco_pc_compartida']),
     ]);
     this.cargando.set(false);
     if (kioscos.error) {
@@ -176,7 +174,6 @@ export class Kioscos implements OnInit, OnDestroy {
     this.fotosPorRevisar.set(new Map((fotos.data ?? []).map((f) => [f.dispositivo_id as string, Number(f.casos)])));
     for (const c of config.data ?? []) {
       if (c.clave === 'minutos_kiosco_sin_conexion_alerta' && typeof c.valor === 'number') this.minutosSinConexion.set(c.valor);
-      if (c.clave === 'minutos_camara_caida_alerta' && typeof c.valor === 'number') this.minutosCamara.set(c.valor);
       if (c.clave === 'kiosco_pc_compartida') this.pcCompartida.set(Number(c.valor) === 1);
     }
     this.ahora.set(Date.now());

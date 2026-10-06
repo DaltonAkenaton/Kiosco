@@ -52,7 +52,12 @@ export type BanderaMarca =
   /** La capturo el jefe a mano desde el panel. */
   | 'manual'
   /** La genero el sistema al cerrar una jornada que quedo abierta. */
-  | 'cierre_automatico';
+  | 'cierre_automatico'
+  /**
+   * La persona ya estaba dada de baja cuando registro (el kiosco no se habia
+   * enterado: estaba sin internet). La pone la base al recibirla (0028).
+   */
+  | 'empleado_de_baja';
 
 /**
  * Cada bandera en palabras, para quien no sabe que es "reloj_sospechoso".
@@ -67,6 +72,7 @@ export const NOMBRES_DE_BANDERAS: Record<BanderaMarca, string> = {
   dispositivo_revocado: 'Kiosco dado de baja',
   manual: 'Captura manual',
   cierre_automatico: 'Sin salida',
+  empleado_de_baja: 'Persona dada de baja',
 };
 
 /**

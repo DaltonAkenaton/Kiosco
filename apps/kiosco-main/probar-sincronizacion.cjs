@@ -90,7 +90,12 @@ app.whenReady().then(async () => {
     console.log('\n--- primera vuelta: baja el catalogo ---');
     // `enrolar` ya pidio una vuelta; se espera a que termine.
     for (let i = 0; i < 50 && bd.estadoDeLaNube() !== 'en_linea'; i++) await esperar(200);
-    await bd.ciclo();
+    // `ciclo()` regresa sin hacer nada si ya hay una vuelta en curso (la que
+    // pidio el alta), y entonces lo de abajo se revisaba antes de tiempo: la
+    // prueba fallaba a veces (06-10-2026). `sincronizarAhora()` (el boton del
+    // modo administrador) espera a esa vuelta y da otra completa.
+    const ahora1 = await bd.sincronizarAhora();
+    comprobar('"Sincronizar ahora" espera la vuelta en curso y habla con la oficina', ahora1.ok === true, JSON.stringify(ahora1));
     comprobar('queda en linea', bd.estadoDeLaNube() === 'en_linea', estados.join(' > '));
 
     const dalton = bd.buscarPorUsuario('dgomez');
@@ -115,7 +120,7 @@ app.whenReady().then(async () => {
     bd.guardarMarca({ id: idFantasma, empleadoId: crypto.randomUUID(), usuario: 'nadie', tipo: 'entrada', reloj: bd.leerReloj(), banderas: [], foto: null });
     bd.registrarEvento('camara_desconectada', { detalle: 'prueba' });
 
-    await bd.ciclo();
+    await bd.sincronizarAhora();
     const { rows: [enNube] } = await nube.query('select dispositivo_id, foto_estado from marcas where id = $1', [idMarca]);
     comprobar('la marca llego a la nube, ligada a este kiosco', enNube && enNube.dispositivo_id === credencial.dispositivoId);
     comprobar('sin foto -> sin_camara', enNube && enNube.foto_estado === 'sin_camara');

@@ -41,7 +41,8 @@ import { aplicarPoliticasDeSesion } from './seguridad';
 import { crearVentanaPrincipal } from './ventana';
 import { anotarUso } from './servicios/actividad';
 import { cerrarKiosco } from './servicios/cierre';
-import { esPcCompartida } from './configuracion-vigente';
+import { esPcCompartida, zonaHorariaVigente } from './configuracion-vigente';
+import { iniciarDiagnostico } from './servicios/diagnostico';
 
 /**
  * ----------------------------------------------------------------------------
@@ -104,6 +105,10 @@ if (!esLaPrimeraCopia) {
    */
   app.setName(CONFIG.ventana.titulo);
   app.setPath('userData', path.join(app.getPath('appData'), CONFIG.ventana.titulo));
+
+  // El diario en disco (servicios/diagnostico.ts), lo antes posible: asi
+  // hasta lo que pase en el arranque queda anotado.
+  iniciarDiagnostico(app.getPath('userData'), zonaHorariaVigente);
 
   // El kiosco esta pensado para una pantalla tactil o un teclado fisico.
   // Apagamos funciones de Chromium que no usamos y que solo suman superficie

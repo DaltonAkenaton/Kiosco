@@ -20,11 +20,13 @@
  */
 
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { diaSiguiente, hoyEn, inicioDelDiaLocal, instanteLocal } from '@kiosko/compartido';
 import { Ayuda } from '../componentes/ayuda';
 import { Dialogo, mensajeDeError } from '../componentes/dialogo';
 import { Avisos } from '../servicios/avisos';
 import { descargarExcel } from '../servicios/escribir-excel';
+import { Pendiente, Pendientes } from '../servicios/pendientes';
 import { senalRecordada } from '../servicios/recordar';
 import { Sesion } from '../servicios/sesion';
 import {
@@ -81,6 +83,9 @@ const SEGUNDOS_PARA_REFRESCAR = 60;
 export class Asistencia implements OnInit, OnDestroy {
   protected readonly sesion = inject(Sesion);
   private readonly avisos = inject(Avisos);
+  private readonly router = inject(Router);
+  /** La franja "Para atender" de arriba (servicios/pendientes.ts). */
+  protected readonly pendientes = inject(Pendientes);
   protected readonly zona = this.sesion.zona;
 
   // Los filtros se recuerdan al cambiar de pantalla (servicios/recordar.ts).
@@ -157,6 +162,30 @@ export class Asistencia implements OnInit, OnDestroy {
 
   /** El boton "Actualizar": trae lo ultimo que llego de los kioscos. */
   protected actualizar(): void {
+    void this.buscar();
+    void this.pendientes.actualizar();
+  }
+
+  /**
+   * "Ver" en la franja de pendientes. Lo de kioscos se atiende en Kioscos; lo
+   * de registros, aqui mismo: pone el filtro de Revisión y las fechas desde el
+   * caso mas antiguo, para que se vean todos de un jalon.
+   */
+  protected verPendiente(p: Pendiente): void {
+    if (p.donde === 'kioscos' || !p.revision) {
+      void this.router.navigateByUrl('/kioscos');
+      return;
+    }
+    const zona = this.sesion.zona();
+    if (p.desde) {
+      this.desde.set(new Intl.DateTimeFormat('en-CA', { timeZone: zona, year: 'numeric', month: '2-digit', day: '2-digit' })
+        .format(new Date(p.desde)));
+    }
+    this.hasta.set(hoyEn(zona));
+    this.empleadoId.set('');
+    this.dispositivoId.set('');
+    this.turnoFiltro.set('');
+    this.revision.set(p.revision);
     void this.buscar();
   }
 

@@ -78,11 +78,21 @@ lineas as (
               else 'bien' end ||
          case when coalesce(d.pendientes, 0) > 0 then ' (' || d.pendientes || ' registros sin enviar)' else '' end
     from dispositivos d, cfg where d.activo
+  -- Camara que falla a ratos (0028): mejor cambiarla antes de que muera.
+  union all select 53, '  - ' || a.dispositivo || ': la camara se desconecto ' || a.cantidad ||
+         ' veces en los ultimos ' || config_entero('camara_dias_desconexiones', 7) ||
+         ' dias. Conviene revisarla o tener otra a la mano.'
+    from avisos_del_panel() a where a.tipo = 'camara_inestable'
 
   union all select 60, ''
   union all select 61, case when (select count(*) from marcas_ayer where en_cuarentena) > 0
                             then 'EN CUARENTENA: ' || (select count(*) from marcas_ayer where en_cuarentena) ||
                                  ' registro(s) de un kiosco dado de baja. Revisalos en el panel.'
+                            else null end
+  union all select 62, case when (select count(*) from marcas_ayer where 'empleado_de_baja' = any (banderas)) > 0
+                            then 'DE PERSONAS DADAS DE BAJA: ' ||
+                                 (select count(*) from marcas_ayer where 'empleado_de_baja' = any (banderas)) ||
+                                 ' registro(s) hechos despues de su baja. Revisalos en el panel.'
                             else null end
 
   union all select 90, ''

@@ -3,9 +3,13 @@
     <h1 class="text-2xl font-bold">Kioscos</h1>
     <p class="text-texto-suave mt-1">Cómo está cada computadora donde se registra la asistencia. Se actualiza sola cada minuto.</p>
   </div>
-  @if (sesion.esAdmin()) {
-    <button type="button" class="boton-principal" (click)="abrirAlta()">+ Dar de alta un kiosco</button>
-  }
+  <div class="flex flex-wrap gap-2">
+    <button type="button" class="boton-secundario" [disabled]="cargando() || actualizando()" (click)="actualizar()"
+            title="Volver a preguntar ahora cómo está cada kiosco">{{ actualizando() ? 'Actualizando…' : '↻ Actualizar' }}</button>
+    @if (sesion.esAdmin()) {
+      <button type="button" class="boton-principal" (click)="abrirAlta()">+ Dar de alta un kiosco</button>
+    }
+  </div>
 </div>
 
 @if (alertas().length > 0) {

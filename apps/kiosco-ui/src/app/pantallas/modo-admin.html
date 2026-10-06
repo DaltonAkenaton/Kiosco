@@ -223,6 +223,24 @@
       <div class="mx-8 mt-3 flex flex-col gap-2 text-base">
         <p class="text-texto-suave flex flex-wrap items-center gap-x-4 gap-y-2">
           <span>Versión del programa: <b class="text-texto">{{ ek.version }}</b></span>
+          <button
+            type="button"
+            class="boton-secundario boton-tactil rounded-xl border-2 px-4 py-2 font-bold"
+            [disabled]="sincronizando()"
+            (click)="sincronizarAhora()"
+          >
+            {{ sincronizando() ? 'Sincronizando…' : '↻ Sincronizar ahora' }}
+          </button>
+          <kiosco-ayuda titulo="Sincronizar ahora" [texto]="AYUDA.sincronizar" alinear="izquierda" />
+          <button
+            type="button"
+            class="boton-secundario boton-tactil rounded-xl border-2 px-4 py-2"
+            [disabled]="guardandoDiagnostico()"
+            (click)="guardarDiagnostico()"
+          >
+            {{ guardandoDiagnostico() ? 'Guardando…' : '🩺 Guardar diagnóstico' }}
+          </button>
+          <kiosco-ayuda titulo="Guardar diagnóstico" [texto]="AYUDA.diagnostico" alinear="izquierda" />
           @if (ek.actualizacionLista && s.rol === 'admin') {
             <span class="font-bold" style="color: var(--kiosko-atencion)">Hay una versión nueva lista: {{ ek.actualizacionLista }}</span>
             <button

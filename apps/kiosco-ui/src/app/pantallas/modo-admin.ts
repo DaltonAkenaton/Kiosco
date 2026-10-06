@@ -103,6 +103,14 @@ const AYUDA = {
     'Este kiosco descarga solo las versiones nuevas del programa y las instala solo de madrugada ' +
     '(entre 2 y 5 de la mañana), cuando nadie lo está usando. Si la quieres ya, pica el botón cuando ' +
     'nadie esté checando: el kiosco se cierra y vuelve a abrir solo en uno o dos minutos.',
+  diagnostico:
+    'Guarda en una memoria USB el "diario" de este kiosco: lo que le ha pasado en las últimas dos ' +
+    'semanas (cámara desconectada, sin internet, errores). Sirve para que quien da soporte entienda ' +
+    'una falla sin venir. No lleva fotos, PINes ni contraseñas.',
+  sincronizar:
+    'Este kiosco habla con la oficina solo, cada minuto: manda los registros y trae los cambios del ' +
+    'panel (altas, bajas, PINes, configuración). Si acabas de cambiar algo en el panel y no quieres ' +
+    'esperar, pica este botón. Sin internet no puede hacer nada, pero tampoco se pierde nada.',
   descartar:
     'Para registros que la oficina no aceptó y que no se van a volver a enviar (por ejemplo, pruebas ' +
     'hechas con el kiosco dado de baja). No se borran: dejan de verse aquí y quedan guardados en esta ' +
@@ -379,6 +387,43 @@ export class ModoAdmin implements OnInit, OnDestroy {
     this.motivoDescarte.set(null);
     this.verRechazados.set(false);
     await this.cargarEstadoKiosco();
+  }
+
+  /** "Sincronizar ahora": no esperar el minuto tras un cambio en el panel. */
+  protected readonly sincronizando = signal(false);
+
+  protected async sincronizarAhora(): Promise<void> {
+    const sesion = this.sesion();
+    if (!sesion || this.sincronizando()) return;
+    this.sincronizando.set(true);
+    const datos = this.atender(await this.puente.admin?.sincronizarAhora(sesion.token));
+    this.sincronizando.set(false);
+    if (!datos) return;
+    this.avisoEstado.set(
+      !datos.ok
+        ? 'No se pudo hablar con la oficina (¿hay internet?). Lo guardado aquí no se pierde: se manda solo en cuanto vuelva la conexión.'
+        : datos.pendientes > 0
+          ? `Listo: ya está al día con la oficina, pero ${datos.pendientes} registro(s) siguen sin enviarse. Se reintentan solos.`
+          : 'Listo: este kiosco ya está al día con la oficina (empleados, PINes y configuración).',
+    );
+    await this.cargarEstadoKiosco();
+  }
+
+  /** "Guardar diagnostico": el diario del kiosco a una memoria USB, para soporte. */
+  protected readonly guardandoDiagnostico = signal(false);
+
+  protected async guardarDiagnostico(): Promise<void> {
+    const sesion = this.sesion();
+    if (!sesion || this.guardandoDiagnostico()) return;
+    this.guardandoDiagnostico.set(true);
+    const resultado = await this.puente.admin?.guardarDiagnostico(sesion.token);
+    this.guardandoDiagnostico.set(false);
+    const datos = this.atender(resultado);
+    if (datos) {
+      this.avisoEstado.set(
+        `Listo: se guardó la carpeta "${datos.carpeta.split(/[\\/]/).pop()}" (${datos.archivos} día(s) de diario). Mándala a quien le da soporte al sistema.`,
+      );
+    }
   }
 
   protected async instalarActualizacion(): Promise<void> {

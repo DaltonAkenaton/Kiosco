@@ -92,6 +92,19 @@ app.whenReady().then(async () => {
     await esperar(900);
   };
   const texto = () => js('document.body.innerText');
+  /** Elige `valor` en el <select> (o escribe en el <input>) cuya etiqueta dice `etiqueta`. */
+  const elegir = async (etiqueta, valor) => {
+    const ok = await js(`(() => {
+      const l = [...document.querySelectorAll('label')].find((x) => x.textContent.includes(${JSON.stringify(etiqueta)}));
+      const c = l?.querySelector('select, input'); if (!c) return false;
+      c.value = ${JSON.stringify(valor)}; c.dispatchEvent(new Event('change', { bubbles: true })); return true; })()`);
+    if (!ok) throw new Error(`no encontre el campo "${etiqueta}"`);
+    await esperar(1500);
+  };
+  /** El numero rojo del menu junto a esa seccion ("Kioscos ②"), o 0. */
+  const insignia = async (seccion) => Number(await js(`(() => {
+    const a = [...document.querySelectorAll('.enlace-menu')].find((x) => x.textContent.includes(${JSON.stringify(seccion)}));
+    return a?.querySelector('.insignia-pendientes')?.textContent ?? '0'; })()`));
 
   /** El enlace del ultimo correo que le llego a `correo` en Mailpit (Supabase local). */
   const enlaceDelCorreo = async (correo) => {
@@ -199,6 +212,42 @@ app.whenReady().then(async () => {
     idEventoDescarte = eventoDescarte.id;
     await ir('/kioscos');
     comprobar('muestra las alertas', (await texto()).includes('Para atender'));
+
+    // Camara que falla a ratos (0028): 3 desconexiones en la semana.
+    for (const dias of [1, 2, 3]) {
+      await bd.query(`insert into eventos_dispositivo (id, dispositivo_id, tipo, detalle, ocurrido_en)
+        values (gen_random_uuid(), '00000000-0000-4000-8000-00000000d001', 'camara_desconectada', '{}', now() - make_interval(days => $1))`, [dias]);
+    }
+    await picar('↻ Actualizar');
+    await esperar(1000);
+    comprobar('avisa de la cámara que se desconecta a ratos (con cuántas veces)',
+      /la cámara se desconectó \d+ veces desde el/.test(await texto()));
+    comprobar('y el menú muestra el número junto a "Kioscos"', (await insignia('Kioscos')) >= 1, String(await insignia('Kioscos')));
+
+    // Alguien dado de baja que registro en un kiosco sin internet (0028).
+    const { rows: [deBaja] } = await bd.query(
+      `insert into empleados (usuario, nombre, apellido_paterno, pin_hash)
+       values ('zbaja' || floor(random() * 1e6)::int, 'Zoila', 'DeBaja', extensions.crypt('1234', extensions.gen_salt('bf', 4)))
+       returning id`);
+    // La baja, como si la hubiera hecho el jefe desde el panel (actor y motivo en la bitacora).
+    await bd.query('begin');
+    await bd.query(`select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-00000000a001"}', true)`);
+    await bd.query(`select set_config('app.motivo', 'Ya no trabaja aquí (prueba del panel)', true)`);
+    await bd.query('update empleados set activo = false where id = $1', [deBaja.id]);
+    await bd.query('commit');
+    await bd.query(
+      `insert into marcas (id, empleado_id, dispositivo_id, tipo, hora_dispositivo, hora_estimada, monotonico_ms, arranque_id)
+       values (gen_random_uuid(), $1, '00000000-0000-4000-8000-00000000d001', 'entrada', now(), now(), 0, gen_random_uuid())`, [deBaja.id]);
+    await ir('/asistencia');
+    comprobar('Asistencia avisa arriba de los registros de personas dadas de baja',
+      (await texto()).includes('Para atender') && (await texto()).includes('personas que ya estaban dadas de baja'));
+    comprobar('y el menú lo cuenta junto a "Asistencia"', (await insignia('Asistencia')) >= 1);
+    await picar('Ver cuáles');
+    await esperar(1000);
+    comprobar('"Ver cuáles" filtra justo esos registros', (await texto()).includes('Zoila DeBaja') &&
+      (await texto()).includes('Persona dada de baja'));
+    await elegir('Revisión', '');
+    await ir('/kioscos');
     comprobar('PC compartida: un kiosco que no se reporta sale "Cerrado" y no como alerta',
       (await texto()).includes('Cerrado') && !/no se reporta desde/.test(await texto()));
     comprobar('"Lo que se hizo en los kioscos": el descarte con quién, cuántos y el motivo',
@@ -471,6 +520,20 @@ app.whenReady().then(async () => {
     await esperar(1500);
     comprobar('con "Todo" sí aparecen', deKioscos === 0 ||
       (await js(`[...document.querySelectorAll('tbody tr')].some((tr) => tr.textContent.includes('El sistema (un kiosco)'))`)));
+    // Filtros nuevos (06-10-2026)
+    await elegir('Qué tipo de cambio', 'altas');
+    comprobar('filtro "Altas de personal": aparece el alta, no la captura manual',
+      (await texto()).includes(motivoAlta) && !(await texto()).includes('No hubo luz en la manana (prueba)'));
+    await elegir('Qué tipo de cambio', '');
+    await elegir('Buscar en el motivo', 'hubo luz');
+    comprobar('buscar en el motivo encuentra la captura manual y no lo demás',
+      (await texto()).includes('No hubo luz en la manana (prueba)') && !(await texto()).includes(motivoAlta));
+    await elegir('Buscar en el motivo', '');
+    await elegir('Qué tipo de cambio', 'bajas');
+    comprobar('filtro "Bajas de personal": la de la prueba de Asistencia, con su motivo',
+      (await texto()).includes('Ya no trabaja aquí (prueba del panel)') && !(await texto()).includes(motivoAlta));
+    await picar('Quitar filtros');
+    comprobar('"Quitar filtros" vuelve a mostrar todo', (await texto()).includes(motivoAlta));
     await capturar('5-bitacora');
     await ir('/mi-cuenta');
     comprobar('Mi cuenta muestra el usuario del kiosco', (await texto()).includes('jefe'));

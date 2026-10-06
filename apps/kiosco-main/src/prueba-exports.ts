@@ -123,6 +123,7 @@ export {
   iniciarSincronizacion,
   estadoDeLaNube,
   reiniciarSincronizacionParaPrueba,
+  sincronizarAhora,
 } from './servicios/sincronizacion';
 export { leerCredencial, rutaDeLaCredencial, olvidarCredencialEnMemoria } from './servicios/credencial-kiosco';
 export { EsquemaEnrolamiento } from './ipc/esquemas';
@@ -137,3 +138,4 @@ export { registrarManejadoresIpc } from './ipc/manejadores';
 export { registrarManejadoresAdmin } from './ipc/manejadores-admin';
 export { aplicarPoliticasDeSesion } from './seguridad';
 export { esBuenMomentoParaInstalar } from './actualizaciones';
+export { iniciarDiagnostico, limpiar, copiarDiagnostico } from './servicios/diagnostico';

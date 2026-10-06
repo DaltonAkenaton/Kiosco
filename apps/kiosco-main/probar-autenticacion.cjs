@@ -989,6 +989,43 @@ app.whenReady().then(async () => {
     bd.EsquemaElegirPin.safeParse({ tokenCambioPin: pasePrueba, pinNuevo: 'abcd' }).success === false &&
     bd.EsquemaElegirPin.safeParse({ tokenCambioPin: pasePrueba, pinNuevo: '12345' }).success === false);
 
+  // --- Diario en disco (servicios/diagnostico.ts, 06-10-2026) ---
+  // Al final a proposito: a partir de aqui la consola tambien va al archivo.
+  {
+    const fsD = require('node:fs');
+    const pathD = require('node:path');
+    const hashFalso = '$2b$10$' + 'a'.repeat(53);
+    const limpio = bd.limpiar(`foto data:image/jpeg;base64,${'A'.repeat(500)} y pin ${hashFalso}`);
+    comprobar('el diario nunca guarda fotos ni hashes de PIN',
+      limpio.includes('[imagen]') && limpio.includes('[hash]') && !limpio.includes('AAAA') && !limpio.includes(hashFalso), limpio);
+    comprobar('un renglon larguisimo se corta', bd.limpiar('x'.repeat(10000)).length < 2100);
+
+    const datosD = pathD.join(os.tmpdir(), 'kiosko-diagnostico-' + Date.now());
+    const carpetaD = pathD.join(datosD, 'diagnostico');
+    fsD.mkdirSync(carpetaD, { recursive: true });
+    const viejo = pathD.join(carpetaD, 'kiosco-2020-01-01.log');
+    fsD.writeFileSync(viejo, 'viejo');
+    const haceUnMes = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    fsD.utimesSync(viejo, haceUnMes, haceUnMes);
+
+    bd.iniciarDiagnostico(datosD, () => 'America/Matamoros');
+    console.warn('[prueba] camara desconectada (prueba del diario)', hashFalso);
+    const archivos = fsD.readdirSync(carpetaD).filter((n) => n.endsWith('.log'));
+    const contenido = archivos.map((n) => fsD.readFileSync(pathD.join(carpetaD, n), 'utf8')).join('');
+    comprobar('lo que se escribe en la consola queda en el archivo del dia',
+      archivos.length === 1 && /kiosco-\d{4}-\d{2}-\d{2}\.log/.test(archivos[0]) && contenido.includes('AVISO') &&
+      contenido.includes('camara desconectada (prueba del diario)'), archivos.join(','));
+    comprobar('y ahi tampoco queda el hash', !contenido.includes(hashFalso) && contenido.includes('[hash]'));
+    comprobar('los archivos de hace mas de dos semanas se borran solos', !fsD.existsSync(viejo));
+
+    const destinoD = pathD.join(datosD, 'memoria-usb');
+    fsD.mkdirSync(destinoD);
+    const copia = bd.copiarDiagnostico(destinoD, 'Kiosco: prueba');
+    comprobar('"Guardar diagnostico" copia el diario y un resumen',
+      copia.archivos === 1 && fsD.existsSync(pathD.join(copia.carpeta, 'resumen.txt')) &&
+      fsD.readdirSync(copia.carpeta).some((n) => n.endsWith('.log')), JSON.stringify(copia));
+  }
+
   console.log(fallos === 0 ? '\nTODAS LAS PRUEBAS PASARON' : `\n${fallos} PRUEBA(S) FALLARON`);
   app.exit(fallos === 0 ? 0 : 1);
 });

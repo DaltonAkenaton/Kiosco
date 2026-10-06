@@ -120,6 +120,9 @@ const estado: EstadoKiosco = {
   pcCompartida: CONFIG.pausa.pcCompartidaPorDefecto,
 };
 
+/** ¿Ya llego el primer reporte de la camara en este arranque? Ver `reportarEstadoCamara`. */
+let camaraYaReportada = false;
+
 /**
  * Arma el paquete de configuracion que viaja a la pantalla.
  *
@@ -766,6 +769,28 @@ export function registrarManejadoresIpc(): void {
     if (!validacion.success) return;
 
     const { disponible, detalle } = validacion.data;
+
+    /**
+     * EL PRIMER REPORTE DE CADA ARRANQUE (arreglo del 06-10-2026).
+     *
+     * `estado.camaraDisponible` arranca en `false`. Antes eso causaba dos
+     * errores opuestos:
+     *   - Cada vez que se ABRIA el kiosco con la camara bien, salia un
+     *     "camara_reconectada" falso (de false a true). En una PC compartida,
+     *     que se abre y se cierra varias veces al dia, llenaba de ruido.
+     *   - Si el kiosco arrancaba YA SIN camara, no salia nada (de false a
+     *     false). Justo la camara mas descompuesta no dejaba rastro.
+     * Ahora el primer reporte solo deja evento si es malo.
+     */
+    if (!camaraYaReportada) {
+      camaraYaReportada = true;
+      estado.camaraDisponible = disponible;
+      if (!disponible) {
+        console.info(`[camara] no disponible al arrancar${detalle ? ` - ${detalle}` : ''}`);
+        registrarEvento('camara_desconectada', { detalle: detalle ?? null, alArrancar: true });
+      }
+      return;
+    }
 
     // Solo nos interesa cuando CAMBIA, no cada 5 segundos.
     if (estado.camaraDisponible !== disponible) {

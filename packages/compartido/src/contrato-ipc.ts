@@ -114,6 +114,10 @@ export const CANALES = {
   adminRecuperarFotos: 'admin:recuperar-fotos',
   /** Instala la version nueva ya descargada y reinicia el kiosco. */
   adminInstalarActualizacion: 'admin:instalar-actualizacion',
+  /** Una vuelta de sincronizacion en el momento (subir, bajar, latir). */
+  adminSincronizarAhora: 'admin:sincronizar-ahora',
+  /** Copiar el diario del kiosco (diagnostico) a una memoria o carpeta. */
+  adminGuardarDiagnostico: 'admin:guardar-diagnostico',
   /** Un solo sentido: la sesion se cerro sola por inactividad. */
   adminSesionCerrada: 'admin:sesion-cerrada',
 } as const;
@@ -468,6 +472,10 @@ export interface ApiAdmin {
   reintentarRechazados(token: string): Promise<ResultadoAdmin<{ reintentados: number }>>;
   descartarRechazados(token: string, motivo: string): Promise<ResultadoAdmin<{ descartados: number }>>;
   instalarActualizacion(token: string): Promise<ResultadoAdmin<null>>;
+  /** `ok` = se pudo hablar con la oficina; `pendientes` = lo que sigue sin enviarse. */
+  sincronizarAhora(token: string): Promise<ResultadoAdmin<{ ok: boolean; pendientes: number }>>;
+  /** Abre la ventana de Windows para elegir donde. `null` si se cancelo. */
+  guardarDiagnostico(token: string): Promise<ResultadoAdmin<{ carpeta: string; archivos: number } | null>>;
   recuperarFotos(token: string, contrasena: string): Promise<ResultadoAdmin<ResultadoRecuperacionFotos>>;
   /** La sesion se cerro sola (inactividad). */
   alCerrarSesion(callback: () => void): () => void;

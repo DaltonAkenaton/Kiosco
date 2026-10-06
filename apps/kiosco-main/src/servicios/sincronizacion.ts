@@ -546,6 +546,26 @@ export async function ciclo(): Promise<void> {
 }
 
 /**
+ * El boton "Sincronizar ahora" del modo administrador (06-10-2026).
+ *
+ * Una vuelta COMPLETA en el momento: subir lo pendiente, bajar el catalogo
+ * (bajas, PINes, configuracion) y avisar al panel como esta la camara, sin
+ * esperar a que toque cada cosa. Sirve al jefe que acaba de cambiar algo en
+ * el panel y no quiere esperar el minuto. Sin internet no hace milagros:
+ * lo dice y ya.
+ */
+export async function sincronizarAhora(): Promise<{ ok: boolean; pendientes: number }> {
+  if (!sincronizacionDisponible() || !leerCredencial()) return { ok: false, pendientes: contarPendientes() };
+  // Si ya hay una vuelta en camino, se espera a que acabe y se da otra.
+  const limite = Date.now() + S.segundosTiempoLimitePeticion * 1000;
+  while (enCurso && Date.now() < limite) await new Promise((listo) => setTimeout(listo, 200));
+  ultimoPullMs = 0;
+  ultimoLatidoMs = 0;
+  await ciclo();
+  return { ok: nube === 'en_linea', pendientes: contarPendientes() };
+}
+
+/**
  * Pide una vuelta pronto (tras guardar una marca). No es inmediata a
  * proposito: junta en un solo viaje las marcas que llegan seguidas.
  */
