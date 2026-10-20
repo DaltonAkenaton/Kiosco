@@ -239,9 +239,24 @@ const PIN_PROPIO_SIN_SUBIR = `EXISTS (
    WHERE o.tipo_registro = 'cambio_pin' AND o.sincronizado_en IS NULL AND o.rechazado_en IS NULL
      AND json_extract(o.payload, '$.empleadoId') = excluded.id)`;
 
-/** Aplica el catalogo completo en una sola transaccion. */
-export function aplicarCatalogo(catalogo: CatalogoRecibido): void {
+/**
+ * Aplica el catalogo completo en una sola transaccion.
+ *
+ * `completo`: se pidio SIN cursor (primera vez o recien enrolado), asi que la
+ * nube mando a TODOS. Entonces quien este en el kiosco y no venga en la lista
+ * es de otra base (por ejemplo, la de pruebas, si la PC se uso antes para
+ * probar) y se desactiva. Sin esto, esos empleados seguian en la lista y esos
+ * administradores podian entrar al modo administrador (20-10-2026). No se
+ * borran: sus marcas los siguen nombrando.
+ *
+ * Devuelve cuantos se desactivaron por no venir en la lista.
+ */
+export function aplicarCatalogo(
+  catalogo: CatalogoRecibido,
+  opciones: { completo?: boolean } = {},
+): { empleadosAjenos: number; administradoresAjenos: number } {
   const bd = baseDeDatos();
+  const ajenos = { empleadosAjenos: 0, administradoresAjenos: 0 };
 
   enTransaccion(() => {
     // --- Empleados (incluidas las bajas, que llegan con activo = false) ---
@@ -280,6 +295,24 @@ export function aplicarCatalogo(catalogo: CatalogoRecibido): void {
       admin.run(a.id, a.usuario, a.nombre, a.contrasena_hash, a.rol, a.activo ? 1 : 0, a.actualizado_en);
     }
 
+    // --- Lo que la nube no conoce, fuera (solo con el catalogo completo) ---
+    if (opciones.completo) {
+      const desactivarAjenos = (tabla: 'empleados_cache' | 'administradores_cache', ids: string[]): number =>
+        Number(
+          bd
+            .prepare(
+              `UPDATE ${tabla} SET activo = 0
+                WHERE activo = 1 AND id NOT IN (SELECT value FROM json_each(?))`,
+            )
+            .run(JSON.stringify(ids)).changes,
+        );
+      ajenos.empleadosAjenos = desactivarAjenos('empleados_cache', catalogo.empleados.map((e) => e.id));
+      ajenos.administradoresAjenos = desactivarAjenos(
+        'administradores_cache',
+        catalogo.administradores.map((a) => a.id),
+      );
+    }
+
     // --- Configuracion: llega COMPLETA, se reemplaza completa ---
     // Guardada como JSON (texto): '30', '"America/Matamoros"'. Quien la lea
     // la interpreta con JSON.parse (ver configuracion-vigente.ts).
@@ -305,6 +338,7 @@ export function aplicarCatalogo(catalogo: CatalogoRecibido): void {
 
     if (catalogo.cursor) guardarEstadoLocal(CLAVE_CURSOR_CATALOGO, catalogo.cursor);
   });
+  return ajenos;
 }
 
 /**

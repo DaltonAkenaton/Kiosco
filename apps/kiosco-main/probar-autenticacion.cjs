@@ -847,6 +847,41 @@ app.whenReady().then(async () => {
     bdSql.prepare('SELECT hora_estimada_ms FROM ultimas_marcas_cache WHERE empleado_id = ?').get(antesDalton.id).hora_estimada_ms > Date.parse('2002-01-01'));
   comprobar('el cursor se recuerda para la proxima vez', bd.leerEstadoLocal('cursor_catalogo') === '2026-09-23T12:00:00.000Z');
 
+  // Restos de OTRA base (20-10-2026): una laptop usada como kiosco de pruebas
+  // y luego enrolada en produccion seguia mostrando al personal de pruebas.
+  const idAjeno = crypto.randomUUID();
+  const idAdminAjeno = crypto.randomUUID();
+  bdSql.prepare(`INSERT INTO empleados_cache (id, usuario, nombre, apellido_paterno, pin_hash, activo, actualizado_en)
+                 VALUES (?, 'ajeno.pruebas', 'Ajeno', 'De Pruebas', ?, 1, '2026-09-26T00:00:00Z')`).run(idAjeno, hashNube);
+  bdSql.prepare(`INSERT INTO administradores_cache (id, usuario, nombre, contrasena_hash, rol, activo, actualizado_en)
+                 VALUES (?, 'admin.pruebas', 'Admin de pruebas', ?, 'admin', 1, '2026-09-26T00:00:00Z')`).run(idAdminAjeno, hashNube);
+  const activosAntes = bdSql.prepare('SELECT id FROM empleados_cache WHERE activo = 1 AND id <> ?').all(idAjeno).map((f) => f.id);
+  const adminsAntes = bdSql.prepare('SELECT id FROM administradores_cache WHERE activo = 1 AND id <> ?').all(idAdminAjeno).map((f) => f.id);
+  const catalogoSoloDalton = {
+    empleados: [{
+      id: idNube, usuario: 'dgomez', numero_empleado: '1001', nombre: 'Dalton', apellido_paterno: 'Gómez',
+      apellido_materno: 'Arellano', pin_hash: hashNube, pin_temporal: false, activo: true,
+      actualizado_en: new Date().toISOString(),
+    }],
+    administradores: [], ultimasMarcas: [], cursor: '2026-09-23T12:00:00.000Z',
+    // La misma de arriba: la configuracion llega completa y se reemplaza.
+    configuracion: { intentos_pin_maximos: 6, umbral_brillo_minimo: 'no es numero', zona_horaria: 'America/Matamoros' },
+  };
+  const incremental = bd.aplicarCatalogo(catalogoSoloDalton);
+  comprobar('con cursor (incremental) NO se desactiva a quien no viene: solo llegan los cambios',
+    incremental.empleadosAjenos === 0 && bd.buscarPorId(idAjeno).activo === true);
+  const completo = bd.aplicarCatalogo(catalogoSoloDalton, { completo: true });
+  comprobar('catalogo completo: el empleado que la nube no conoce se desactiva',
+    completo.empleadosAjenos >= 1 && bd.buscarPorId(idAjeno).activo === false, JSON.stringify(completo));
+  comprobar('y el administrador que la nube no conoce, tambien (ya no entra al modo administrador)',
+    completo.administradoresAjenos >= 1 &&
+      bdSql.prepare('SELECT activo FROM administradores_cache WHERE id = ?').get(idAdminAjeno).activo === 0);
+  comprobar('el que si viene sigue activo', bd.buscarPorId(idNube).activo === true);
+  comprobar('el ajeno NO se borra (sus marcas lo nombran)', Boolean(bd.buscarPorId(idAjeno)));
+  // Las pruebas de abajo usan a los demas: se dejan como estaban.
+  for (const id of activosAntes) bdSql.prepare('UPDATE empleados_cache SET activo = 1 WHERE id = ?').run(id);
+  for (const id of adminsAntes) bdSql.prepare('UPDATE administradores_cache SET activo = 1 WHERE id = ?').run(id);
+
   // --- La configuracion del jefe ---
   comprobar('el kiosco obedece la configuracion de la nube (6 intentos de PIN)', bd.reglasDelPin().intentosMaximos === 6);
   comprobar('un valor absurdo NO se obedece: se usa el respaldo',

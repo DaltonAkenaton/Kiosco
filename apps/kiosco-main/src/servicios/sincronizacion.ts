@@ -329,12 +329,8 @@ const EsquemaCatalogo = z.object({
 });
 
 async function bajar(credencial: CredencialKiosco, segundosLimite?: number): Promise<void> {
-  const r = await llamar(
-    'catalogo',
-    { desde: leerEstadoLocal(CLAVE_CURSOR_CATALOGO) },
-    credencial.token,
-    segundosLimite,
-  );
+  const desde = leerEstadoLocal(CLAVE_CURSOR_CATALOGO);
+  const r = await llamar('catalogo', { desde }, credencial.token, segundosLimite);
   if (r.estado === 401) return cambiarNube('no_reconocido');
   if (r.estado === 403) return cambiarNube('revocado');
 
@@ -343,7 +339,14 @@ async function bajar(credencial: CredencialKiosco, segundosLimite?: number): Pro
     throw new SinConexion(`catalogo con forma inesperada (${r.estado})`);
   }
 
-  aplicarCatalogo(catalogo.data);
+  // Sin cursor la nube manda a todos: lo que no venga es de otra base.
+  const ajenos = aplicarCatalogo(catalogo.data, { completo: desde === null });
+  if (ajenos.empleadosAjenos > 0 || ajenos.administradoresAjenos > 0) {
+    console.info(
+      `[sync] fuera de la lista por no existir en la nube: ${ajenos.empleadosAjenos} empleado(s), ` +
+        `${ajenos.administradoresAjenos} administrador(es)`,
+    );
+  }
   ultimaBajadaOkMs = Date.now();
   // El jefe pudo cambiar "PC compartida" en el panel: la pantalla y el inicio
   // con Windows se ajustan sin reiniciar.
