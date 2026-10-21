@@ -83,6 +83,12 @@ button:disabled {
 .menu-principal {
   scrollbar-width: thin;
 }
+/* En celular el menu no cabe: se desvanece a la derecha, pista de que se desliza. */
+@media (max-width: 639px) {
+  .menu-principal {
+    mask-image: linear-gradient(to right, black 85%, transparent);
+  }
+}
 .enlace-menu {
   white-space: nowrap;
   border-radius: 0.6rem;
@@ -136,9 +142,33 @@ button:disabled {
   outline: 2px solid var(--kiosko-institucion-secundario);
   outline-offset: 1px;
 }
-/* Los calendarios nativos del navegador, con el color del tema oscuro. */
-input[type='date'].campo {
+/* Los calendarios y relojes nativos del navegador, con el color del tema
+   oscuro. Sin esto el icono del reloj salia gris oscuro sobre el fondo oscuro:
+   no se veia ni parecia boton (prueba del autor, 20-10-2026). Al picar en
+   cualquier parte del campo se abre el selector (raiz.ts). */
+input[type='date'].campo,
+input[type='time'].campo {
   color-scheme: dark;
+  cursor: pointer;
+}
+input[type='date'].campo::-webkit-calendar-picker-indicator,
+input[type='time'].campo::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 1;
+  padding: 0.15rem;
+  border-radius: 0.375rem;
+}
+input[type='date'].campo::-webkit-calendar-picker-indicator:hover,
+input[type='time'].campo::-webkit-calendar-picker-indicator:hover {
+  background-color: color-mix(in srgb, var(--kiosko-texto) 15%, transparent);
+}
+
+/* Casillas y botones redondos con el color del panel, no el azul del navegador (Notas). */
+.casilla,
+input[type='checkbox'],
+input[type='radio'] {
+  accent-color: var(--kiosko-institucion-secundario);
+  cursor: pointer;
 }
 
 /* --------------------------------------------------------------------------
@@ -247,6 +277,16 @@ main table tbody tr.encabezado-dia td {
 }
 main table tbody tr.encabezado-dia:hover {
   background-color: transparent;
+}
+
+/* La fila del caso al llegar desde Pendientes (Reportes, 20-10-2026):
+   fondo amarillo suave y una barra a la izquierda, para verla de un vistazo. */
+main table tbody tr.fila-resaltada td {
+  background-color: color-mix(in srgb, var(--kiosko-atencion) 22%, transparent);
+}
+main table tbody tr.fila-resaltada td:first-child {
+  box-shadow: inset 6px 0 0 var(--kiosko-atencion);
+  font-weight: 700;
 }
 
 /* Dentro de una ventana (dialogo) las tablas van sin marco propio. */

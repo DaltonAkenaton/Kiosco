@@ -23,7 +23,13 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { desempatarUsuario, generarUsuario } from '@kiosko/compartido';
+import {
+  IDENTIFICACION,
+  desempatarUsuario,
+  generarUsuario,
+  normalizarNumeroEmpleado,
+  numeroDeEmpleadoValido,
+} from '@kiosko/compartido';
 import { Ayuda } from '../componentes/ayuda';
 import { CargandoTabla, RENGLONES_CARGANDO } from '../componentes/cargando-tabla';
 import { Dialogo, mensajeDeError } from '../componentes/dialogo';
@@ -159,12 +165,25 @@ export class Empleados implements OnInit {
     await this.cargar();
   }
 
+  /** ¿En el kiosco se checa con el numero de empleado? (Configuracion, 0029) */
+  protected readonly identificarConNumero = signal(false);
+
+  /** Activos sin numero: con "checar con numero" encendido, no podrian checar. */
+  protected readonly sinNumero = computed(() =>
+    this.empleados().filter((e) => e.activo && !e.anonimizado_en && !e.numero_empleado),
+  );
+  protected readonly nombresSinNumero = computed(() => this.sinNumero().map((e) => this.nombreCompleto(e)).join(', '));
+
   private async cargar(): Promise<void> {
-    const { data, error } = await this.sesion.bd
-      .from('empleados')
-      .select('id, usuario, numero_empleado, nombre, apellido_paterno, apellido_materno, pin_temporal, activo, anonimizado_en')
-      .order('nombre')
-      .order('apellido_paterno');
+    const [{ data, error }, ajuste] = await Promise.all([
+      this.sesion.bd
+        .from('empleados')
+        .select('id, usuario, numero_empleado, nombre, apellido_paterno, apellido_materno, pin_temporal, activo, anonimizado_en')
+        .order('nombre')
+        .order('apellido_paterno'),
+      this.sesion.bd.from('configuracion').select('valor').eq('clave', 'identificar_con_numero').maybeSingle(),
+    ]);
+    this.identificarConNumero.set(Number(ajuste.data?.valor) === 1);
     this.cargando.set(false);
     if (error) {
       this.error.set('No se pudo traer la lista. Revisa el internet y vuelve a intentar.');
@@ -227,13 +246,22 @@ export class Empleados implements OnInit {
       this.errorAccion.set('Falta el nombre o el apellido paterno.');
       return false;
     }
-    // Solo digitos (29-09-2026: alguien escribio "no tiene" y se guardo como
-    // numero). Sin largo fijo: los de la universidad pueden ser mas largos
-    // que los que teclea el kiosco.
-    if (d.numero.trim() !== '' && !/^[0-9]+$/.test(d.numero.trim())) {
-      this.errorAccion.set('El número de empleado lleva sólo números. Si no tiene, déjalo vacío.');
+    // 29-09-2026: alguien escribio "no tiene" y se guardo como numero.
+    // 20-10-2026: los de la universidad pueden llevar LETRAS ("A12345"); se
+    // guardan en mayusculas, y con el largo que el kiosco deja teclear
+    // (compartido/usuarios.ts): uno mas largo seria alguien que no puede checar.
+    // Y es obligatorio (pedido del autor): sin numero no podria checar si el
+    // kiosco esta en modo numero. La base lo deja vacio sólo al anonimizar.
+    const numero = normalizarNumeroEmpleado(d.numero);
+    if (numero === '') {
+      this.errorAccion.set('Falta el número de empleado.');
       return false;
     }
+    if (!numeroDeEmpleadoValido(numero)) {
+      this.errorAccion.set(this.problemaConElNumero(numero));
+      return false;
+    }
+    if (numero !== d.numero) this.datos.update((x) => ({ ...x, numero }));
     if (!/^[a-z][a-z0-9.]{2,19}$/.test(d.usuario.trim())) {
       this.errorAccion.set('El usuario debe empezar con una letra y tener de 3 a 20 letras o números, sin espacios ni acentos.');
       return false;
@@ -292,6 +320,15 @@ export class Empleados implements OnInit {
     this.pines.set([]);
     this.recienDadoDeAlta.set(null);
     void this.router.navigate(['/horarios'], { queryParams: { empleado: empleado.id } });
+  }
+
+  /** Por que un numero de empleado no sirve, en palabras. */
+  private problemaConElNumero(numero: string): string {
+    const { largoNumeroEmpleadoMinimo: min, largoNumeroEmpleadoMaximo: max } = IDENTIFICACION;
+    if (!/^[A-Z0-9-]+$/.test(numero)) {
+      return `El número de empleado "${numero}" sólo puede llevar letras sin acento, números y guion.`;
+    }
+    return `El número de empleado debe tener de ${min} a ${max} letras o números ("${numero}" tiene ${numero.length}).`;
   }
 
   protected async guardarEdicion(empleado: Empleado, motivo: string): Promise<void> {
@@ -461,12 +498,13 @@ export class Empleados implements OnInit {
     }
 
     const usados = this.empleados().map((e) => e.usuario);
+    const numerosDelArchivo: string[] = [];
     const filas = renglones.slice(1).map((c) => {
       const d = {
         nombre: c[iNombre] ?? '',
         paterno: c[iPaterno] ?? '',
         materno: iMaterno >= 0 ? (c[iMaterno] ?? '') : '',
-        numero: iNumero >= 0 ? (c[iNumero] ?? '') : '',
+        numero: iNumero >= 0 ? normalizarNumeroEmpleado(c[iNumero] ?? '') : '',
         usuario: '',
       };
       const base = generarUsuario(d.nombre, d.paterno);
@@ -475,11 +513,16 @@ export class Empleados implements OnInit {
       else {
         d.usuario = desempatarUsuario(base, usados);
         usados.push(d.usuario);
-        if (d.numero && !/^[0-9]+$/.test(d.numero.trim())) {
-          problema = `El número "${d.numero}" no es un número (déjalo vacío si no tiene)`;
-        } else if (d.numero && this.empleados().some((e) => e.numero_empleado === d.numero)) {
+        if (!d.numero) {
+          problema = 'Falta el número de empleado';
+        } else if (!numeroDeEmpleadoValido(d.numero)) {
+          problema = this.problemaConElNumero(d.numero);
+        } else if (this.empleados().some((e) => e.numero_empleado === d.numero)) {
           problema = `Ya hay alguien con el número ${d.numero}`;
+        } else if (numerosDelArchivo.includes(d.numero)) {
+          problema = `El número ${d.numero} está repetido en el archivo`;
         }
+        numerosDelArchivo.push(d.numero);
       }
       return { ...d, problema };
     });
@@ -507,7 +550,7 @@ export class Empleados implements OnInit {
         filas: [
           ['nombre', 'apellido_paterno', 'apellido_materno', 'numero'],
           ['María Elena', 'Garza', 'Salinas', '1234'],
-          ['José Luis', 'Treviño', '', ''],
+          ['José Luis', 'Treviño', '', 'A12345'],
         ],
         anchos: [24, 22, 22, 14],
       },
@@ -520,7 +563,7 @@ export class Empleados implements OnInit {
           ['1. Ve a la hoja "Empleados" (abajo, en las pestañas).'],
           ['2. Escribe una persona por renglón, debajo de los títulos. NO cambies la primera fila.'],
           ['3. Borra los dos renglones de ejemplo (María Elena y José Luis).'],
-          ['4. "nombre" y "apellido_paterno" son obligatorios. "apellido_materno" y "numero" (de empleado) pueden ir vacíos.'],
+          ['4. "nombre", "apellido_paterno" y "numero" (de empleado, de 4 a 12 letras o números) son obligatorios. "apellido_materno" puede ir vacío.'],
           ['5. No hace falta escribir usuario ni PIN: los pone el sistema.'],
           ['6. Guarda el archivo (Archivo > Guardar) y en el panel: Empleados > Importar lista de Excel > Elegir archivo.'],
           ['7. El panel te muestra la lista para revisar ANTES de dar de alta a nadie. Al final, imprime la hoja de los PIN.'],

@@ -118,6 +118,7 @@ const estado: EstadoKiosco = {
   pausaTerminaEn: null,
   desfaseRelojMs: 0,
   pcCompartida: CONFIG.pausa.pcCompartidaPorDefecto,
+  modoIdentificacion: CONFIG.identificacion.modo,
 };
 
 /** ¿Ya llego el primer reporte de la camara en este arranque? Ver `reportarEstadoCamara`. */
@@ -156,6 +157,7 @@ function configuracionParaInterfaz(): ConfiguracionParaInterfaz {
     segundosParaElegirSiHayDuda: CONFIG.interfaz.segundosParaElegirSiHayDuda,
     segundosSinTeclearAlElegirPin: CONFIG.seguridadPin.segundosSinTeclearAlElegirPin,
     segundosMensajeExito: CONFIG.interfaz.segundosMensajeExito,
+    segundosParaEntrarAlAdministrador: CONFIG.interfaz.segundosParaEntrarAlAdministrador,
     videoEnEspejo: CONFIG.interfaz.videoEnEspejo,
     mostrarTecladoEnPantalla: CONFIG.interfaz.mostrarTecladoEnPantalla,
     intervaloRelojMs: CONFIG.interfaz.intervaloRelojMs,
@@ -646,8 +648,8 @@ export function registrarManejadoresIpc(): void {
       // Si los datos no sirven, devolvemos la configuracion SIN CAMBIOS en vez
       // de un error: la pantalla se redibuja igual que estaba y nadie se queda
       // atorado por un boton de desarrollo.
-      if (validacion.success) {
-        cambiarModoIdentificacion(validacion.data.modo);
+      if (validacion.success && cambiarModoIdentificacion(validacion.data.modo)) {
+        actualizarEstado({ modoIdentificacion: modoIdentificacionVigente() });
       }
 
       return configuracionParaInterfaz();

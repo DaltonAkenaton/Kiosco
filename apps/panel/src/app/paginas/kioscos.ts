@@ -16,7 +16,7 @@ import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { Ayuda } from '../componentes/ayuda';
 import { Dialogo, mensajeDeError } from '../componentes/dialogo';
 import { Avisos } from '../servicios/avisos';
-import { Pendientes } from '../servicios/pendientes';
+import { AvisosDelPanel } from '../servicios/avisos-del-panel';
 import { Sesion } from '../servicios/sesion';
 import { fecha, haceCuanto, hora } from '../textos';
 
@@ -63,7 +63,7 @@ const TEXTOS_DE_ACTIVIDAD: Record<string, (quien: string, d: Record<string, unkn
 export class Kioscos implements OnInit, OnDestroy {
   protected readonly sesion = inject(Sesion);
   private readonly avisos = inject(Avisos);
-  protected readonly pendientes = inject(Pendientes);
+  protected readonly avisosDelPanel = inject(AvisosDelPanel);
   protected readonly zona = this.sesion.zona;
   protected readonly cargando = signal(true);
 
@@ -82,7 +82,7 @@ export class Kioscos implements OnInit, OnDestroy {
    * al terminar de checar, asi que "no se reporta" es lo normal y NO es alerta.
    */
   protected readonly pcCompartida = signal(true);
-  protected readonly ahora = signal(Date.now());
+  protected readonly ahora = signal(this.sesion.ahora());
   protected readonly error = signal<string | null>(null);
 
   protected readonly fecha = fecha;
@@ -120,11 +120,11 @@ export class Kioscos implements OnInit, OnDestroy {
 
   /**
    * Lo que hay que atender, en palabras. Sale de `avisos_del_panel()` (0028)
-   * por el servicio Pendientes: la misma lista que el numero del menu, para
+   * por el servicio AvisosDelPanel: la misma lista que el numero del menu, para
    * que nunca digan cosas distintas. Las reglas (minutos de camara caida,
    * PC compartida, camara que falla a ratos) viven en la base.
    */
-  protected readonly alertas = this.pendientes.deKioscos;
+  protected readonly alertas = this.avisosDelPanel.deKioscos;
 
   async ngOnInit(): Promise<void> {
     await this.cargar();
@@ -143,13 +143,13 @@ export class Kioscos implements OnInit, OnDestroy {
 
   protected async actualizar(): Promise<void> {
     this.actualizando.set(true);
-    await Promise.all([this.cargar(), this.pendientes.actualizar()]);
+    await Promise.all([this.cargar(), this.avisosDelPanel.actualizar()]);
     this.actualizando.set(false);
   }
 
   private async cargar(): Promise<void> {
     void this.cargarActividad();
-    void this.pendientes.actualizar();
+    void this.avisosDelPanel.actualizar();
     const [kioscos, fotos, config] = await Promise.all([
       this.sesion.bd
         .from('dispositivos')
@@ -176,11 +176,11 @@ export class Kioscos implements OnInit, OnDestroy {
       if (c.clave === 'minutos_kiosco_sin_conexion_alerta' && typeof c.valor === 'number') this.minutosSinConexion.set(c.valor);
       if (c.clave === 'kiosco_pc_compartida') this.pcCompartida.set(Number(c.valor) === 1);
     }
-    this.ahora.set(Date.now());
+    this.ahora.set(this.sesion.ahora());
   }
 
   private async cargarActividad(): Promise<void> {
-    const desde = new Date(Date.now() - DIAS_ACTIVIDAD * 24 * 60 * 60 * 1000).toISOString();
+    const desde = new Date(this.sesion.ahora() - DIAS_ACTIVIDAD * 24 * 60 * 60 * 1000).toISOString();
     const [eventos, admins] = await Promise.all([
       this.sesion.bd
         .from('eventos_dispositivo')

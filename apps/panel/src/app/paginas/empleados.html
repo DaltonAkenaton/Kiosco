@@ -28,6 +28,14 @@
   <p class="mt-4 font-bold" style="color: var(--kiosko-peligro)">{{ mensaje }}</p>
 }
 
+<!-- En el kiosco se checa con el numero de empleado (Configuracion, 0029): quien no tiene numero no puede checar. -->
+@if (identificarConNumero() && sinNumero().length > 0) {
+  <p class="mt-4 rounded-xl px-4 py-3 font-semibold" style="background-color: rgb(239 68 68 / 0.18); color: var(--kiosko-peligro)" role="alert">
+    ⚠ En el kiosco se checa con el número de empleado, y {{ sinNumero().length }} persona(s) no tienen número:
+    {{ nombresSinNumero() }}. No pueden checar hasta que se los pongas (Editar).
+  </p>
+}
+
 <div class="tabla-desplazable mt-4">
 <table class="w-full border-collapse text-left">
   <thead>
@@ -122,8 +130,8 @@
     <label class="flex flex-col gap-1">Apellido materno <span class="text-texto-suave text-sm">(si tiene)</span>
       <input class="campo" [value]="datos().materno" (input)="cambiarDato('materno', valor($event))" />
     </label>
-    <label class="flex flex-col gap-1">Número de empleado <span class="text-texto-suave text-sm">(si tiene)</span>
-      <input class="campo" inputmode="numeric" placeholder="Sólo números; vacío si no tiene"
+    <label class="flex flex-col gap-1">Número de empleado
+      <input class="campo uppercase" autocapitalize="characters" placeholder="Como A12345"
              [value]="datos().numero" (input)="cambiarDato('numero', valor($event))" />
     </label>
     <label class="flex flex-col gap-1 sm:col-span-2">
@@ -269,8 +277,8 @@
 
 <!-- ====================== CONSTANCIA ARCO (derecho de acceso) ====================== -->
 @if (constancia(); as c) {
-  <div class="fixed inset-0 z-50 flex items-center justify-center p-6" style="background-color: rgb(0 0 0 / 0.8)">
-    <div class="ventana bg-superficie border-borde hoja-de-pines flex max-h-full w-full max-w-4xl flex-col gap-4 overflow-y-auto rounded-3xl border-2 p-8 text-base">
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-6" style="background-color: rgb(0 0 0 / 0.8)">
+    <div class="ventana bg-superficie border-borde hoja-de-pines flex max-h-full w-full max-w-4xl flex-col gap-4 overflow-y-auto rounded-3xl border-2 p-5 sm:p-8 text-base">
       <div class="no-imprimir flex flex-wrap gap-3">
         <button type="button" class="boton-principal" (click)="imprimirConstancia()">🖨 Imprimir o guardar como PDF</button>
         <button type="button" class="boton-secundario" (click)="descargarArchivoArco()">⬇ Archivo de datos (.json)</button>
@@ -331,8 +339,8 @@
 
 <!-- ====================== LOS PIN, UNA SOLA VEZ ====================== -->
 @if (pines().length > 0) {
-  <div class="fixed inset-0 z-50 flex items-center justify-center p-6" style="background-color: rgb(0 0 0 / 0.8)">
-    <div class="ventana bg-superficie border-borde hoja-de-pines flex max-h-full w-full max-w-2xl flex-col gap-4 overflow-y-auto rounded-3xl border-2 p-8">
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-6" style="background-color: rgb(0 0 0 / 0.8)">
+    <div class="ventana bg-superficie border-borde hoja-de-pines flex max-h-full w-full max-w-2xl flex-col gap-4 overflow-y-auto rounded-3xl border-2 p-5 sm:p-8">
       <h2 class="text-2xl font-bold">{{ pines().length === 1 ? 'Su PIN' : 'Los PIN del personal' }}</h2>
       <p class="no-imprimir text-lg">
         <b>Anótalo o imprímelo ahora:</b> no se vuelve a mostrar. Dáselo a la persona en privado.

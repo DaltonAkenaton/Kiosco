@@ -110,7 +110,15 @@ export {
   descartarRechazados,
   leerEstadoLocal,
 } from './datos/repositorio-sincronizacion';
-export { reglasDelPin, umbralesDeCamara, numeroConfigurado, zonaHorariaVigente, esPcCompartida } from './configuracion-vigente';
+export {
+  reglasDelPin,
+  umbralesDeCamara,
+  numeroConfigurado,
+  zonaHorariaVigente,
+  esPcCompartida,
+  modoIdentificacionVigente,
+} from './configuracion-vigente';
+export { esquemaIdentificacion } from './ipc/esquemas';
 export { minimizar, estaPausado } from './servicios/pausa';
 export { enviarAntesDeCerrar } from './servicios/sincronizacion';
 export {

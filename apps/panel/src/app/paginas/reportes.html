@@ -1,5 +1,5 @@
 <h1 class="text-2xl font-bold">Reportes</h1>
-<p class="text-texto-suave mt-1 max-w-3xl">
+<p class="text-texto-suave mt-1 max-w-5xl">
   Quién llegó a tiempo, quién tuvo retardo o falta, y cuántas horas trabajó.
   <panel-ayuda titulo="¿Cómo se calcula?" [texto]="AYUDA_RECALCULO" alinear="izquierda" />
   El sistema informa; no descuenta nada.
@@ -13,14 +13,10 @@
     <input type="date" class="campo" [value]="hasta()" (change)="cambiar('hasta', valor($event))" />
   </label>
   <label class="flex flex-col gap-1">Empleado
-    <select class="campo" (change)="cambiar('empleadoId', valor($event))">
-      <option value="">Todos</option>
-      @for (e of listaEmpleados(); track e.id) {
-        <option [value]="e.id" [selected]="e.id === empleadoId()">{{ e.nombre }}</option>
-      }
-    </select>
+    <panel-elegir-empleado [opciones]="listaEmpleados()" [valor]="empleadoId()" textoVacio="Todos"
+                           (elegir)="cambiar('empleadoId', $event)" />
   </label>
-  <div class="flex gap-2 pb-0.5">
+  <div class="flex flex-wrap gap-2 pb-0.5">
     <button type="button" class="rounded-xl border-2 px-4 py-2" [class.font-bold]="vista() === 'resumen'"
             [style.border-color]="vista() === 'resumen' ? 'var(--kiosko-institucion-secundario)' : 'var(--kiosko-borde)'"
             (click)="vista.set('resumen')">Resumen por persona</button>
@@ -35,10 +31,28 @@
       </button>
     }
   </div>
+  @if (vista() === 'resumen') {
+    <label class="flex max-w-full flex-col gap-1">Ordenar por
+      <select class="campo max-w-full" data-prueba="orden-resumen" (change)="ordenResumen.set($any(valor($event)))">
+        @for (o of ORDENES_DEL_RESUMEN; track o.valor) {
+          <option [value]="o.valor" [selected]="o.valor === ordenResumen()">{{ o.texto }}</option>
+        }
+      </select>
+    </label>
+  }
   <div class="ml-auto flex flex-wrap gap-2">
     <button type="button" class="boton-secundario" [disabled]="filas().length === 0" (click)="descargarExcel()">⬇ Descargar Excel</button>
     <button type="button" class="boton-secundario" [disabled]="filas().length === 0" (click)="imprimir()">🖨 Imprimir o PDF</button>
   </div>
+</div>
+
+<!-- Periodos de un clic (21-10-2026): "¿quién faltó más este mes?" sin pelear con dos calendarios. -->
+<div class="no-imprimir mt-3 flex flex-wrap items-center gap-2" role="group" aria-label="Periodo">
+  <span class="text-texto-suave">Periodo:</span>
+  @for (p of PERIODOS; track p.valor) {
+    <button type="button" class="enlace-menu !px-3 !py-1" [class.activo]="periodoActual() === p.valor"
+            [attr.aria-pressed]="periodoActual() === p.valor" (click)="elegirPeriodo(p.valor)">{{ p.texto }}</button>
+  }
 </div>
 
 @if (aviso(); as a) {
@@ -80,8 +94,11 @@
         <th class="py-2 pr-4">Quién</th>
         <th class="py-2 pr-4 text-right">Días con turno</th>
         <th class="py-2 pr-4 text-right" style="color: var(--kiosko-entrada)">A tiempo</th>
-        <th class="py-2 pr-4 text-right" style="color: var(--kiosko-atencion)">Retardos</th>
-        <th class="py-2 pr-4 text-right" style="color: var(--kiosko-peligro)">Faltas</th>
+        <th class="py-2 pr-4 text-right" style="color: var(--kiosko-atencion)">Retardos{{ ordenResumen() === 'retardos' ? ' ▼' : '' }}</th>
+        <th class="py-2 pr-4 text-right" style="color: var(--kiosko-atencion)">
+          Minutos tarde{{ ordenResumen() === 'minutos' ? ' ▼' : '' }} <panel-ayuda titulo="Minutos tarde" [texto]="AYUDA_MINUTOS" />
+        </th>
+        <th class="py-2 pr-4 text-right" style="color: var(--kiosko-peligro)">Faltas{{ ordenResumen() === 'faltas' ? ' ▼' : '' }}</th>
         <th class="py-2 pr-4 text-right">Ausencias justificadas</th>
         <th class="py-2 pr-4 text-right" style="color: var(--kiosko-entrada)">Justificados</th>
         <th class="py-2 pr-4 text-right">Registros incompletos</th>
@@ -94,6 +111,8 @@
         <tr class="border-borde border-b">
           <td class="py-2 pr-4 font-semibold">{{ r.nombre }}
             @if (numero(r.empleadoId)) { <span class="text-texto-suave font-normal"> · #{{ numero(r.empleadoId) }}</span> }
+            <button type="button" class="no-imprimir text-texto-suave block text-sm font-normal underline underline-offset-4"
+                    (click)="verDiasDe(r.empleadoId)">Ver sus días</button>
           </td>
           <td class="py-2 pr-4 text-right tabular-nums">{{ r.programados }}</td>
           <td class="py-2 pr-4 text-right tabular-nums">{{ r.aTiempo }}</td>
@@ -101,6 +120,7 @@
             {{ r.retardos }}
             @if (r.retardosMayores) { <span class="text-texto-suave text-sm font-normal">({{ r.retardosMayores }} mayor{{ r.retardosMayores === 1 ? '' : 'es' }})</span> }
           </td>
+          <td class="py-2 pr-4 text-right tabular-nums">{{ minutos(r.minutosTarde) }}</td>
           <td class="py-2 pr-4 text-right tabular-nums" [class.font-bold]="r.faltas > 0"
               [style.color]="r.faltas > 0 ? 'var(--kiosko-peligro)' : null">{{ r.faltas }}</td>
           <td class="py-2 pr-4 text-right tabular-nums">{{ r.justificadas }}</td>
@@ -117,6 +137,12 @@
     Las horas sólo cuentan jornadas con entrada y salida. Si alguien no registró su salida, esas horas no se suman (el sistema no las inventa).
   </p>
 } @else {
+  @if (resaltado(); as r) {
+    <p class="no-imprimir mt-4 flex items-center gap-2 text-base">
+      <span class="inline-block h-4 w-4 rounded" style="background-color: var(--kiosko-atencion)" aria-hidden="true"></span>
+      {{ r.fecha ? 'Resaltado: el día del pendiente.' : 'Resaltados: los días que llegó tarde, que son los que suman los minutos de la semana.' }}
+    </p>
+  }
   <div class="tabla-desplazable mt-4">
   <table class="w-full border-collapse text-left">
     <thead>
@@ -138,12 +164,17 @@
             <td colspan="7">{{ fechaLarga(f.fecha) }}</td>
           </tr>
         }
-        <tr class="border-borde border-b">
+        <tr class="border-borde border-b" [class.fila-resaltada]="resaltada(f)">
           <td class="py-2 pr-4 whitespace-nowrap">{{ fechaCorta(f.fecha) }}</td>
           <td class="py-2 pr-4 font-semibold">{{ nombre(f.empleado_id) }}</td>
           <td class="py-2 pr-4">
             @if (f.programado_inicio && f.programado_fin) {
               {{ f.turno }} <span class="text-texto-suave tabular-nums">{{ hora(f.programado_inicio, zona()) }}–{{ hora(f.programado_fin, zona()) }}</span>
+              @if (f.ajuste) {
+                <span class="etiqueta ml-1" style="color: var(--kiosko-atencion)">{{ f.ajuste === 'intercambio' ? 'intercambio' : 'cambio del día' }}</span>
+                <panel-ayuda titulo="Cambio por un día"
+                             texto="Ese día esta persona tuvo otro horario (Horarios → Cambios por un día). Los retardos y faltas de ese día se miden contra ese horario." />
+              }
             } @else { — }
           </td>
           <td class="py-2 pr-4 tabular-nums">

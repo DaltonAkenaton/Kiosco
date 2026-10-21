@@ -41,7 +41,7 @@ import { aplicarPoliticasDeSesion } from './seguridad';
 import { crearVentanaPrincipal } from './ventana';
 import { anotarUso } from './servicios/actividad';
 import { cerrarKiosco } from './servicios/cierre';
-import { esPcCompartida, zonaHorariaVigente } from './configuracion-vigente';
+import { esPcCompartida, modoIdentificacionVigente, zonaHorariaVigente } from './configuracion-vigente';
 import { iniciarDiagnostico } from './servicios/diagnostico';
 
 /**
@@ -139,7 +139,7 @@ if (!esLaPrimeraCopia) {
      * se ve bien y no guarda nada.
      */
     abrirBaseDeDatos();
-    actualizarEstado({ pcCompartida: esPcCompartida() });
+    actualizarEstado({ pcCompartida: esPcCompartida(), modoIdentificacion: modoIdentificacionVigente() });
     sembrarEmpleadosDePrueba(); // no hace nada si la app esta empaquetada
     sembrarAdministradorDePrueba(); // tampoco
 

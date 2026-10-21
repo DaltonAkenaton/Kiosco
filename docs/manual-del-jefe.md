@@ -17,8 +17,9 @@
  └──────────────┘                 └─────────────────────┘
 ```
 
-- El personal checa en el **kiosco**: elige su número de la lista, teclea su
-  PIN, y el kiosco toma una foto.
+- El personal checa en el **kiosco**: elige su número de la lista (o escribe su
+  número de empleado, según Configuración), teclea su PIN, y el kiosco toma una
+  foto.
 - La **foto se queda en el kiosco**, con candado. Nunca viaja por internet.
 - El **registro** (quién, a qué hora, entrada o salida) llega a tu **panel** en
   segundos. Si no hay internet, el kiosco lo guarda y lo manda cuando vuelve.
@@ -63,6 +64,95 @@ un clic accidental.
 
 ## 3. El día a día
 
+### Pendientes (lo que hay que atender con el personal)
+
+Es la **primera pestaña**, y el panel **abre ahí** cuando hay algo sin atender
+(el número rojo junto a "Pendientes" dice cuántos). Así lo del viernes sigue
+ahí el lunes.
+
+Cada **caso** es algo de una persona que conviene revisar:
+
+| Caso | Cuándo sale |
+|---|---|
+| **Llegó tarde** | Llegó tarde ese día los minutos de Configuración → Pendientes (15) o más |
+| **Tarde en la semana** | Sus minutos tarde de lunes a domingo suman 30 o más. Cuentan **desde su hora de entrada**, aunque estén dentro de la tolerancia: 12 minutos cinco días = 60 |
+| **Faltó** | Le tocaba, no vino y no tiene permiso registrado |
+| **No registró su salida** | Entró y nunca marcó salida |
+| **Registró después de su baja** | Alguien checó con una persona que ya diste de baja |
+| **Cámara tapada** | Checó con la cámara tapada |
+
+Cada persona es **una tarjeta corta**: qué tiene ("9 faltas, cámara tapada 2
+días") y entre qué fechas. Pica la tarjeta (o **Ver los casos**) para ver cada uno. Las tarjetas no
+cambian de lugar mientras estás en la página. Si
+alguien **faltó varios días seguidos**, la tarjeta te pregunta si está
+enfermo, de vacaciones o ya no trabaja aquí: regístralo en **Incidencias** (o
+dalo de baja) y esas faltas se cierran solas. Para ver a una sola persona,
+escribe su nombre o número en **Empleado**.
+
+En cada caso:
+
+- **Ver su reporte** (faltas y llegadas tarde): abre **Reportes**, día por
+  día, en la semana del caso. Ahí ves su horario, cuántos minutos llegó tarde
+  cada día ("+4, +14, +52" suman los 70 de la semana) y el botón Justificar.
+  El día del caso sale **resaltado en amarillo** (en "Tarde en la semana", los
+  días que llegó tarde).
+- **Ver sus registros** (salida sin registrar, cámara tapada, registro de
+  alguien dado de baja): abre **Asistencia** con esa persona y ese día, que es
+  donde se corrige el registro.
+- **Registrar incidencia** (sólo en faltas y llegadas tarde): si estaba
+  enfermo, tenía permiso o llegó tarde con razón, regístralo ahí mismo. El caso
+  se cierra solo y el reporte ya no lo cuenta. Si faltó varios días seguidos,
+  la tarjeta trae un botón para registrarlos todos de una vez.
+- **Atender**: escribe **qué se hizo** ("Se habló con la persona", "Se levantó
+  acta", "Tenía permiso"…; las respuestas de siempre se ponen con un clic). El
+  caso pasa a **Atendidos (historia)**, con quién lo atendió y cuándo. Esa es
+  la historia de cada persona.
+  **Ojo: atender sólo anota; la falta sigue contando.** En una falta o una
+  llegada tarde, la ventana trae la casilla **Además, justificar ese día**:
+  márcala y elige como qué (permiso, incapacidad, no se registró…) para que
+  ya no cuente en los reportes; queda también en **Incidencias**. Las
+  respuestas "Tenía permiso del jefe" y "Fue un error del registro" la marcan
+  solas; "Se habló con la persona" y "Se levantó acta" la desmarcan (la falta
+  sigue contando). Si escribes otra cosa, tú decides si la marcas. Antes de
+  guardar, el panel **te pregunta** en grande: "quedará justificada como:
+  **Permiso**". Si no es el tipo correcto, **Cancelar** te regresa sin perder
+  lo escrito. En **Atendidos** cada falta o retardo dice **✓ Día justificado:
+  (tipo)** o **Sigue contando como falta**; si luego quitas la incidencia en
+  Incidencias, también aquí deja de decirlo.
+  Al atender **Tarde en la semana**, un recuadro
+  amarillo te pregunta por **cada día** que llegó tarde esa semana (todos
+  marcados): los marcados se cierran junto con la semana; desmarca el que
+  vayas a atender aparte (por ejemplo, con su propia acta).
+- Si un caso **deja de aplicar** (registras un permiso o vacaciones para ese
+  día, registras su salida a mano, cambias su horario), **se cierra solo** y
+  dice por qué.
+- **Reabrir**: si atendiste uno por error, en Atendidos.
+- En **Atendidos** salen los 100 más recientes; abajo, **Ver más antiguos**
+  trae los siguientes. Elige una persona en **Empleado** para ver toda su
+  historia.
+
+Las reglas (los 15 y 30 minutos, y cuáles casos van a Pendientes) se cambian en
+**Configuración → Pendientes**. Con **0** en los minutos, esa regla se apaga.
+**Revisar desde** es la fecha desde la que se buscan casos: se puso sola el
+día en que se instaló esta versión, para no empezar con cientos de casos
+viejos. Muévela hacia atrás si quieres ver días anteriores.
+
+### Notas
+
+Para anotar lo que hay que hacer sin papelitos ni el celular. Cada nota puede
+llevar **casillas** que se palomean con un clic. Arriba hay un **buscador** y
+tres botones: **Por hacer** (lo normal), **Todo hecho** (las notas con todas
+sus casillas palomeadas) y **Todas**. Al escribirla eliges **quién
+más la ve**: **Sólo yo**, **Todos** (los que entran al panel) o **Algunos**
+(eliges a quiénes). Quien la ve la puede palomear; cambiar quién la ve o
+borrarla, sólo quien la escribió. Si una nota habla de un empleado, escribe
+hechos ("trae justificante el lunes"), no opiniones.
+
+Al palomear la última casilla en **Por hacer**, la nota no desaparece de
+golpe: se queda a la vista con **✔ Todo hecho** hasta que cambies de botón.
+Si estás escribiendo una nota y pulsas **Esc** o picas fuera de la ventana,
+te pregunta antes de tirar lo escrito.
+
 ### Asistencia (la pantalla principal)
 
 Arriba, en rojo, **⚠ Para atender**: lo que conviene revisar, aunque estés en
@@ -75,7 +165,7 @@ solo cuando se arregla lo que lo causa.
 ¿Ya lo revisaste? Pica **✓ Ya lo vi** y se esconde (también el número del
 menú). Vuelve a salir **sólo si empeora**: si la cámara se desconecta otra
 vez, si se vuelve a caer, o si llega un registro nuevo. Se recuerda en esa
-computadora: si otro administrador entra desde la suya, él lo sigue viendo
+computadora: si otro administrador entra desde la suya, lo sigue viendo
 hasta que también lo marque.
 
 En el menú de arriba, un **número rojo** junto a *Asistencia* o *Kioscos* dice
@@ -116,7 +206,15 @@ Elige el rango de fechas. Dos vistas:
 
 - **Día por día**: cada persona, cada día: a qué hora entró y salió, retardo,
   falta, horas trabajadas.
-- **Resumen por persona**: cuántos retardos, faltas y horas en el periodo.
+- **Resumen por persona**: cuántos retardos, faltas, minutos tarde y horas en
+  el periodo. Con **Ordenar por** ves arriba a quien **faltó más**, tuvo **más
+  retardos** o sumó **más minutos tarde**. **Ver sus días** (bajo cada nombre)
+  abre el día por día de esa persona.
+
+**Periodo**: botones de un clic para no batallar con los calendarios: Esta
+semana, Este mes, Mes pasado, Últimos 3 meses y Este año. Ejemplo: "¿quién
+faltó más el mes pasado?" → **Resumen por persona** → **Mes pasado** →
+Ordenar por **Más faltas primero**.
 
 **⬇ Descargar Excel**: baja un archivo de Excel con **dos hojas** ("Resumen
 por persona" y "Día por día"; la que estás viendo va primero), con cada dato
@@ -182,8 +280,9 @@ pide a soporte que lo cambie (manual técnico, "Resumen diario").
   "Todavía no elige su PIN".
 - **Después del alta**, en la ventana del PIN, pica **Siguiente: asignar su
   horario**: abre el editor de horarios con esa persona ya elegida. También
-  hay un botón **Horario** en cada persona de la lista. El número de empleado
-  lleva **sólo números**; si no tiene, déjalo vacío.
+  hay un botón **Horario** en cada persona de la lista. El **número de
+  empleado es obligatorio**: de 4 a 12 letras o números (como A12345), sin
+  espacios. El panel lo guarda en mayúsculas.
 - **Importar lista de Excel**: para muchos a la vez. En la ventana, **⬇
   Descargar plantilla**: es un Excel con las columnas listas, dos renglones de
   ejemplo y una hoja de **Instrucciones**. Borra los ejemplos, escribe un
@@ -204,7 +303,8 @@ pide a soporte que lo cambie (manual técnico, "Resumen diario").
   Transparencia**. Borra su nombre de todo el sistema, **no se puede deshacer**.
   Sus registros de entrada y salida se quedan, sin nombre. Antes hay que darla
   de baja. Si tenía fotos marcadas "Conservar" en el kiosco, quítales la marca
-  allá.
+  allá. Lo que ustedes escribieron a mano en **Notas** no se toca solo:
+  busca su nombre en Notas y edita o borra lo que hable de esa persona.
 
 Cada cambio te pide un **motivo** y queda en la **Bitácora**.
 
@@ -239,6 +339,18 @@ importar, pasa a **Horarios** y ponle el suyo a cada persona. Al dar de alta a
 **una** persona, el botón **Siguiente: asignar su horario** te trae directo
 aquí.
 
+**Cambios por un día** (abajo en Horarios): para **un solo día**.
+
+- **El horario de una persona**: ese día entra a otra hora, o **descansa**.
+- **Dos personas se intercambian el turno**: "el viernes Juan cubre a Pedro y
+  Pedro a Juan". Antes de guardar, el panel dice cómo queda cada quien.
+
+Ese día los retardos y las faltas se miden contra el cambio; el resto de los
+días sigue igual. Sin esto, quien cubre a otro aparecería con **falta** en su
+turno y llegando a una hora rara en el del otro (y le saldrían pendientes que
+no son). En **Reportes** ese día dice "cambio del día" o "intercambio". Con
+**Quitar** se deshace (un intercambio se quita para los dos).
+
 **Si los turnos de la facultad son a otras horas:** en **Turnos**, pica
 **Cambiar** en el turno (o **+ Nuevo turno**) y pon su hora de entrada y de
 salida. Hazlo **antes** de poner los horarios de las personas.
@@ -260,6 +372,10 @@ completo**, con las horas de su turno.
 - **Falla del sistema**: se cayó el kiosco, el internet o la luz.
 - **Retardo justificado**: llegó tarde por una razón aceptada.
 
+La pantalla **Incidencias** trae esta misma explicación arriba de la lista, y
+cada renglón lleva su etiqueta (**ausencia justificada** o **se da por
+bueno**); al pasar el mouse por encima dice qué significa.
+
 Formas de registrarla:
 - **+ Registrar incidencia**: para **una persona**, para **todos los de un
   turno** o para **todos los que tenían turno** esos días (por ejemplo, "se
@@ -270,6 +386,12 @@ Formas de registrarla:
 
 Los registros de entrada y salida **nunca se tocan**: la incidencia sólo cambia
 cómo se califica el día. Si te equivocas, **Quitar** la regresa a como estaba.
+
+**Para encontrar una incidencia**, arriba de la lista hay filtros: **Empleado**,
+**Tipo** (por ejemplo, sólo incapacidades), **Desde / Hasta** y **Buscar en las
+notas** (por ejemplo "IMSS"). Debajo dice cuántas son y cuántos días suman.
+Ejemplo: "¿cuántos días de incapacidad lleva Juan este año?" → Empleado: Juan,
+Tipo: Incapacidad, Desde: 1 de enero. **Quitar filtros** vuelve a mostrar todo.
 - **+ Agregar día festivo**: ese día nadie tiene falta. Es de un día a la vez:
   para periodos largos, usa vacaciones (abajo).
 
@@ -314,6 +436,14 @@ valor choca con otra regla (por ejemplo, una tolerancia mayor que los minutos
 de "retardo mayor"), el panel no lo deja guardar y explica por qué. Un cambio
 llega a los kioscos en unos minutos y los reportes se recalculan solos.
 
+**Checar con el número de empleado** (Configuración → Kioscos): con "Sí", en
+el kiosco cada quien escribe su **número de empleado** (puede llevar letras,
+como A12345) y **Enter**, y luego su PIN; ya no se ve la lista de nombres. Con
+"No", cada quien elige su nombre de la lista. **Antes de encenderlo**, ponle
+su número a todos en **Empleados → Corregir datos**: el panel no te deja
+encenderlo si falta alguien, y si después das de alta a alguien sin número,
+Empleados te avisa en rojo (no podría checar).
+
 ### Respaldo (una copia de todos los datos)
 
 **Configuración → Respaldo → Descargar respaldo**: baja al momento un Excel con
@@ -331,7 +461,7 @@ que tengas que hacer nada (manual técnico, sección 7).
 | Qué | Dónde está su respaldo |
 |---|---|
 | Registros, personal, horarios, ausencias, correcciones, configuración | **Panel** (este botón) y **automático** cada lunes y jueves |
-| **Las fotos** | **Sólo en el kiosco**: ⚙ Administrador → **Guardar en memoria USB**. El respaldo del panel **no** las trae, porque las fotos nunca salen del kiosco |
+| **Las fotos** | **Sólo en el kiosco**: modo administrador → **Guardar en memoria USB**. El respaldo del panel **no** las trae, porque las fotos nunca salen del kiosco |
 
 ### Accesos
 
@@ -372,7 +502,7 @@ Para encontrar algo, usa los filtros:
 
 Las fotos **sólo** se ven en el kiosco.
 
-1. En la barra de abajo del kiosco, pica **⚙ Administrador**.
+1. Mantén presionado **3 segundos** el letrero de arriba del kiosco (**"UAT FCACS Nuevo Laredo"**): se abre la ventana del **modo administrador**. (Desde la versión 1.0.4 ya no hay botón "Administrador" a la vista.)
 2. Tu usuario y contraseña **del kiosco** (los de "Mi cuenta").
    Un error te regresa a la pantalla principal y queda anotado.
 3. Filtra por fecha, persona o revisión. Pica un registro para ver su foto.
@@ -441,9 +571,9 @@ panel.
 | Alguien olvidó su PIN | Empleados → **PIN nuevo**. Mientras, **Registrar a mano**. |
 | Alguien tiene que irse a medio turno (una emergencia) | Que marque **SALIDA** en el kiosco al irse. Después, en **Reportes**, ese día sale "(N min antes)" con el botón **Justificar**, que ya propone **Permiso**: escribe el motivo y listo. Sus horas trabajadas sí cuentan. Si se fue sin marcar: **Registrar a mano** su salida, y luego el Permiso. |
 | El kiosco está cerrado | Es lo normal si la PC se usa para otras cosas: se abre con su **icono** del escritorio, se registra y se pica **Minimizar** (queda en la barra de tareas, listo para el siguiente) o **Cerrar kiosco**. En el panel, Kioscos lo muestra como "Cerrado" y no es alerta. |
-| No puedo entrar al ⚙ Administrador de un kiosco nuevo | Primero hay que **darlo de alta**; los administradores le llegan de la oficina. Además tu usuario del kiosco debe estar definido en **Mi cuenta**. |
+| No puedo entrar al modo administrador de un kiosco nuevo | Primero hay que **darlo de alta**; los administradores le llegan de la oficina. Además tu usuario del kiosco debe estar definido en **Mi cuenta**. |
 | Quiero ver los registros que acaban de llegar | En **Asistencia**, botón **↻ Actualizar**. También se actualiza sola cada minuto si estás viendo el día de hoy. |
-| Un kiosco dado de baja sigue registrando | Sus registros **no llegan al panel** (a propósito: ya no se confía en él). Se quedan guardados en esa PC. Si la baja fue un error: dale de alta de nuevo con un código y, en ese kiosco, **⚙ Administrador → Registros que la oficina no aceptó → Volver a enviarlos**. (Lo que registró **antes** de la baja y no alcanzó a subir llega solo, marcado "en cuarentena" para revisarlo.) |
+| Un kiosco dado de baja sigue registrando | Sus registros **no llegan al panel** (a propósito: ya no se confía en él). Se quedan guardados en esa PC. Si la baja fue un error: dale de alta de nuevo con un código y, en ese kiosco, **modo administrador → Registros que la oficina no aceptó → Volver a enviarlos**. (Lo que registró **antes** de la baja y no alcanzó a subir llega solo, marcado "en cuarentena" para revisarlo.) |
 | Se fue la luz / no hay kiosco | El personal te avisa por WhatsApp; tú **Registrar a mano** con motivo "sin luz". |
 | No hay internet | Nada: el kiosco guarda todo y lo manda al volver. En Kioscos verás "por enviar". |
 | El kiosco dice "Sin cámara" | Se sigue registrando, marcado "sin foto". Revisa el cable de la cámara. |

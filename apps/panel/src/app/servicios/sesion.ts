@@ -13,6 +13,7 @@
  */
 
 import { Injectable, computed, signal } from '@angular/core';
+import { hoyEn } from '@kiosko/compartido';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { ENTORNO } from '../../entorno/entorno';
 import { Inactividad } from './inactividad';
@@ -68,6 +69,18 @@ export class Sesion {
   /** La zona para mostrar horas. Baja de la tabla `configuracion` al entrar. */
   private readonly _zona = signal('America/Matamoros');
   readonly zona = this._zona.asReadonly();
+
+  /**
+   * Cuanto se desvia el reloj de ESTA computadora del de la base (ms).
+   *
+   * 20-10-2026: en la PC de la oficina, "actualizado a las" decia 13:01 a las
+   * 12:01. Windows tenia la zona de Ciudad de Mexico y la hora adelantada a
+   * mano para que "se viera bien": por dentro, el reloj estaba una hora
+   * corrido. Las horas de los REGISTROS ya salian bien (vienen de la base);
+   * lo que dependia del reloj de la PC ("hoy", "actualizado a las") no.
+   * Al entrar se pregunta la hora a la base y todo lo de "ahora" usa esto.
+   */
+  private desfaseMs = 0;
 
   private iniciada: Promise<void> | null = null;
 
@@ -190,6 +203,31 @@ export class Sesion {
     this._debeCambiarContrasena.set(false);
   }
 
+  /** La hora de AHORA segun la base (no segun el reloj de esta PC), en ms. */
+  ahora(): number {
+    return Date.now() + this.desfaseMs;
+  }
+
+  /** La fecha de hoy en Nuevo Laredo ("2026-10-20"), con la hora de la base. */
+  hoy(): string {
+    return hoyEn(this._zona(), this.ahora());
+  }
+
+  /**
+   * Pregunta la hora a la base y guarda la diferencia con este reloj. Se
+   * descuenta la mitad de lo que tardo la respuesta (lo que tardo en volver).
+   * Sin internet se queda con la que tenia: nunca impide nada.
+   */
+  private async medirReloj(): Promise<void> {
+    const antes = Date.now();
+    const { data, error } = await this.bd.rpc('hora_del_servidor');
+    const despues = Date.now();
+    if (error || typeof data !== 'string') return;
+    const servidor = new Date(data).getTime();
+    if (Number.isNaN(servidor)) return;
+    this.desfaseMs = servidor - (antes + despues) / 2;
+  }
+
   /** Un ajuste recien cambiado en Configuracion: que se note sin volver a entrar. */
   aplicarAjuste(clave: string, valor: unknown): void {
     if (clave === 'zona_horaria' && typeof valor === 'string') this._zona.set(valor);
@@ -231,6 +269,7 @@ export class Sesion {
       .select('clave, valor')
       .in('clave', ['zona_horaria', 'minutos_inactividad_panel', 'permitir_datos_demostracion', 'dias_retencion_fotos']);
     for (const { clave, valor } of ajustes ?? []) this.aplicarAjuste(clave, valor);
+    await this.medirReloj();
     return null;
   }
 }

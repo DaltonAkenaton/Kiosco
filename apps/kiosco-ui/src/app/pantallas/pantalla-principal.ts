@@ -71,7 +71,6 @@ import {
 import type {
   ConfiguracionParaInterfaz,
   EmpleadoParaLista,
-  EstadoNube,
   MarcaParaMostrar,
   TipoMarca,
 } from '@kiosko/compartido';
@@ -80,6 +79,8 @@ import { Reloj } from '../componentes/reloj';
 import { ModoAdmin } from './modo-admin';
 import { TecladoNumerico } from '../componentes/teclado-numerico';
 import { Camara, type FotoCapturada } from '../servicios/camara';
+import { EntradaAdmin } from '../servicios/entrada-admin';
+import { TEXTOS_DE_CONEXION } from './textos-conexion';
 import { PuenteKiosco } from '../servicios/puente-kiosco';
 import { Sonidos } from '../servicios/sonidos';
 
@@ -153,6 +154,7 @@ const SEGUNDOS_DE_AVISO = 3;
 })
 export class PantallaPrincipal implements OnInit, OnDestroy {
   private readonly puente = inject(PuenteKiosco);
+  private readonly entradaAdmin = inject(EntradaAdmin);
   private readonly sonidos = inject(Sonidos);
   protected readonly camara = inject(Camara);
 
@@ -181,11 +183,21 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
 
   private temporizadorInactividad: ReturnType<typeof setTimeout> | null = null;
 
+  /** Para notar cuando el jefe cambia el modo desde el panel (0029). */
+  private modoAnterior: 'usuario' | 'lista' | 'numero' | null = null;
+
   // --------------------------------------------------------------------------
   //  Valores derivados
   // --------------------------------------------------------------------------
 
-  protected readonly modo = computed(() => this.configuracion()?.modoIdentificacion ?? 'usuario');
+  /**
+   * El modo VIGENTE. Viene con el estado (0029): el jefe lo cambia en el panel
+   * ("Los empleados checan con su numero de empleado") y llega en la siguiente
+   * sincronizacion, sin reiniciar. La configuracion inicial es solo el arranque.
+   */
+  protected readonly modo = computed(
+    () => this.estado()?.modoIdentificacion ?? this.configuracion()?.modoIdentificacion ?? 'usuario',
+  );
 
   /** En el modo 'usuario' hay que teclear letras, asi que el campo es de texto. */
   protected readonly identificadorEsTexto = computed(() => this.modo() === 'usuario');
@@ -244,7 +256,7 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
           ? 'Teclea el número junto a tu nombre' // el ejemplo va en el renglon de abajo
           : 'Teclea el número junto a tu nombre';
       case 'numero':
-        return 'Escribe tu número de empleado';
+        return 'Escribe tu número de empleado y presiona Enter';
     }
   });
 
@@ -268,6 +280,19 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
   private ultimaListaPorSincronizacion: string | null = null;
 
   constructor() {
+    /**
+     * Mantener presionado el letrero de arriba abre el modo administrador
+     * (20-10-2026: ya no hay boton a la vista; servicios/entrada-admin.ts).
+     * Mientras se guarda un registro no: que termine primero.
+     */
+    effect(() => {
+      if (this.entradaAdmin.solicitudes() === 0) return;
+      untracked(() => {
+        if (this.modoAdminAbierto() || this.paso() === 'guardando') return;
+        this.abrirModoAdmin();
+      });
+    });
+
     /**
      * Al pasar a "teclea tu PIN", el kiosco se pone al dia con la nube
      * mientras la persona teclea: si su ultimo registro fue en OTRO kiosco,
@@ -308,6 +333,22 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
      * nombre), la lista de empleados se vuelve a pedir. Sin esto, alguien
      * recien dado de alta no apareceria hasta reiniciar el kiosco.
      */
+    effect(() => {
+      const modo = this.modo();
+      if (this.modoAnterior === null) {
+        this.modoAnterior = modo;
+        return;
+      }
+      if (modo === this.modoAnterior) return;
+      this.modoAnterior = modo;
+      untracked(() => {
+        this.reiniciar();
+        if (modo === 'lista') {
+          void this.puente.obtenerEmpleadosParaLista().then((lista) => this.empleados.set(lista));
+        }
+      });
+    });
+
     effect(() => {
       const sincronizado = this.estado()?.ultimaSincronizacion ?? null;
       if (sincronizado === null || sincronizado === this.ultimaListaPorSincronizacion) return;
@@ -497,6 +538,16 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
       return;
     }
 
+    // --- Numero de empleado con letras ("A12345", 20-10-2026): siempre en
+    // mayusculas, como en el panel. Tambien el guion.
+    if (this.paso() === 'identificador' && this.modo() === 'numero') {
+      if (evento.key.length === 1 && /^[a-zA-Z-]$/.test(evento.key)) {
+        evento.preventDefault();
+        this.agregarCaracter(evento.key.toUpperCase());
+      }
+      return;
+    }
+
     // --- Letras: solo cuando se esta tecleando un usuario
     // El PIN es siempre numerico, asi que aqui se filtra por paso y por modo.
     if (this.paso() === 'identificador' && this.modo() === 'usuario') {
@@ -530,17 +581,9 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
     const config = this.configuracion();
     if (!config) return;
 
-    // Avance automatico solo con identificadores de largo FIJO (el numero de
-    // empleado). Con un usuario no se puede: el sistema no sabe si "dgom" ya
-    // esta completo o si falta escribir "ez".
-    if (
-      this.paso() === 'identificador' &&
-      this.modo() === 'numero' &&
-      this.identificador().length === config.largoNumeroEmpleadoMaximo
-    ) {
-      this.paso.set('pin');
-      return;
-    }
+    // Sin avance automatico en el identificador: ni el usuario ni el numero
+    // de empleado tienen largo fijo (20-10-2026: el numero puede llevar
+    // letras y su largo no se conoce). Se pasa al PIN con Enter.
 
     // Validacion automatica al completar el PIN, solo si el PIN tiene largo
     // fijo. Si puede ser de 4 a 6 digitos, el sistema no sabe si ya terminaste.
@@ -677,67 +720,7 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
    * Lo que dice la barra de abajo segun el estado de la nube, con su ⓘ.
    * `alta` = se ofrece el boton para teclear el codigo.
    */
-  protected readonly conexion = computed(() => {
-    const e = this.estado();
-    const TEXTOS: Record<EstadoNube, { texto: string; color: string; ayuda: string; alta: boolean }> = {
-      apagada: {
-        texto: 'Sólo en esta computadora',
-        color: 'var(--kiosko-texto-suave)',
-        ayuda:
-          'Este kiosco está configurado para no conectarse con la oficina. Los registros se guardan ' +
-          'aquí y cuentan igual; para verlos hay que venir a esta computadora.',
-        alta: false,
-      },
-      sin_alta: {
-        texto: 'Kiosco sin dar de alta',
-        color: 'var(--kiosko-atencion)',
-        ayuda:
-          'Este kiosco todavía no está conectado con la oficina. Los registros SÍ se guardan aquí y se ' +
-          'mandarán cuando se dé de alta. Para darlo de alta, el jefe genera un código en el panel y ' +
-          'alguien lo teclea con el botón "Dar de alta".',
-        alta: true,
-      },
-      conectando: {
-        texto: 'Conectando…',
-        color: 'var(--kiosko-texto-suave)',
-        ayuda: 'El kiosco está buscando la conexión con la oficina. Puedes registrarte normalmente.',
-        alta: false,
-      },
-      en_linea: {
-        texto: 'Con internet',
-        color: 'var(--kiosko-entrada)',
-        ayuda: 'El kiosco está conectado con la oficina: los registros se mandan solos.',
-        alta: false,
-      },
-      sin_conexion: {
-        texto: 'Sin internet',
-        color: 'var(--kiosko-texto-suave)',
-        ayuda:
-          'No hay conexión con la oficina en este momento. Puedes registrarte normalmente: tu registro ' +
-          'se guarda aquí y se manda solo cuando vuelva el internet.',
-        alta: false,
-      },
-      revocado: {
-        texto: 'Kiosco dado de baja',
-        color: 'var(--kiosko-peligro)',
-        ayuda:
-          'En el panel dieron de baja este kiosco. Los registros se siguen guardando aquí, pero la ' +
-          'oficina ya no los recibe. Si fue un error, el jefe genera un código nuevo y alguien lo ' +
-          'teclea con "Dar de alta de nuevo".',
-        alta: true,
-      },
-      no_reconocido: {
-        texto: 'La oficina no reconoce este kiosco',
-        color: 'var(--kiosko-peligro)',
-        ayuda:
-          'La oficina ya no reconoce la credencial de este kiosco. Los registros se siguen guardando ' +
-          'aquí. Para arreglarlo, el jefe genera un código nuevo en el panel y alguien lo teclea con ' +
-          '"Dar de alta de nuevo".',
-        alta: true,
-      },
-    };
-    return TEXTOS[e?.nube ?? 'apagada'];
-  });
+  protected readonly conexion = computed(() => TEXTOS_DE_CONEXION[this.estado()?.nube ?? 'apagada']);
 
   protected readonly dandoDeAlta = signal(false);
   protected readonly codigoDeAlta = signal('');
@@ -779,11 +762,6 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
     this.codigoDeAlta.set((evento.target as HTMLInputElement).value.toUpperCase());
   }
 
-  /** El ⓘ de "N por enviar", en la barra de abajo. */
-  protected readonly AYUDA_POR_ENVIAR =
-    'Son los registros que ya quedaron guardados en esta computadora, pero que todavía no se ' +
-    'mandan al sistema de la oficina. Se mandan solos cuando hay internet. Tu registro ya cuenta ' +
-    'desde que ves "ENTRADA" o "SALIDA" en la pantalla: no tienes que hacer nada.';
 
   /** Los tres modos, para el selector. */
   protected readonly MODOS = [

@@ -1,0 +1,161 @@
+<div class="flex flex-wrap items-center gap-3">
+  <h1 class="text-2xl font-bold">Notas</h1>
+  <button type="button" class="boton-principal !px-3 !py-1" (click)="nueva()">+ Nueva nota</button>
+</div>
+<p class="text-texto-suave mt-1 max-w-5xl">
+  Para anotar lo que hay que hacer, con casillas que se palomean. Tú eliges quién más la ve.
+  <panel-ayuda titulo="¿Quién ve mis notas?" alinear="izquierda"
+               texto="«Sólo yo»: nadie más. «Todos»: todos los que entran al panel. «Algunos»: las personas que elijas. Quien la ve la puede palomear y editar; cambiar quién la ve o borrarla, sólo quien la escribió. Si una nota habla de un empleado, escribe hechos («trae justificante el lunes»), no opiniones." />
+</p>
+
+<div class="mt-4 flex flex-wrap items-end gap-3">
+  <label class="flex flex-col gap-1">
+    <span class="text-texto-suave text-sm">Buscar</span>
+    <input class="campo w-72 max-w-full" type="search" placeholder="Ej.: cámara" title="Busca en el título, el texto y las casillas"
+           [value]="busqueda()" (input)="busqueda.set(valor($event))" />
+  </label>
+  <div class="flex flex-wrap gap-1" role="group" aria-label="Qué notas ver">
+    <button type="button" class="enlace-menu" [class.activo]="filtro() === 'por_hacer'" (click)="verFiltro('por_hacer')">
+      Por hacer ({{ cuantas().por_hacer }})
+    </button>
+    <button type="button" class="enlace-menu" [class.activo]="filtro() === 'hechas'" (click)="verFiltro('hechas')">
+      Todo hecho ({{ cuantas().hechas }})
+    </button>
+    <button type="button" class="enlace-menu" [class.activo]="filtro() === 'todas'" (click)="verFiltro('todas')">
+      Todas ({{ cuantas().todas }})
+    </button>
+  </div>
+</div>
+
+@if (error(); as mensaje) {
+  <p class="mt-4 font-bold" style="color: var(--kiosko-peligro)">{{ mensaje }}</p>
+}
+
+@if (cargando()) {
+  <p class="text-texto-suave mt-6">Cargando…</p>
+} @else {
+  <div class="mt-5 flex flex-col gap-4">
+    @for (n of ordenadas(); track n.id) {
+      <article class="bg-superficie border-borde flex flex-col gap-3 rounded-2xl border-2 p-4">
+        <header class="flex items-start justify-between gap-2">
+          <h2 class="text-lg font-bold">{{ n.titulo || '(sin título)' }}</h2>
+          <span class="etiqueta shrink-0 text-sm">{{ quienLaVe(n) }}</span>
+        </header>
+
+        @if (n.texto) {
+          <p class="whitespace-pre-line">{{ n.texto }}</p>
+        }
+
+        @if (n.tareas.length > 0) {
+          <ul class="flex flex-col gap-1">
+            @for (t of n.tareas; track $index) {
+              <li>
+                <label class="flex cursor-pointer items-start gap-2">
+                  <input type="checkbox" class="casilla mt-1 size-5 shrink-0" [checked]="t.hecha" (change)="palomear(n, $index)" />
+                  <span [class.line-through]="t.hecha" [class.text-texto-suave]="t.hecha">{{ t.texto }}</span>
+                </label>
+              </li>
+            }
+          </ul>
+          @if (faltan(n) === 0) {
+            <p class="text-sm font-semibold" style="color: var(--kiosko-entrada)">✔ Todo hecho</p>
+          }
+        }
+
+        <footer class="text-texto-suave mt-auto flex flex-wrap items-center justify-between gap-2 text-sm">
+          <span>
+            @if (!esMia(n)) { De {{ nombreDe(n.autor) }} · }
+            Cambiada {{ cuando(n.actualizado_en) }}
+            @if (n.actualizado_por && n.actualizado_por !== n.autor) { por {{ nombreDe(n.actualizado_por) }} }
+          </span>
+          <span class="flex gap-2">
+            <button type="button" class="boton-secundario !px-3 !py-1" (click)="editar(n)">Editar</button>
+            @if (esMia(n)) {
+              <button type="button" class="boton-secundario !px-3 !py-1" (click)="errorAccion.set(null); porBorrar.set(n)">Borrar</button>
+            }
+          </span>
+        </footer>
+      </article>
+    } @empty {
+      <p class="bg-superficie border-borde rounded-2xl border-2 px-5 py-6 text-lg">
+        @if (notas().length === 0) {
+          Todavía no hay notas. Pica <b>+ Nueva nota</b> para anotar algo pendiente.
+        } @else if (busqueda().trim()) {
+          Ninguna nota tiene «{{ busqueda().trim() }}»{{ filtro() === 'todas' ? '' : ' en esta vista' }}.
+          @if (filtro() !== 'todas') {
+            <button type="button" class="underline underline-offset-4" (click)="verFiltro('todas')">Buscar en todas</button>
+          }
+        } @else if (filtro() === 'por_hacer') {
+          <span aria-hidden="true">✔</span> No queda nada por hacer.
+        } @else {
+          Todavía ninguna nota tiene todas sus casillas palomeadas.
+        }
+      </p>
+    }
+  </div>
+}
+
+<!-- ====================== DIALOGOS ====================== -->
+@if (borrador(); as b) {
+  <panel-dialogo [titulo]="b.id ? 'Editar nota' : 'Nueva nota'" textoBoton="Guardar" [pedirMotivo]="false" [hayCambios]="hayCambios()"
+                 [ocupado]="guardando()" [error]="errorAccion()" (confirmar)="guardar()" (cancelar)="borrador.set(null)">
+    <label class="flex flex-col gap-1">Título
+      <input class="campo" maxlength="200" placeholder="Ej.: Pendientes de la semana" [value]="b.titulo"
+             (input)="cambiar('titulo', valor($event))" (keydown.enter)="$event.preventDefault()" />
+    </label>
+    <label class="flex flex-col gap-1">Texto <span class="text-texto-suave text-base">(opcional)</span>
+      <textarea class="campo min-h-24" maxlength="20000" [value]="b.texto" (input)="cambiar('texto', valor($event))"></textarea>
+    </label>
+
+    <fieldset class="flex flex-col gap-2">
+      <legend class="mb-1">Casillas <span class="text-texto-suave text-base">(opcional)</span></legend>
+      @for (t of b.tareas; track $index) {
+        <div class="flex items-center gap-2">
+          <span aria-hidden="true">{{ t.hecha ? '☑' : '☐' }}</span>
+          <input class="campo flex-1" [attr.aria-label]="'Casilla ' + ($index + 1)" [value]="t.texto"
+                 (input)="cambiarCasilla($index, valor($event))" (keydown.enter)="$event.preventDefault()" />
+          <button type="button" class="boton-secundario !px-3 !py-1" (click)="quitarCasilla($index)">Quitar</button>
+        </div>
+      }
+      <div class="flex items-center gap-2">
+        <input class="campo flex-1" placeholder="Ej.: Pedir a RH la lista de veladores" aria-label="Casilla nueva"
+               [value]="casillaNueva()" (input)="casillaNueva.set(valor($event))"
+               (keydown.enter)="$event.preventDefault(); agregarCasilla()" />
+        <button type="button" class="boton-secundario !px-3 !py-1" (click)="agregarCasilla()">+ Agregar casilla</button>
+      </div>
+    </fieldset>
+
+    @if (borradorEsMio(b)) {
+      <label class="flex flex-col gap-1">¿Quién la ve?
+        <select class="campo" [value]="b.visibilidad" (change)="cambiar('visibilidad', $any(valor($event)))">
+          @for (v of OPCIONES_VISIBILIDAD; track v) {
+            <option [value]="v" [selected]="v === b.visibilidad">{{ VISIBILIDADES[v].nombre }} — {{ VISIBILIDADES[v].ayuda }}</option>
+          }
+        </select>
+      </label>
+      @if (b.visibilidad === 'algunos') {
+        <fieldset class="flex flex-col gap-1">
+          <legend class="mb-1">¿Con quién?</legend>
+          @for (a of otrosAdministradores(); track a.id) {
+            <label class="flex cursor-pointer items-center gap-2">
+              <input type="checkbox" class="size-5" [checked]="b.compartidaCon.includes(a.id)"
+                     (change)="compartirCon(a.id, marcado($event))" />
+              {{ a.nombre }}
+            </label>
+          } @empty {
+            <p class="text-texto-suave text-base">No hay más administradores con acceso al panel.</p>
+          }
+        </fieldset>
+      }
+    } @else {
+      <p class="text-texto-suave text-base">Esta nota es de {{ autorDe(b) }}: sólo esa persona cambia quién la ve.</p>
+    }
+  </panel-dialogo>
+}
+
+@if (porBorrar(); as n) {
+  <panel-dialogo [titulo]="'Borrar la nota «' + (n.titulo || 'sin título') + '»'" textoBoton="Borrar" [peligro]="true" [pedirMotivo]="false"
+                 [ocupado]="guardando()" [error]="errorAccion()" (confirmar)="borrar(n)" (cancelar)="porBorrar.set(null)">
+    <p>Se borra para todos los que la ven. No se puede deshacer.</p>
+  </panel-dialogo>
+}

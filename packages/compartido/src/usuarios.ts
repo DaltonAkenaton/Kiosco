@@ -21,6 +21,8 @@
  *  configuracion.ts para las tres alternativas y sus compromisos.
  */
 
+import { IDENTIFICACION } from './configuracion';
+
 /**
  * Las "marcas de acento" de Unicode.
  *
@@ -151,4 +153,33 @@ export const PATRON_USUARIO = /^[a-z][a-z0-9.]*$/;
  */
 export function normalizarUsuarioTecleado(texto: string): string {
   return quitarAcentos(texto).trim().toLowerCase();
+}
+
+// ============================================================================
+//  NUMERO DE EMPLEADO  (20-10-2026)
+// ============================================================================
+//  Los de la universidad pueden llevar letras ("A12345"). Para que "a12345"
+//  y "A12345" sean el mismo, se guardan y se comparan en MAYUSCULAS y sin
+//  espacios a los lados. Lo usan el panel (al guardar) y el kiosco (al buscar
+//  a quien teclea): si cada uno lo hiciera a su manera, un dia no coincidirian.
+
+/**
+ * "  a12345 " -> "A12345". Los espacios de EN MEDIO se quedan, y entonces el
+ * numero no pasa la validacion: "no tiene" no debe guardarse como "NOTIENE".
+ */
+export function normalizarNumeroEmpleado(texto: string): string {
+  return texto.trim().toUpperCase();
+}
+
+/**
+ * ¿Es un numero de empleado que se puede teclear en el kiosco? Letras sin
+ * acento, digitos y guion, con el largo de IDENTIFICACION. Recibe el texto
+ * YA normalizado.
+ */
+export function numeroDeEmpleadoValido(numero: string): boolean {
+  return (
+    /^[A-Z0-9-]+$/.test(numero) &&
+    numero.length >= IDENTIFICACION.largoNumeroEmpleadoMinimo &&
+    numero.length <= IDENTIFICACION.largoNumeroEmpleadoMaximo
+  );
 }

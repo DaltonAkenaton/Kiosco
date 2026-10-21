@@ -221,6 +221,31 @@
     <!-- ====================== ESTADO DE ESTE KIOSCO ====================== -->
     @if (estadoKiosco(); as ek) {
       <div class="mx-8 mt-3 flex flex-col gap-2 text-base">
+        <!-- Lo que hasta el 20-10-2026 se veia en la barra de abajo del kiosco. -->
+        @if (estadoEnVivo(); as ev) {
+          @let c = conexion();
+          <p class="flex flex-wrap items-center gap-3">
+            <span class="pastilla gap-2 py-1 font-semibold" [style.color]="c.color">
+              <span class="h-2.5 w-2.5 rounded-full" [style.background-color]="c.color"></span>
+              {{ c.texto }}
+              <kiosco-ayuda [titulo]="c.texto" [texto]="c.ayuda" alinear="izquierda" />
+            </span>
+            @if (ev.nube !== 'apagada') {
+              <span class="pastilla py-1 font-semibold"
+                    [style.color]="ev.registrosPendientes > 0 ? 'var(--kiosko-texto)' : 'var(--kiosko-texto-suave)'">
+                <span class="tabular-nums">{{ ev.registrosPendientes }}</span>&nbsp;por enviar
+                <kiosco-ayuda titulo="Registros por enviar" [texto]="AYUDA_POR_ENVIAR" alinear="izquierda" />
+              </span>
+            }
+            <span class="pastilla py-1 font-semibold"
+                  [style.color]="ev.camaraDisponible ? 'var(--kiosko-entrada)' : 'var(--kiosko-atencion)'">
+              {{ ev.camaraDisponible ? 'Cámara funcionando' : 'Sin cámara' }}
+            </span>
+            @if (ev.nombreKiosco) {
+              <span class="text-texto-suave">Este kiosco: <b class="text-texto">{{ ev.nombreKiosco }}</b></span>
+            }
+          </p>
+        }
         <p class="text-texto-suave flex flex-wrap items-center gap-x-4 gap-y-2">
           <span>Versión del programa: <b class="text-texto">{{ ek.version }}</b></span>
           <button

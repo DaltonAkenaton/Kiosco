@@ -115,6 +115,45 @@ app.whenReady().then(async () => {
   comprobar('"Munoz" generó rmunoz', bd.buscarPorUsuario('rmunoz') !== null);
 
   // ======================================================================
+  //  NUMERO DE EMPLEADO CON LETRAS Y MODO DECIDIDO POR EL JEFE (20-10-2026)
+  // ======================================================================
+  console.log('\n--- número de empleado con letras (0029) ---');
+  const bdNumero = bd.baseDeDatos();
+  const numeroOriginal = bd.buscarPorUsuario('jdelacruz').numeroEmpleado;
+  // Guardado en minusculas, como pudo quedar en la nube antes de que el
+  // panel los pasara a mayusculas.
+  bdNumero.prepare(`UPDATE empleados_cache SET numero_empleado = 'a12345' WHERE usuario = 'jdelacruz'`).run();
+  comprobar('el número con letras se encuentra sin importar mayúsculas',
+    bd.buscarPorNumeroEmpleado('A12345')?.usuario === 'jdelacruz');
+  comprobar('ni espacios a los lados', bd.buscarPorNumeroEmpleado('  a12345 ')?.usuario === 'jdelacruz');
+  comprobar('el número de siempre sigue sirviendo', bd.buscarPorNumeroEmpleado('1001')?.usuario === 'dgomez');
+  comprobar('un número que no existe no encuentra a nadie', bd.buscarPorNumeroEmpleado('ZZZ999') === null);
+
+  comprobar('sin el ajuste del jefe, el modo es el de configuracion.ts', bd.modoIdentificacionVigente() === 'lista',
+    bd.modoIdentificacionVigente());
+  const ajustarModo = (valor) => bdNumero
+    .prepare(`INSERT INTO configuracion_cache (clave, valor) VALUES ('identificar_con_numero', ?)
+              ON CONFLICT (clave) DO UPDATE SET valor = excluded.valor`).run(valor);
+  ajustarModo('1');
+  comprobar('el jefe encendió "checar con número": el modo es número', bd.modoIdentificacionVigente() === 'numero');
+  const conLetras = bd.esquemaIdentificacion().safeParse({ identificador: ' a12345 ', pin: PIN_DE_LA_SEMILLA });
+  comprobar('el kiosco acepta letras y las pasa a mayúsculas',
+    conLetras.success && conLetras.data.identificador === 'A12345', JSON.stringify(conLetras.error?.issues?.[0]?.message ?? ''));
+  comprobar('rechaza espacios en medio ("no tiene")',
+    !bd.esquemaIdentificacion().safeParse({ identificador: 'no tiene', pin: PIN_DE_LA_SEMILLA }).success);
+  comprobar('rechaza acentos y eñes',
+    !bd.esquemaIdentificacion().safeParse({ identificador: 'ÑA1234', pin: PIN_DE_LA_SEMILLA }).success);
+  comprobar('rechaza uno más largo de lo que se puede teclear',
+    !bd.esquemaIdentificacion().safeParse({ identificador: 'A'.repeat(13), pin: PIN_DE_LA_SEMILLA }).success);
+  ajustarModo('0');
+  comprobar('lo apagó: el modo vuelve a lista', bd.modoIdentificacionVigente() === 'lista');
+  ajustarModo('7');
+  comprobar('un valor absurdo en el ajuste no se obedece (se usa el de configuracion.ts)',
+    bd.modoIdentificacionVigente() === 'lista');
+  bdNumero.prepare(`DELETE FROM configuracion_cache WHERE clave = 'identificar_con_numero'`).run();
+  bdNumero.prepare(`UPDATE empleados_cache SET numero_empleado = ? WHERE usuario = 'jdelacruz'`).run(numeroOriginal);
+
+  // ======================================================================
   //  GUARDADO DE MARCAS Y FOTOS
   // ======================================================================
   console.log('\n--- guardado de marcas y fotos ---');

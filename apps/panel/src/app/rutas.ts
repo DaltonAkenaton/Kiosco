@@ -1,5 +1,6 @@
 import { inject } from '@angular/core';
 import { type CanActivateFn, Router, type Routes } from '@angular/router';
+import { Pendientes } from './servicios/pendientes';
 import { Sesion } from './servicios/sesion';
 
 /**
@@ -33,12 +34,25 @@ const soloAdmin: CanActivateFn = () => {
   return sesion.esAdmin() ? true : router.parseUrl('/asistencia');
 };
 
+/**
+ * A donde se entra (0029): si hay pendientes sin atender, a Pendientes; si
+ * no, a Asistencia, como siempre. Es el "recordatorio" que pidio el jefe:
+ * sin correo ni WhatsApp, el panel le abre en lo que falta por hacer.
+ * Sin internet (no se pudo revisar), a Asistencia.
+ */
+const alEntrar: CanActivateFn = async () => {
+  const pendientes = inject(Pendientes);
+  const router = inject(Router);
+  const abiertos = await pendientes.revisar();
+  return router.parseUrl(abiertos ? '/pendientes' : '/asistencia');
+};
+
 /** Si ya hay sesion (por ejemplo, un marcador guardado de /entrar), directo adentro. */
 const sinSesion: CanActivateFn = async () => {
   const sesion = inject(Sesion);
   const router = inject(Router);
   await sesion.iniciar();
-  return sesion.admin() ? router.parseUrl('/asistencia') : true;
+  return sesion.admin() ? router.parseUrl('/') : true;
 };
 
 export const RUTAS: Routes = [
@@ -52,13 +66,15 @@ export const RUTAS: Routes = [
     canActivateChild: [contrasenaPropia],
     loadComponent: () => import('./paginas/marco').then((m) => m.Marco),
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'asistencia' },
+      { path: '', pathMatch: 'full', canActivate: [alEntrar], children: [] },
+      { path: 'pendientes', loadComponent: () => import('./paginas/pendientes').then((m) => m.PaginaPendientes) },
       { path: 'asistencia', loadComponent: () => import('./paginas/asistencia').then((m) => m.Asistencia) },
       { path: 'reportes', loadComponent: () => import('./paginas/reportes').then((m) => m.Reportes) },
       { path: 'empleados', loadComponent: () => import('./paginas/empleados').then((m) => m.Empleados) },
       { path: 'horarios', loadComponent: () => import('./paginas/horarios').then((m) => m.Horarios) },
       { path: 'ausencias', loadComponent: () => import('./paginas/ausencias').then((m) => m.Ausencias) },
       { path: 'kioscos', loadComponent: () => import('./paginas/kioscos').then((m) => m.Kioscos) },
+      { path: 'notas', loadComponent: () => import('./paginas/notas').then((m) => m.Notas) },
       { path: 'configuracion', loadComponent: () => import('./paginas/configuracion').then((m) => m.Configuracion) },
       { path: 'accesos', canActivate: [soloAdmin], loadComponent: () => import('./paginas/accesos').then((m) => m.Accesos) },
       { path: 'bitacora', canActivate: [soloAdmin], loadComponent: () => import('./paginas/bitacora').then((m) => m.Bitacora) },

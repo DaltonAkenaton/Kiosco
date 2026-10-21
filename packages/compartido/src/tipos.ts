@@ -347,4 +347,12 @@ export interface EstadoKiosco {
    * abre con su icono y tiene "Cerrar kiosco" en vez de "Usar esta PC".
    */
   pcCompartida: boolean;
+
+  /**
+   * Como se identifica el personal AHORA (ajuste del jefe
+   * `identificar_con_numero`, 0029). Viaja con el estado y no solo con la
+   * configuracion porque cambia sin reiniciar: el jefe lo enciende en el
+   * panel y la pantalla cambia en la siguiente sincronizacion.
+   */
+  modoIdentificacion: 'usuario' | 'lista' | 'numero';
 }

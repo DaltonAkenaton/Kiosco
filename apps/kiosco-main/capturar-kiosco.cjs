@@ -154,8 +154,29 @@ app.whenReady().then(async () => {
     await picar('Cancelar');
     await esperar(500);
 
-    // Modo administrador
-    await picar('Administrador');
+    // Checar con el NUMERO de empleado (20-10-2026): con letras y Enter.
+    await js(`window.kiosco.cambiarModoIdentificacion('numero')`);
+    await esperar(800);
+    await capturar('numero-vacio');
+    await teclear('1003');
+    await esperar(300);
+    await capturar('numero-tecleado');
+    await oprimir('Enter');
+    await esperar(400);
+    await capturar('numero-pide-pin');
+    await oprimir('Escape');
+    await js(`window.kiosco.cambiarModoIdentificacion('lista')`);
+    await esperar(800);
+
+    // Modo administrador: ya no hay boton; se mantiene presionado el letrero
+    // de arriba (servicios/entrada-admin.ts).
+    const letrero = (evento) => js(`document.querySelector('header')?.dispatchEvent(
+      new PointerEvent('${evento}', { bubbles: true, button: 0, pointerType: 'mouse' }))`);
+    await letrero('pointerdown');
+    await esperar(1800);
+    await capturar('admin-manteniendo-presionado');
+    await esperar(1600);
+    await letrero('pointerup');
     await esperar(1000);
     await capturar('admin-entrar');
     const campos = await js(`[...document.querySelectorAll('input')].map((i) => i.type)`);

@@ -1,5 +1,5 @@
 <h1 class="text-2xl font-bold">Configuración</h1>
-<p class="text-texto-suave mt-1 max-w-3xl">
+<p class="text-texto-suave mt-1 max-w-5xl">
   Las reglas del sistema. Se cambian aquí, sin reinstalar nada. Los kioscos reciben los cambios en unos
   minutos, cuando tienen internet.
   @if (!sesion.esAdmin()) {
@@ -28,7 +28,7 @@
     <div class="mt-2 grid gap-3 lg:grid-cols-2">
       @for (o of g.opciones; track o.clave) {
         @let p = palabras(o);
-        <article class="bg-superficie border-borde flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-2xl border-2 px-5 py-4">
+        <article class="bg-superficie border-borde flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-2xl border-2 px-5 py-4">
           <div>
             <p class="font-semibold">
               {{ p.nombre }}
@@ -55,7 +55,7 @@
   <section class="mt-8" aria-labelledby="titulo-respaldo">
     <h2 id="titulo-respaldo" class="text-xl font-bold">Respaldo</h2>
     <article class="bg-superficie border-borde mt-2 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-2xl border-2 px-5 py-4">
-      <div class="max-w-2xl">
+      <div class="min-w-0 max-w-2xl">
         <p class="font-semibold">
           Una copia de todos los datos, en Excel
           <panel-ayuda titulo="¿Qué trae el respaldo?" [texto]="AYUDA_RESPALDO" alinear="izquierda" />
@@ -100,6 +100,12 @@
                   (click)="nuevoValor.set('0')">No</button>
         </div>
       </div>
+    } @else if (o.tipo === 'fecha') {
+      <label class="flex flex-col gap-1">
+        <span>Fecha nueva</span>
+        <input type="date" class="campo w-60 text-xl" [max]="sesion.hoy()" [value]="nuevoValor()"
+               (change)="nuevoValor.set(valor($event))" />
+      </label>
     } @else {
     <label class="flex flex-col gap-1">
       <span>

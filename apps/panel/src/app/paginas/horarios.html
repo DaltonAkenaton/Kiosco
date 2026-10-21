@@ -1,5 +1,5 @@
 <h1 class="text-2xl font-bold">Horarios</h1>
-<p class="text-texto-suave mt-1 max-w-3xl">
+<p class="text-texto-suave mt-1 max-w-5xl">
   Los turnos y el horario de cada persona. Con esto el sistema sabe a qué hora debía llegar cada quien.
 </p>
 
@@ -34,8 +34,8 @@
               <p class="text-texto-suave text-sm">Cruza la medianoche: cuenta para el día en que empieza.</p>
             }
             <p class="text-texto-suave text-sm">
-              Tolerancia: {{ t.tolerancia_minutos ?? 'la de Configuración' }}{{ t.tolerancia_minutos !== null ? ' min' : '' }} ·
-              Retardo mayor: {{ t.minutos_para_falta ?? 'el de Configuración' }}{{ t.minutos_para_falta !== null ? ' min' : '' }}
+              Tolerancia: {{ t.tolerancia_minutos ?? reglasGenerales().tolerancia }} min{{ t.tolerancia_minutos === null ? ' (la de Configuración)' : '' }} ·
+              Retardo mayor: {{ t.minutos_para_falta ?? reglasGenerales().falta }} min{{ t.minutos_para_falta === null ? ' (el de Configuración)' : '' }}
             </p>
           </div>
           @if (sesion.esAdmin()) {
@@ -101,6 +101,42 @@
   </div>
 </section>
 
+<!-- ====================== CAMBIOS POR UN DIA (0029) ====================== -->
+<section class="mt-8">
+  <div class="flex items-center gap-3">
+    <h2 class="text-xl font-bold">Cambios por un día <panel-ayuda titulo="Cambios por un día" [texto]="AYUDA.cambios" alinear="izquierda" /></h2>
+    @if (sesion.esAdmin()) {
+      <button type="button" class="boton-secundario !px-3 !py-1" (click)="abrirCambio()">+ Cambio por un día</button>
+    }
+  </div>
+  <p class="text-texto-suave mt-1">Alguien entra a otra hora, descansa, o dos personas se intercambian el turno. Sólo ese día.</p>
+  <ul class="mt-3 flex flex-col gap-2">
+    @for (a of cambiosParaMostrar(); track a.id) {
+      @let otro = pareja(a);
+      <li class="bg-superficie border-borde flex flex-wrap items-center justify-between gap-3 rounded-xl border-2 px-4 py-2"
+          [class.opacity-60]="esPasado(a.fecha)">
+        <span>
+          <b>{{ diaLargo(a.fecha) }}</b> ·
+          @if (otro) {
+            Intercambio: <b>{{ nombreDe(a.empleado_id) }}</b> {{ horasDe(a) === 'Descansa' ? 'descansa' : 'trabaja ' + horasDe(a) }}
+            y <b>{{ nombreDe(otro.empleado_id) }}</b> {{ horasDe(otro) === 'Descansa' ? 'descansa' : 'trabaja ' + horasDe(otro) }}
+          } @else {
+            <b>{{ nombreDe(a.empleado_id) }}</b> {{ horasDe(a) === 'Descansa' ? 'descansa' : 'trabaja ' + horasDe(a) }}
+          }
+          <span class="text-texto-suave block text-sm">{{ a.motivo }}</span>
+        </span>
+        @if (sesion.esAdmin()) {
+          <button type="button" class="boton-secundario !px-3 !py-1" (click)="errorAccion.set(null); ajustePorQuitar.set(a)">Quitar</button>
+        }
+      </li>
+    } @empty {
+      @if (!cargando()) {
+        <li class="text-texto-suave">No hay cambios por un día de las últimas dos semanas ni próximos.</li>
+      }
+    }
+  </ul>
+</section>
+
 <!-- ====================== DIALOGOS ====================== -->
 @if (turnoEditado(); as t) {
   <panel-dialogo [titulo]="t.id ? 'Cambiar el turno ' + t.nombre : 'Nuevo turno'" textoBoton="Guardar"
@@ -116,10 +152,12 @@
     <p class="text-texto-suave text-base">Si la salida es antes que la entrada (22:00–06:00), el turno cruza la medianoche.</p>
     <div class="flex flex-wrap gap-3">
       <label class="flex flex-col gap-1">Tolerancia (minutos)
-        <input class="campo w-40" inputmode="numeric" placeholder="la general" [value]="t.tolerancia" (input)="cambiarTurno('tolerancia', valor($event))" />
+        <input class="campo w-44" inputmode="numeric" maxlength="3" [placeholder]="reglasGenerales().tolerancia + ' (la general)'"
+               [value]="t.tolerancia" (input)="minutosDelTurno('tolerancia', $event)" />
       </label>
       <label class="flex flex-col gap-1">Minutos para "retardo mayor"
-        <input class="campo w-40" inputmode="numeric" placeholder="la general" [value]="t.falta" (input)="cambiarTurno('falta', valor($event))" />
+        <input class="campo w-44" inputmode="numeric" maxlength="3" [placeholder]="reglasGenerales().falta + ' (la general)'"
+               [value]="t.falta" (input)="minutosDelTurno('falta', $event)" />
       </label>
     </div>
     <p class="text-texto-suave text-base">Déjalos vacíos para usar los de Configuración (lo normal).</p>
@@ -179,5 +217,79 @@
         }
       </div>
     </div>
+  </panel-dialogo>
+}
+
+@if (cambioNuevo(); as c) {
+  <panel-dialogo titulo="Cambio por un día" textoBoton="Guardar cambio"
+                 [ejemploMotivo]="c.tipo === 'intercambio' ? 'Ej.: Juan cubre a Pedro por una cita médica' : 'Ej.: entra tarde por una cita en el IMSS'"
+                 [ocupado]="guardando()" [error]="errorAccion()" (confirmar)="guardarCambio($event)" (cancelar)="cambioNuevo.set(null)">
+    <fieldset class="flex flex-col gap-2">
+      <legend class="mb-1">¿Qué cambio?</legend>
+      <label class="flex cursor-pointer items-center gap-2">
+        <input type="radio" name="tipo-cambio" class="size-5" [checked]="c.tipo === 'una'" (change)="cambiarCambio('tipo', 'una')" />
+        El horario de una persona (otra hora, o descansa)
+      </label>
+      <label class="flex cursor-pointer items-center gap-2">
+        <input type="radio" name="tipo-cambio" class="size-5" [checked]="c.tipo === 'intercambio'" (change)="cambiarCambio('tipo', 'intercambio')" />
+        Dos personas se intercambian el turno
+      </label>
+    </fieldset>
+
+    <label class="flex flex-col gap-1">Día
+      <input type="date" class="campo w-52" [value]="c.fecha" (change)="cambiarCambio('fecha', valor($event))" />
+    </label>
+
+    <label class="flex flex-col gap-1">{{ c.tipo === 'intercambio' ? 'Primera persona' : 'Persona' }}
+      <panel-elegir-empleado [opciones]="opcionesDeEmpleado()" [valor]="c.a" (elegir)="cambiarCambio('a', $event)" />
+      @if (c.a && horarioNormal()[c.a] !== undefined) {
+        <span class="text-texto-suave text-base">Ese día normalmente: {{ horasDe(horarioNormal()[c.a]) }}</span>
+      }
+    </label>
+
+    @if (c.tipo === 'intercambio') {
+      <label class="flex flex-col gap-1">Segunda persona
+        <panel-elegir-empleado [opciones]="opcionesDeEmpleado()" [valor]="c.b" (elegir)="cambiarCambio('b', $event)" />
+        @if (c.b && horarioNormal()[c.b] !== undefined) {
+          <span class="text-texto-suave text-base">Ese día normalmente: {{ horasDe(horarioNormal()[c.b]) }}</span>
+        }
+      </label>
+      @if (c.a && c.b && horarioNormal()[c.a] !== undefined && horarioNormal()[c.b] !== undefined) {
+        <p class="aviso aviso-atencion text-base font-normal">
+          Ese día, <b>{{ nombreDe(c.a) }}</b> {{ horasDe(horarioNormal()[c.b]) === 'Descansa' ? 'descansa' : 'trabaja ' + horasDe(horarioNormal()[c.b]) }}
+          y <b>{{ nombreDe(c.b) }}</b> {{ horasDe(horarioNormal()[c.a]) === 'Descansa' ? 'descansa' : 'trabaja ' + horasDe(horarioNormal()[c.a]) }}.
+        </p>
+      }
+    } @else {
+      <fieldset class="flex flex-col gap-2">
+        <label class="flex cursor-pointer items-center gap-2">
+          <input type="radio" name="descansa" class="size-5" [checked]="!c.descansa" (change)="cambiarDescanso(false)" />
+          Trabaja a otra hora
+        </label>
+        @if (!c.descansa) {
+          <div class="flex flex-wrap gap-3 pl-7">
+            <label class="flex flex-col gap-1">Entrada <input type="time" class="campo" [value]="c.inicio" (change)="cambiarCambio('inicio', valor($event))" /></label>
+            <label class="flex flex-col gap-1">Salida <input type="time" class="campo" [value]="c.fin" (change)="cambiarCambio('fin', valor($event))" /></label>
+          </div>
+        }
+        <label class="flex cursor-pointer items-center gap-2">
+          <input type="radio" name="descansa" class="size-5" [checked]="c.descansa" (change)="cambiarDescanso(true)" />
+          Ese día descansa
+        </label>
+      </fieldset>
+    }
+  </panel-dialogo>
+}
+
+@if (ajustePorQuitar(); as a) {
+  <panel-dialogo [titulo]="'Quitar el cambio del ' + diaLargo(a.fecha)" textoBoton="Quitar" [peligro]="true"
+                 ejemploMotivo="Ej.: al final no se hizo el cambio"
+                 [ocupado]="guardando()" [error]="errorAccion()" (confirmar)="quitarCambio(a, $event)" (cancelar)="ajustePorQuitar.set(null)">
+    <p>
+      @if (a.intercambio_id) {
+        Es un intercambio: se quita para las dos personas.
+      }
+      Ese día vuelve a medirse con el horario normal (con retardos o faltas si los hubo).
+    </p>
   </panel-dialogo>
 }

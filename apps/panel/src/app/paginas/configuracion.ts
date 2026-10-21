@@ -26,7 +26,7 @@ interface Opcion {
   valor: unknown;
   descripcion: string;
   grupo: string;
-  tipo: 'entero' | 'texto';
+  tipo: 'entero' | 'texto' | 'fecha';
   minimo: number | null;
   maximo: number | null;
   unidad: string;
@@ -41,7 +41,7 @@ interface Opcion {
 const LAS_USA_EL_KIOSCO = new Set([
   'intentos_pin_maximos', 'segundos_bloqueo_pin', 'minutos_olvidar_intentos', 'umbral_brillo_minimo',
   'umbral_varianza_minima', 'umbral_desfase_reloj_ms', 'dias_retencion_fotos', 'zona_horaria',
-  'horas_para_cierre_automatico',
+  'horas_para_cierre_automatico', 'identificar_con_numero',
 ]);
 
 /** Un turno con su propia tolerancia o sus propios minutos (Horarios). */
@@ -59,6 +59,7 @@ const GRUPOS: Record<string, string> = {
   privacidad: 'Privacidad',
   dispositivos: 'Kioscos',
   panel: 'Este panel',
+  pendientes: 'Pendientes',
   general: 'General',
 };
 
@@ -90,7 +91,8 @@ export class Configuracion implements OnInit {
   protected readonly errorRespaldo = signal<string | null>(null);
   protected readonly AYUDA_RESPALDO =
     'Trae lo mismo que el respaldo automático que se hace cada lunes y jueves: una hoja de Excel por tabla ' +
-    '(registros, personal, horarios, ausencias, correcciones, bitácora, configuración, kioscos), sin PIN ni ' +
+    '(registros, personal, horarios, cambios de horario, ausencias, pendientes, correcciones, bitácora, configuración, ' +
+    'kioscos), sin PIN ni ' +
     'contraseñas. NO trae las fotos: nunca salen del kiosco; se respaldan desde el kiosco, en el modo ' +
     'administrador, con "Guardar en memoria USB". Queda anotado en la bitácora quién lo descargó y cuándo.';
 
@@ -127,6 +129,13 @@ export class Configuracion implements OnInit {
   }
 
   protected valorEnPalabras(o: Opcion): string {
+    if (o.tipo === 'fecha' && typeof o.valor === 'string') {
+      return new Date(`${o.valor}T12:00:00Z`).toLocaleDateString('es-MX', {
+        day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC',
+      });
+    }
+    // Las reglas de minutos de Pendientes (0029) se apagan con 0.
+    if (o.clave.startsWith('pendientes_minutos') && Number(o.valor) === 0) return 'Apagado';
     return `${String(o.valor)}${o.unidad ? ' ' + o.unidad.replace('dias', 'días') : ''}`;
   }
 
@@ -156,12 +165,22 @@ export class Configuracion implements OnInit {
         this.errorAccion.set(`Debe estar entre ${o.minimo} y ${o.maximo}.`);
         return;
       }
-      const choque = this.chocaConUnTurno(o.clave, numero);
+      const choque = this.chocaConUnTurno(o.clave, numero) ?? (await this.faltanNumeros(o.clave, numero));
       if (choque) {
         this.errorAccion.set(choque);
         return;
       }
       valor = numero;
+    } else if (o.tipo === 'fecha') {
+      valor = this.nuevoValor().trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(valor as string)) {
+        this.errorAccion.set('Elige una fecha.');
+        return;
+      }
+      if ((valor as string) > this.sesion.hoy()) {
+        this.errorAccion.set('La fecha no puede ser después de hoy.');
+        return;
+      }
     } else {
       valor = this.nuevoValor().trim();
       if (valor === '') {
@@ -220,6 +239,21 @@ export class Configuracion implements OnInit {
     return null;
   }
 
+  /**
+   * Checar con el numero de empleado (0029): con alguien activo SIN numero,
+   * esa persona no podria checar. Se dice quienes son antes de encenderlo.
+   */
+  private async faltanNumeros(clave: string, numero: number): Promise<string | null> {
+    if (clave !== 'identificar_con_numero' || numero !== 1) return null;
+    const { data, error } = await this.sesion.bd
+      .from('empleados').select('nombre, apellido_paterno').eq('activo', true).is('numero_empleado', null);
+    if (error) return 'No se pudo revisar que todos tengan número. Revisa el internet y vuelve a intentar.';
+    if (!data || data.length === 0) return null;
+    const nombres = data.slice(0, 5).map((e) => `${e.nombre} ${e.apellido_paterno}`).join(', ');
+    return `${data.length} persona(s) activa(s) no tienen número de empleado (${nombres}${data.length > 5 ? '…' : ''}). ` +
+      'Pónselo en Empleados → Editar antes de encender esto; si no, no podrían checar.';
+  }
+
   protected abrirRespaldo(): void {
     this.errorRespaldo.set(null);
     this.avanceRespaldo.set('');
@@ -243,7 +277,7 @@ export class Configuracion implements OnInit {
       const hojas = await armarRespaldo(this.sesion.bd, this.sesion.zona(), (tabla, numero, total) =>
         this.avanceRespaldo.set(`Bajando ${tabla.replaceAll('_', ' ')} (${numero} de ${total})…`),
       );
-      const hoy = new Intl.DateTimeFormat('sv-SE', { timeZone: this.sesion.zona() }).format(new Date());
+      const hoy = this.sesion.hoy();
       descargarExcel(`respaldo-${hoy}.xlsx`, hojas);
       this.respaldoAbierto.set(false);
       this.avisos.exito('Respaldo descargado. Guárdalo en un lugar seguro y bórralo de Descargas.');

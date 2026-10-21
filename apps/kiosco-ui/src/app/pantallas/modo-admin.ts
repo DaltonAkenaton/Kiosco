@@ -51,6 +51,7 @@ import {
 } from '@kiosko/compartido';
 import { Ayuda } from '../componentes/ayuda';
 import { PuenteKiosco } from '../servicios/puente-kiosco';
+import { AYUDA_POR_ENVIAR, TEXTOS_DE_CONEXION } from './textos-conexion';
 
 /** Lo que se le dice a la pantalla principal cuando la sesion se cierra sola. */
 const MENSAJE_SESION_CERRADA = 'La sesión de administrador se cerró porque nadie la usó por un rato.';
@@ -255,6 +256,15 @@ export class ModoAdmin implements OnInit, OnDestroy {
 
   /** Version, actualizacion lista y registros que la oficina no acepto. */
   protected readonly estadoKiosco = signal<EstadoDelKioscoParaAdmin | null>(null);
+
+  /**
+   * Lo que antes estaba en la barra de abajo de la pantalla principal
+   * (conexion, registros por enviar, camara). Desde el 20-10-2026 el
+   * empleado ya no lo ve; quien da soporte lo ve aqui.
+   */
+  protected readonly estadoEnVivo = this.puente.estado;
+  protected readonly conexion = computed(() => TEXTOS_DE_CONEXION[this.estadoEnVivo()?.nube ?? 'apagada']);
+  protected readonly AYUDA_POR_ENVIAR = AYUDA_POR_ENVIAR;
   protected readonly verRechazados = signal(false);
   /** "Descartar": pidiendo el motivo (null = cerrado). */
   protected readonly motivoDescarte = signal<string | null>(null);

@@ -14,6 +14,10 @@
  *        Lo que se explica arriba del motivo.
  *      </panel-dialogo>
  *
+ *  `etiquetaMotivo` y `sugerencias` (0029): para Pendientes, donde no se
+ *  pregunta "¿por que?" sino "¿que se hizo?", con botones de las respuestas
+ *  de siempre ("Se hablo con la persona") que llenan el campo de un clic.
+ *
  *  `$event` es el motivo ya escrito. El contenido (lo de adentro) puede traer
  *  sus propios campos: el dialogo solo agrega el motivo y los botones.
  *
@@ -21,6 +25,10 @@
  *  ventana, salvo mientras guarda. Picar afuera cuenta solo si el clic
  *  EMPIEZA afuera: quien selecciona texto dentro de un campo y suelta el
  *  raton fuera de la ventana no pierde lo que escribio.
+ *
+ *  `hayCambios` (21-10-2026): en una ventana con mucho que escribir (una
+ *  nota), Esc o un clic afuera PREGUNTAN antes de tirar lo escrito. El boton
+ *  Cancelar no pregunta: ese si se pico a proposito.
  */
 
 import { Component, HostListener, input, output, signal } from '@angular/core';
@@ -32,13 +40,13 @@ export const LARGO_MINIMO_MOTIVO = 10;
   selector: 'panel-dialogo',
   template: `
     <div
-      class="fixed inset-0 z-50 flex items-center justify-center p-6"
+      class="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-6"
       style="background-color: rgb(0 0 0 / 0.7)"
       (mousedown)="presionEnElFondo($event)"
       (click)="clicEnElFondo($event)"
     >
       <form
-        class="ventana bg-superficie border-borde flex max-h-full w-full max-w-xl flex-col gap-4 overflow-y-auto rounded-3xl border-2 p-8"
+        class="ventana bg-superficie border-borde flex max-h-full w-full max-w-xl flex-col gap-4 overflow-y-auto rounded-3xl border-2 p-5 sm:p-8"
         (submit)="$event.preventDefault(); enviar()"
       >
         <h2 class="text-2xl font-bold">{{ titulo() }}</h2>
@@ -46,11 +54,18 @@ export const LARGO_MINIMO_MOTIVO = 10;
 
         @if (pedirMotivo()) {
           <label class="flex flex-col gap-1">
-            <span>¿Por qué? <span class="text-texto-suave">(queda anotado en la bitácora)</span></span>
-            <input class="campo" [placeholder]="ejemploMotivo()" [value]="motivo()" (input)="motivo.set(valor($event))" />
+            <span>{{ etiquetaMotivo() }} <span class="text-texto-suave">(queda anotado en la bitácora)</span></span>
+            @if (sugerencias().length > 0) {
+              <span class="flex flex-wrap gap-2">
+                @for (s of sugerencias(); track s) {
+                  <button type="button" class="boton-secundario !px-3 !py-1 text-base" (click)="escribir(s)">{{ s }}</button>
+                }
+              </span>
+            }
+            <input class="campo" [placeholder]="ejemploMotivo()" [value]="motivo()" (input)="escribir(valor($event))" />
             @if (motivo().trim().length < minimo) {
               <span class="text-base font-semibold" style="color: var(--kiosko-atencion)">
-                ✎ Escribe por qué (al menos {{ minimo }} letras; llevas {{ motivo().trim().length }}) para poder guardar.
+                ✎ {{ etiquetaMotivo() === '¿Por qué?' ? 'Escribe por qué' : 'Escríbelo' }} (al menos {{ minimo }} letras; llevas {{ motivo().trim().length }}) para poder guardar.
               </span>
             }
           </label>
@@ -86,9 +101,16 @@ export class Dialogo {
   readonly error = input<string | null>(null);
   readonly pedirMotivo = input(true);
   readonly ejemploMotivo = input('Ej.: lo pidió el empleado el 23 de septiembre');
+  readonly etiquetaMotivo = input('¿Por qué?');
+  /** Respuestas de siempre: un clic las escribe en el campo (se pueden editar). */
+  readonly sugerencias = input<string[]>([]);
+  /** Hay algo escrito que se perderia: Esc y el clic afuera preguntan primero. */
+  readonly hayCambios = input(false);
 
   readonly confirmar = output<string>();
   readonly cancelar = output<void>();
+  /** El motivo cada vez que cambia (Pendientes marca "justificar" segun la sugerencia elegida). */
+  readonly alEscribir = output<string>();
 
   protected readonly motivo = signal('');
   protected readonly minimo = LARGO_MINIMO_MOTIVO;
@@ -110,10 +132,17 @@ export class Dialogo {
   }
 
   protected clicEnElFondo(evento: MouseEvent): void {
-    if (evento.target === evento.currentTarget && this.empezoAfuera) this.cerrar();
+    if (evento.target === evento.currentTarget && this.empezoAfuera) this.cerrarSinQuerer();
   }
 
+  /** Esc o clic afuera: puede ser sin querer, asi que si hay algo escrito se pregunta. */
   @HostListener('document:keydown.escape')
+  protected cerrarSinQuerer(): void {
+    if (this.ocupado()) return;
+    if (this.hayCambios() && !window.confirm('¿Cerrar sin guardar? Se pierde lo que escribiste.')) return;
+    this.cancelar.emit();
+  }
+
   protected cerrar(): void {
     if (!this.ocupado()) this.cancelar.emit();
   }
@@ -121,6 +150,11 @@ export class Dialogo {
   protected enviar(): void {
     if (this.pedirMotivo() && this.motivo().trim().length < this.minimo) return;
     this.confirmar.emit(this.motivo().trim());
+  }
+
+  protected escribir(texto: string): void {
+    this.motivo.set(texto);
+    this.alEscribir.emit(texto);
   }
 
   protected valor(evento: Event): string {

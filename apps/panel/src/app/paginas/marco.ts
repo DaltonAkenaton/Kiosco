@@ -10,13 +10,20 @@
  *  secciones, el nombre y "Salir" se caian a otro renglon como si fuera un
  *  error. En pantallas angostas (tablet) el menu se desliza de lado.
  *
+ *  En celular (21-10-2026): el encabezado fijo se comia la cuarta parte de la
+ *  pantalla. Ahi se esconden el subtitulo y el nombre de quien entro, el menu
+ *  se desvanece a la derecha (pista de que hay mas) y la seccion abierta se
+ *  recorre a la vista.
+ *
  *  Tambien vigila la inactividad (servicios/inactividad.ts): avisa un minuto
  *  antes y cierra la sesion al vencer.
  */
 
 import { Component, OnDestroy, OnInit, computed, effect, inject } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { Avisos } from '../servicios/avisos';
+import { AvisosDelPanel } from '../servicios/avisos-del-panel';
 import { Inactividad } from '../servicios/inactividad';
 import { Pendientes } from '../servicios/pendientes';
 import { Sesion } from '../servicios/sesion';
@@ -33,11 +40,11 @@ import { Sesion } from '../servicios/sesion';
         <div class="contenedor flex items-center justify-between gap-4 pt-3 pb-2">
           <div class="leading-tight">
             <p class="text-lg font-bold">Control de Asistencia</p>
-            <p class="text-sm opacity-80">Panel administrativo</p>
+            <p class="hidden text-sm opacity-80 sm:block">Panel administrativo</p>
           </div>
           <div class="flex items-center gap-4">
             @if (sesion.admin(); as a) {
-              <span class="text-right text-sm leading-tight">
+              <span class="hidden text-right text-sm leading-tight sm:block">
                 <b class="block text-base">{{ a.nombre }}</b>
                 {{ a.rol === 'admin' ? 'Administrador' : 'Supervisor' }}
               </span>
@@ -50,7 +57,7 @@ import { Sesion } from '../servicios/sesion';
           @for (s of secciones(); track s.ruta) {
             <a [routerLink]="s.ruta" routerLinkActive="activo" class="enlace-menu">
               {{ s.nombre }}
-              <!-- Cuantas cosas hay que atender ahi (servicios/pendientes.ts). -->
+              <!-- Cuantas cosas hay que atender ahi (servicios/pendientes.ts y avisos-del-panel.ts). -->
               @if (s.pendientes > 0) {
                 <span class="insignia-pendientes" [attr.aria-label]="s.pendientes + ' para atender'">{{ s.pendientes }}</span>
               }
@@ -90,6 +97,7 @@ export class Marco implements OnInit, OnDestroy {
   protected readonly sesion = inject(Sesion);
   protected readonly inactividad = inject(Inactividad);
   protected readonly avisos = inject(Avisos);
+  private readonly avisosDelPanel = inject(AvisosDelPanel);
   private readonly pendientes = inject(Pendientes);
   private readonly router = inject(Router);
 
@@ -99,16 +107,25 @@ export class Marco implements OnInit, OnDestroy {
     effect(() => {
       if (!this.sesion.admin()) void this.router.navigateByUrl('/entrar');
     });
+    // La seccion abierta, a la vista en el menu (en celular puede quedar fuera, a la derecha).
+    this.router.events.pipe(takeUntilDestroyed()).subscribe((e) => {
+      if (e instanceof NavigationEnd) {
+        setTimeout(() => document.querySelector('.menu-principal .activo')?.scrollIntoView({ block: 'nearest', inline: 'nearest' }));
+      }
+    });
   }
 
   /** Accesos y Bitacora solo para el rol admin: la base tampoco se los deja a un supervisor. */
   protected readonly secciones = computed(() => [
-    { ruta: '/asistencia', nombre: 'Asistencia', pendientes: this.pendientes.deAsistencia().length },
+    // Primero: es donde se abre el panel cuando hay algo que atender (0029).
+    { ruta: '/pendientes', nombre: 'Pendientes', pendientes: this.pendientes.abiertos() },
+    { ruta: '/asistencia', nombre: 'Asistencia', pendientes: this.avisosDelPanel.deAsistencia().length },
     { ruta: '/reportes', nombre: 'Reportes', pendientes: 0 },
     { ruta: '/empleados', nombre: 'Empleados', pendientes: 0 },
     { ruta: '/horarios', nombre: 'Horarios', pendientes: 0 },
     { ruta: '/ausencias', nombre: 'Incidencias', pendientes: 0 },
-    { ruta: '/kioscos', nombre: 'Kioscos', pendientes: this.pendientes.deKioscos().length },
+    { ruta: '/kioscos', nombre: 'Kioscos', pendientes: this.avisosDelPanel.deKioscos().length },
+    { ruta: '/notas', nombre: 'Notas', pendientes: 0 },
     { ruta: '/configuracion', nombre: 'Configuración', pendientes: 0 },
     ...(this.sesion.esAdmin()
       ? [
@@ -121,11 +138,13 @@ export class Marco implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.inactividad.iniciar(() => void this.salir('inactividad'));
+    this.avisosDelPanel.iniciar();
     this.pendientes.iniciar();
   }
 
   ngOnDestroy(): void {
     this.inactividad.detener();
+    this.avisosDelPanel.detener();
     this.pendientes.detener();
   }
 

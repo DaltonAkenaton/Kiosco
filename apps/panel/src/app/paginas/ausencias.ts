@@ -16,16 +16,22 @@
  *
  *  (La ruta sigue siendo /ausencias para no romper enlaces guardados.)
  *
+ *  Filtros (21-10-2026): persona, tipo, fechas y buscar en las notas. Se
+ *  piden a la base, no se filtra lo ya traido: antes solo llegaban las 200
+ *  mas recientes y las viejas se perdian de vista sin avisar.
+ *
  *  El reporte las toma en cuenta al momento: registrar unas vacaciones de la
  *  semana pasada corrige el reporte de la semana pasada.
  */
 
-import { Component, OnInit, inject, signal } from '@angular/core';
-import { hoyEn } from '@kiosko/compartido';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Ayuda } from '../componentes/ayuda';
 import { CargandoTabla, RENGLONES_CARGANDO } from '../componentes/cargando-tabla';
 import { Dialogo, mensajeDeError } from '../componentes/dialogo';
-import { RegistrarIncidencia, familiaDeIncidencia, textoDeIncidencia } from '../componentes/registrar-incidencia';
+import { ElegirEmpleado } from '../componentes/elegir-empleado';
+import { RegistrarIncidencia, TIPOS_DE_INCIDENCIA, familiaDeIncidencia, textoDeIncidencia } from '../componentes/registrar-incidencia';
 import { Avisos } from '../servicios/avisos';
+import { senalRecordada } from '../servicios/recordar';
 import { Sesion } from '../servicios/sesion';
 
 interface Incidencia {
@@ -37,6 +43,9 @@ interface Incidencia {
   notas: string;
 }
 
+/** Cuantas se traen como mucho; si se llega, se pide afinar los filtros. */
+const MAXIMO_INCIDENCIAS = 300;
+
 interface Festivo {
   fecha: string;
   descripcion: string;
@@ -44,7 +53,7 @@ interface Festivo {
 
 @Component({
   selector: 'panel-ausencias',
-  imports: [CargandoTabla, Dialogo, RegistrarIncidencia],
+  imports: [Ayuda, CargandoTabla, Dialogo, ElegirEmpleado, RegistrarIncidencia],
   templateUrl: './ausencias.html',
 })
 export class Ausencias implements OnInit {
@@ -59,6 +68,33 @@ export class Ausencias implements OnInit {
   protected readonly error = signal<string | null>(null);
 
   protected readonly familia = familiaDeIncidencia;
+  protected readonly TIPOS = TIPOS_DE_INCIDENCIA;
+  protected readonly MAXIMO = MAXIMO_INCIDENCIAS;
+
+  // Filtros: se recuerdan al cambiar de pantalla, como en Reportes.
+  protected readonly filtroEmpleado = senalRecordada('incidencias.empleado', '');
+  protected readonly filtroTipo = senalRecordada('incidencias.tipo', '');
+  protected readonly filtroDesde = senalRecordada('incidencias.desde', '');
+  protected readonly filtroHasta = senalRecordada('incidencias.hasta', '');
+  protected readonly filtroTexto = senalRecordada('incidencias.texto', '');
+  protected readonly hayFiltros = computed(
+    () => !!(this.filtroEmpleado() || this.filtroTipo() || this.filtroDesde() || this.filtroHasta() || this.filtroTexto().trim()),
+  );
+  /**
+   * Total de dias que suman las incidencias que se ven, contando solo los que
+   * caen entre Desde y Hasta: una incapacidad del 28 al 3, buscando octubre,
+   * suma 3 dias y no 6.
+   */
+  protected readonly diasEnTotal = computed(() => {
+    const desde = this.filtroDesde();
+    const hasta = this.filtroHasta();
+    return this.incidencias().reduce((suma, i) => {
+      const inicio = desde && desde > i.fecha_inicio ? desde : i.fecha_inicio;
+      const fin = hasta && hasta < i.fecha_fin ? hasta : i.fecha_fin;
+      return suma + Math.max(0, Math.round((Date.parse(fin) - Date.parse(inicio)) / 86_400_000) + 1);
+    }, 0);
+  });
+  private consulta = 0;
 
   protected readonly registrando = signal(false);
   protected readonly porBorrar = signal<Incidencia | null>(null);
@@ -72,19 +108,41 @@ export class Ausencias implements OnInit {
   }
 
   private async cargar(): Promise<void> {
-    const [inc, fes, emp] = await Promise.all([
-      this.sesion.bd.from('incidencias').select('id, empleado_id, tipo, fecha_inicio, fecha_fin, notas').order('fecha_inicio', { ascending: false }).limit(200),
+    const esta = ++this.consulta;
+    let inc = this.sesion.bd.from('incidencias').select('id, empleado_id, tipo, fecha_inicio, fecha_fin, notas');
+    if (this.filtroEmpleado()) inc = inc.eq('empleado_id', this.filtroEmpleado());
+    if (this.filtroTipo()) inc = inc.eq('tipo', this.filtroTipo());
+    // Que se crucen con el periodo: una incapacidad del 28 al 3 sale buscando "desde el 1".
+    if (this.filtroDesde()) inc = inc.gte('fecha_fin', this.filtroDesde());
+    if (this.filtroHasta()) inc = inc.lte('fecha_inicio', this.filtroHasta());
+    // Sin % _ * ni \: son comodines (o el escape) de ilike y aqui se busca el texto tal cual.
+    const texto = this.filtroTexto().trim().replace(/[%_*\\]/g, ' ');
+    if (texto) inc = inc.ilike('notas', `%${texto}%`);
+    const [incidencias, fes, emp] = await Promise.all([
+      inc.order('fecha_inicio', { ascending: false }).limit(MAXIMO_INCIDENCIAS),
       this.sesion.bd.from('dias_festivos').select('fecha, descripcion').order('fecha'),
       this.sesion.bd.from('empleados').select('id, nombre, apellido_paterno, apellido_materno').order('nombre'),
     ]);
+    if (esta !== this.consulta) return; // ya se pidio otra con otros filtros
     this.cargando.set(false);
-    if (inc.error || fes.error || emp.error) {
+    if (incidencias.error || fes.error || emp.error) {
       this.error.set('No se pudo traer la información. Revisa el internet.');
       return;
     }
-    this.incidencias.set(inc.data as Incidencia[]);
+    this.error.set(null);
+    this.incidencias.set(incidencias.data as Incidencia[]);
     this.festivos.set(fes.data as Festivo[]);
     this.empleados.set((emp.data ?? []).map((e) => ({ id: e.id, nombre: [e.nombre, e.apellido_paterno, e.apellido_materno].filter(Boolean).join(' ') })));
+  }
+
+  protected filtrar(filtro: 'filtroEmpleado' | 'filtroTipo' | 'filtroDesde' | 'filtroHasta' | 'filtroTexto', valor: string): void {
+    this[filtro].set(valor);
+    void this.cargar();
+  }
+
+  protected quitarFiltros(): void {
+    for (const f of ['filtroEmpleado', 'filtroTipo', 'filtroDesde', 'filtroHasta', 'filtroTexto'] as const) this[f].set('');
+    void this.cargar();
   }
 
   protected nombre(id: string): string {
@@ -124,7 +182,7 @@ export class Ausencias implements OnInit {
 
   protected abrirFestivo(): void {
     this.errorAccion.set(null);
-    this.festivoNuevo.set({ fecha: hoyEn(this.sesion.zona()), descripcion: '' });
+    this.festivoNuevo.set({ fecha: this.sesion.hoy(), descripcion: '' });
   }
 
   protected async guardarFestivo(): Promise<void> {

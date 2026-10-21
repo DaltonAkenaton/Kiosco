@@ -20,7 +20,7 @@
  *    3. Se puede probar sin base de datos, sustituyendolo por uno falso.
  */
 
-import { CONFIG, type EmpleadoEnCache } from '@kiosko/compartido';
+import { CONFIG, normalizarNumeroEmpleado, type EmpleadoEnCache } from '@kiosko/compartido';
 import { numeroConfigurado } from '../configuracion-vigente';
 import { randomUUID } from 'node:crypto';
 import { baseDeDatos, enTransaccion } from './base-de-datos';
@@ -95,11 +95,24 @@ export function buscarPorId(id: string): EmpleadoEnCache | null {
   return fila ? aEmpleado(fila) : null;
 }
 
-/** Busca por numero de gafete. Se usa en el modo 'numero'. */
+/**
+ * Busca por numero de gafete. Se usa en el modo 'numero'.
+ *
+ * Sin importar mayusculas ni espacios a los lados (20-10-2026: pueden llevar
+ * letras): "a12345" encuentra al "A12345" aunque en la nube se haya guardado
+ * antes de que el panel los pasara a mayusculas. Solo empleados ACTIVOS: con
+ * un numero repetido entre alguien dado de baja y alguien activo, gana el
+ * activo.
+ */
 export function buscarPorNumeroEmpleado(numero: string): EmpleadoEnCache | null {
   const fila = baseDeDatos()
-    .prepare('SELECT * FROM empleados_cache WHERE numero_empleado = ?')
-    .get(numero) as FilaEmpleado | undefined;
+    .prepare(
+      `SELECT * FROM empleados_cache
+        WHERE upper(trim(numero_empleado)) = ?
+        ORDER BY activo DESC
+        LIMIT 1`,
+    )
+    .get(normalizarNumeroEmpleado(numero)) as FilaEmpleado | undefined;
 
   return fila ? aEmpleado(fila) : null;
 }

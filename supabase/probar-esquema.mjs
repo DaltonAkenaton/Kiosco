@@ -1335,7 +1335,9 @@ console.log('\n--- avisos del panel y registros tras la baja (0028) ---');
   comprobar('(e) caída hace 20 min (el aviso es a los 15): sí es aviso',
     lista.some((a) => a.tipo === 'camara_caida' && a.dispositivo_id === k.id));
 
-  // (f) Registros de personas dadas de baja, hasta que se anulan
+  // (f) Registros de personas dadas de baja, hasta que se anulan. Desde la
+  // 0029 van a Pendientes; en la franja solo si eso se apaga.
+  await bd.query(`update configuracion set valor = '0' where clave = 'pendientes_registros_de_baja'`);
   const beto = await crear('bbaja');
   await bd.query('update empleados set activo = false where id = $1', [beto]);
   const deBeto = await marcarEn(beto, `now() + interval '1 minute'`);
@@ -1348,6 +1350,10 @@ console.log('\n--- avisos del panel y registros tras la baja (0028) ---');
   lista = await avisos();
   const trasAnular = lista.find((a) => a.tipo === 'registros_de_baja')?.cantidad ?? 0;
   comprobar('(f) al anular uno, deja de contarse', trasAnular === antesDeAnular - 1, `${antesDeAnular} -> ${trasAnular}`);
+  await bd.query(`update configuracion set valor = '1' where clave = 'pendientes_registros_de_baja'`);
+  lista = await avisos();
+  comprobar('(f) con Pendientes encendido (lo normal desde la 0029), ya no salen en la franja',
+    !lista.some((a) => a.tipo === 'registros_de_baja'));
 
   // (g) Quien puede verlos
   await entrarComo('33333333-3333-3333-3333-333333333333'); // con sesion, pero no es administrador
@@ -1382,6 +1388,319 @@ console.log('\n--- avisos del panel y registros tras la baja (0028) ---');
   await bd.query('update dispositivos set camara_ok = false where id = $1', [k.id]);
   comprobar('(i) la cámara que cae y vuelve no deja renglones en la bitácora', (await cuenta()) === antesCamara,
     `${antesCamara} -> ${await cuenta()}`);
+}
+
+// ============================================================================
+//  0029 · PENDIENTES, CAMBIOS DE HORARIO Y NOTAS
+// ============================================================================
+//  `revisar_pendientes()` mira los ultimos 14 dias desde HOY, asi que aqui las
+//  fechas no pueden ser fijas: todo se arma desde el LUNES DE LA SEMANA
+//  PASADA (siempre cae dentro de esos 14 dias). Las horas si son a mano, en
+//  hora de Nuevo Laredo, y la base las convierte.
+console.log('\n--- pendientes (0029) ---');
+{
+  await bd.query('reset role');
+  await bd.query(`select set_config('request.jwt.claims', '', true)`);
+  // "Revisar desde" queda en el dia en que se aplico la migracion (hoy, en
+  // local): aqui se abre para que cuente la semana pasada. Ver (h).
+  comprobar('"Revisar desde" se puso sola: el día en que se aplicó la migración',
+    /^\d{4}-\d{2}-\d{2}$/.test((await bd.query(
+      `select valor #>> '{}' v from configuracion where clave = 'pendientes_revisar_desde'`)).rows[0]?.v ?? ''));
+  await bd.query(`update configuracion set valor = '"2000-01-01"' where clave = 'pendientes_revisar_desde'`);
+  const { rows: [{ lunes }] } = await bd.query(
+    `select (date_trunc('week', (now() at time zone 'America/Matamoros')::date) - interval '7 days')::date::text as lunes`);
+  const diaN = (n) => `('${lunes}'::date + ${n})`;
+  const { rows: [{ viernes }] } = await bd.query(`select ('${lunes}'::date + 4)::text as viernes`);
+  const crear = async (usuario, numero = null) => (await bd.query(
+    `insert into empleados (usuario, numero_empleado, nombre, apellido_paterno, pin_hash)
+     values ($1, $2, 'Prueba', 'Pendientes', extensions.crypt('1234', extensions.gen_salt('bf', 4))) returning id`,
+    [usuario, numero])).rows[0].id;
+  const { rows: [k] } = await bd.query(
+    `insert into dispositivos (nombre, token_hash) values ('Kiosco pendientes', 'hash-pendientes') returning id`);
+  /** Marca en el dia `n` despues del lunes pasado, a la hora local `hhmm`. */
+  const marcar = async (emp, tipo, n, hhmm, banderas = '{}') => (await bd.query(
+    `insert into marcas (id, empleado_id, dispositivo_id, tipo, hora_dispositivo, hora_estimada, monotonico_ms, arranque_id, banderas)
+     values (gen_random_uuid(), $1, $2, $3,
+             (${diaN(n)} + $4::time) at time zone 'America/Matamoros',
+             (${diaN(n)} + $4::time) at time zone 'America/Matamoros', 0, gen_random_uuid(), $5) returning id`,
+    [emp, k.id, tipo, hhmm, banderas])).rows[0].id;
+  const idTurno = async (nombre) => (await bd.query('select id from turnos where nombre = $1', [nombre])).rows[0].id;
+  const todos = '[{"dia":0},{"dia":1},{"dia":2},{"dia":3},{"dia":4},{"dia":5},{"dia":6}]';
+
+  // Matutino (06:00-14:00) toda la semana pasada, y nada mas: el horario se
+  // cierra el lunes de esta semana para que esta semana no salgan faltas.
+  const paco = await crear('ppendiente');
+  await entrarComo(ID_ADMIN);
+  await bd.query(`select asignar_horario($1, $2, '${lunes}', '${todos}', 'Horario de prueba 0029')`,
+    [paco, await idTurno('Matutino')]);
+  await bd.query('reset role');
+  await bd.query(`update asignaciones_turno set vigente_hasta = ${diaN(7)} where empleado_id = $1`, [paco]);
+
+  // lun, mar, mie: 12 min tarde (dentro de la regla del dia: 15) -> 36 en la semana
+  for (const n of [0, 1, 2]) { await marcar(paco, 'entrada', n, '06:12'); await marcar(paco, 'salida', n, '14:00'); }
+  await marcar(paco, 'entrada', 3, '06:20'); await marcar(paco, 'salida', 3, '14:00'); // jue: 20 min
+  // vie: no vino
+  await marcar(paco, 'entrada', 5, '06:00');                                          // sab: sin salida
+  await marcar(paco, 'entrada', 6, '06:00', '{foto_obstruida}');                      // dom: camara tapada
+  await marcar(paco, 'salida', 6, '14:00', '{foto_obstruida}');
+
+  const revisar = async (quien = ID_ADMIN) => {
+    await entrarComo(quien);
+    const { rows: [{ n }] } = await bd.query('select revisar_pendientes() as n');
+    await bd.query('reset role');
+    return n;
+  };
+  const casosDe = async (emp) => (await bd.query(
+    `select * from pendientes where empleado_id = $1 order by tipo, desde`, [emp])).rows;
+  const delTipo = (casos, tipo) => casos.filter((c) => c.tipo === tipo);
+
+  const abiertos = await revisar();
+  let casos = await casosDe(paco);
+  comprobar('(a) devuelve cuántos quedan abiertos (el número del menú)', abiertos >= casos.length, `${abiertos}`);
+  const semana = delTipo(casos, 'retardos_semana')[0];
+  comprobar('(a) la semana suma los minutos DESDE LA HORA DE ENTRADA: 12+12+12+20 = 56, en 4 días',
+    semana?.detalle?.minutos === 56 && semana?.detalle?.dias === 4 && semana?.desde?.toISOString().slice(0, 10) === lunes,
+    JSON.stringify(semana?.detalle));
+  const retardosDia = delTipo(casos, 'retardo_dia');
+  comprobar('(a) retardo de UN día: sólo el jueves (20 min); los de 12 no llegan a 15',
+    retardosDia.length === 1 && retardosDia[0].detalle.minutos === 20, JSON.stringify(retardosDia.map((c) => c.detalle)));
+  comprobar('(a) la falta del viernes', delTipo(casos, 'falta').length === 1);
+  comprobar('(a) la salida no registrada del sábado', delTipo(casos, 'salida_no_registrada').length === 1);
+  const foto = delTipo(casos, 'foto_tapada');
+  comprobar('(a) cámara tapada el domingo: UN caso con las dos veces',
+    foto.length === 1 && foto[0].detalle.veces === 2, JSON.stringify(foto.map((c) => c.detalle)));
+
+  await revisar();
+  comprobar('(b) revisar otra vez no duplica nada', (await casosDe(paco)).length === casos.length);
+
+  // (c) Se cierran solos: vacaciones el viernes
+  await entrarComo(ID_ADMIN);
+  await bd.query(`select registrar_incidencia($1, 'vacaciones', ${diaN(4)}, ${diaN(4)}, 'Vacaciones de prueba 0029')`, [paco]);
+  await bd.query('reset role');
+  await revisar();
+  const falta = delTipo(await casosDe(paco), 'falta')[0];
+  comprobar('(c) se registró vacaciones ese día: la falta se cierra sola, diciendo por qué',
+    falta?.estado === 'resuelto_solo' && /permiso o vacaciones/.test(falta?.que_se_hizo ?? ''), falta?.que_se_hizo);
+
+  // (d) Atender
+  const jueves = retardosDia[0];
+  await entrarComo(ID_ADMIN);
+  await debeFallar('(d) atender sin decir qué se hizo: no', `select atender_pendiente('${jueves.id}', 'ok')`, 'qué se hizo');
+  await bd.query(`select atender_pendiente($1, 'Se habló con él, dice que fue el camión')`, [jueves.id]);
+  await debeFallar('(d) atenderlo dos veces: no (lo pudo atender otro)',
+    `select atender_pendiente('${jueves.id}', 'Se habló con él otra vez')`, 'ya estaba cerrado');
+  await bd.query('reset role');
+  const { rows: [atendido] } = await bd.query('select * from pendientes where id = $1', [jueves.id]);
+  comprobar('(d) queda atendido, con quién, cuándo y qué se hizo',
+    atendido.estado === 'atendido' && atendido.cerrado_por === ID_ADMIN && atendido.cerrado_en !== null
+      && atendido.que_se_hizo === 'Se habló con él, dice que fue el camión');
+  const { rows: [bit] } = await bd.query(
+    `select motivo from bitacora_auditoria where tabla = 'pendientes' and registro_id = $1 order by id desc limit 1`, [jueves.id]);
+  comprobar('(d) y en la bitácora', bit?.motivo === 'Se habló con él, dice que fue el camión');
+  await revisar();
+  comprobar('(d) revisar no reabre lo atendido',
+    (await bd.query('select estado from pendientes where id = $1', [jueves.id])).rows[0].estado === 'atendido');
+
+  await entrarComo(ID_ADMIN);
+  await bd.query(`select reabrir_pendiente($1, 'Lo cerré por error, falta hablar')`, [jueves.id]);
+  await bd.query('reset role');
+  comprobar('(d) se puede reabrir (con motivo)',
+    (await bd.query('select estado, que_se_hizo from pendientes where id = $1', [jueves.id])).rows[0].estado === 'pendiente');
+
+  // (e) Las reglas son del jefe
+  await bd.query(`update configuracion set valor = '0' where clave = 'pendientes_minutos_tarde_semana'`);
+  await revisar();
+  const semanaApagada = delTipo(await casosDe(paco), 'retardos_semana')[0];
+  comprobar('(e) apagar la regla de la semana cierra sus pendientes, diciendo por qué',
+    semanaApagada.estado === 'resuelto_solo' && /Se apagó/.test(semanaApagada.que_se_hizo), semanaApagada.que_se_hizo);
+  await bd.query(`update configuracion set valor = '60' where clave = 'pendientes_minutos_tarde_semana'`);
+  await revisar();
+  comprobar('(e) con el límite en 60, una semana de 56 minutos no es pendiente',
+    delTipo(await casosDe(paco), 'retardos_semana').every((c) => c.estado !== 'pendiente'));
+  await bd.query(`update configuracion set valor = '30' where clave = 'pendientes_minutos_tarde_semana'`);
+
+  // (f) Quien
+  comprobar('(f) un supervisor también puede ver y revisar', typeof (await revisar(ID_SUPERVISOR)) === 'number');
+  await entrarComo('33333333-3333-3333-3333-333333333333');
+  await debeFallar('(f) con sesión pero sin ser administrador: no', 'select revisar_pendientes()', 'administrador');
+  comprobar('(f) ...ni ve ninguno', (await bd.query('select count(*)::int n from pendientes')).rows[0].n === 0);
+  await entrarComo(ID_ADMIN);
+  await debeFallar('(f) nadie escribe pendientes a mano (sólo con las funciones)',
+    `insert into pendientes (clave, tipo, empleado_id, desde, hasta) values ('x', 'falta', '${paco}', now(), now())`);
+  const { rowCount: cambiados } = await bd.query(`update pendientes set estado = 'atendido' where id = $1`, [jueves.id]);
+  comprobar('(f) ni los cambia a mano (la RLS no deja tocar ninguna fila)', cambiados === 0);
+  await bd.query('reset role');
+  await bd.query('set local role anon');
+  await debeFallar('(f) sin sesión ni siquiera se puede llamar', 'select revisar_pendientes()');
+  await bd.query('reset role');
+
+  // (h) "Revisar desde": lo de antes no es pendiente, y si el jefe mueve la
+  // fecha, lo abierto de antes se cierra solo diciendo por que.
+  await bd.query(`update configuracion set valor = to_jsonb(${diaN(5)}::text) where clave = 'pendientes_revisar_desde'`);
+  await revisar();
+  const juevesDespues = (await bd.query('select estado, que_se_hizo from pendientes where id = $1', [jueves.id])).rows[0];
+  comprobar('(h) mover "Revisar desde" al sábado cierra solo el retardo del jueves, diciendo por qué',
+    juevesDespues.estado === 'resuelto_solo' && /Revisar desde/.test(juevesDespues.que_se_hizo), juevesDespues.que_se_hizo);
+  comprobar('(h) lo del sábado en adelante sigue abierto (la salida no registrada)',
+    delTipo(await casosDe(paco), 'salida_no_registrada')[0]?.estado === 'pendiente');
+  comprobar('(h) la semana no suma los días de antes: no sale "tarde en la semana"',
+    delTipo(await casosDe(paco), 'retardos_semana').every((c) => c.estado !== 'pendiente'));
+  await entrarComo(ID_ADMIN);
+  await debeFallar('(h) "Revisar desde" no puede ser después de hoy',
+    `select actualizar_configuracion('pendientes_revisar_desde', to_jsonb((current_date + 30)::text), 'Prueba de fecha futura')`,
+    'después de hoy');
+  await debeFallar('(h) ni algo que no es fecha',
+    `select actualizar_configuracion('pendientes_revisar_desde', '"mañana"', 'Prueba de fecha mala')`, 'fecha');
+  await debeFallar('(h) ni una fecha que no existe',
+    `select actualizar_configuracion('pendientes_revisar_desde', '"2026-02-30"', 'Prueba de fecha mala')`, 'no existe');
+  await bd.query(`select actualizar_configuracion('pendientes_revisar_desde', '"2000-01-01"', 'Prueba de fecha buena')`);
+  await bd.query('reset role');
+
+  // (g) Persona dada de baja: sus pendientes se cierran solos
+  await bd.query('update empleados set activo = false where id = $1', [paco]);
+  await revisar();
+  comprobar('(g) al dar de baja a la persona, sus pendientes abiertos se cierran solos',
+    (await casosDe(paco)).every((c) => c.estado !== 'pendiente'));
+  await bd.query('update empleados set activo = true where id = $1', [paco]);
+
+  // ==========================================================================
+  console.log('\n--- cambios de horario por un día (0029) ---');
+  // Paco: matutino (06-14) TODOS los dias; Vero: vespertino (14-22) lun-vie.
+  // Se usan dias de la semana QUE VIENE: no tocan los pendientes de arriba.
+  const vero = await crear('vpendiente');
+  await bd.query(`update asignaciones_turno set vigente_hasta = null where empleado_id = $1`, [paco]);
+  await entrarComo(ID_ADMIN);
+  await bd.query(`select asignar_horario($1, $2, '${lunes}', '[{"dia":1},{"dia":2},{"dia":3},{"dia":4},{"dia":5}]', 'Horario de prueba 0029')`,
+    [vero, await idTurno('Vespertino')]);
+  const lunesQueViene = diaN(14);
+  const horario = async (emp, n) => (await bd.query(`select * from horario_del_dia($1, ${diaN(n)})`, [emp])).rows[0];
+  const filaDe = async (emp, n) => (await bd.query(
+    `select * from reporte_asistencia(${diaN(n)}, ${diaN(n)}, $1) where turno is not null`, [emp])).rows;
+
+  await debeFallar('(a) sin motivo, no', `select intercambiar_horario('${paco}', '${vero}', ${lunesQueViene}, 'x')`, 'motivo');
+  const grupo = (await bd.query(`select intercambiar_horario($1, $2, ${lunesQueViene}, 'Intercambio de prueba 0029') g`,
+    [paco, vero])).rows[0].g;
+  const hp = await horario(paco, 14);
+  const hv = await horario(vero, 14);
+  comprobar('(a) intercambio: ese día Paco trabaja de 14 a 22 y Vero de 6 a 14',
+    hp.hora_inicio === '14:00:00' && hp.hora_fin === '22:00:00' && hv.hora_inicio === '06:00:00' && hv.hora_fin === '14:00:00',
+    JSON.stringify({ hp, hv }));
+  const [filaPaco] = await filaDe(paco, 14);
+  const { rows: [{ esperado }] } = await bd.query(
+    `select ((${lunesQueViene} + time '14:00') at time zone 'America/Matamoros') as esperado`);
+  comprobar('(a) y el reporte lo mide contra ESE horario, diciendo que es intercambio',
+    filaPaco?.ajuste === 'intercambio' && filaPaco?.programado_inicio?.getTime() === esperado.getTime(),
+    JSON.stringify(filaPaco));
+  comprobar('(a) el día siguiente sigue normal', (await horario(paco, 15)).hora_inicio === '06:00:00');
+  await debeFallar('(a) no se puede encimar otro cambio ese día',
+    `select ajustar_horario_dia('${paco}', ${lunesQueViene}, '07:00', '15:00', 'Cambio de prueba 0029')`, 'intercambio');
+
+  const unoDelGrupo = (await bd.query('select id from ajustes_horario where intercambio_id = $1 limit 1', [grupo])).rows[0].id;
+  await bd.query(`select quitar_ajuste_horario($1, 'Ya no se hizo el cambio')`, [unoDelGrupo]);
+  comprobar('(b) quitar un intercambio quita a los dos',
+    (await bd.query('select count(*)::int n from ajustes_horario where intercambio_id = $1', [grupo])).rows[0].n === 0);
+
+  // Vero descansa el sabado; Paco no: intercambio = Vero cubre, Paco descansa.
+  await bd.query(`select intercambiar_horario($1, $2, ${diaN(19)}, 'Vero cubre el sábado de Paco')`, [paco, vero]);
+  comprobar('(c) intercambio con alguien que descansaba: ahora descansa Paco...',
+    (await horario(paco, 19)).trabaja === false && (await filaDe(paco, 19)).length === 0);
+  const [sabVero] = await filaDe(vero, 19);
+  comprobar('(c) ...y Vero aparece en el reporte ese día que normalmente no trabaja',
+    sabVero?.ajuste === 'intercambio' && sabVero?.estado === 'programado', JSON.stringify(sabVero));
+
+  await bd.query(`select ajustar_horario_dia($1, ${diaN(16)}, '22:00', '06:00', 'Cubre la noche de prueba')`, [paco]);
+  const [noche] = await filaDe(paco, 16);
+  comprobar('(d) un cambio a turno de noche termina a las 06:00 del día siguiente',
+    noche?.ajuste === 'cambio'
+      && noche?.programado_fin?.getTime() - noche?.programado_inicio?.getTime() === 8 * 3600 * 1000, JSON.stringify(noche));
+  await bd.query(`select ajustar_horario_dia($1, ${diaN(16)}, null, null, 'Mejor que descanse ese día')`, [paco]);
+  comprobar('(d) volver a ajustar el mismo día lo reemplaza (ahora descansa)',
+    (await filaDe(paco, 16)).length === 0
+      && (await bd.query(`select count(*)::int n from ajustes_horario where empleado_id = $1 and fecha = ${diaN(16)}`, [paco])).rows[0].n === 1);
+  await debeFallar('(d) un horario de 20 horas: no (más que la "salida no registrada")',
+    `select ajustar_horario_dia('${paco}', ${diaN(17)}, '06:00', '02:00', 'Horario demasiado largo')`, 'más largo');
+  await debeFallar('(d) entrada sin salida: no',
+    `select ajustar_horario_dia('${paco}', ${diaN(17)}, '06:00', null, 'Falta la hora de salida')`, 'Escribe la hora');
+
+  // Un cambio que vuelve descanso un dia que fue falta: la falta se cierra sola.
+  await bd.query('reset role');
+  await bd.query(`delete from incidencias where empleado_id = $1`, [paco]);
+  await bd.query(`delete from pendientes where empleado_id = $1`, [paco]);
+  await revisar();
+  comprobar('(e) sin las vacaciones, el viernes vuelve a ser falta',
+    (await casosDe(paco)).some((c) => c.tipo === 'falta' && c.estado === 'pendiente'));
+  await entrarComo(ID_ADMIN);
+  await bd.query(`select ajustar_horario_dia($1, ${diaN(4)}, null, null, 'Ese viernes le tocaba descanso')`, [paco]);
+  await bd.query('reset role');
+  await revisar();
+  comprobar('(e) con un cambio de horario (ese día descansaba), la falta se cierra sola',
+    delTipo(await casosDe(paco), 'falta').find((c) => c.desde.toISOString().slice(0, 10) === viernes)?.estado === 'resuelto_solo');
+
+  await entrarComo(ID_SUPERVISOR);
+  await debeFallar('(f) un supervisor NO cambia horarios',
+    `select ajustar_horario_dia('${paco}', ${diaN(18)}, '07:00', '15:00', 'Cambio de prueba 0029')`, 'administrador');
+  comprobar('(f) pero sí los ve', (await bd.query('select count(*)::int n from ajustes_horario')).rows[0].n > 0);
+  await debeFallar('(f) nadie escribe ajustes a mano',
+    `insert into ajustes_horario (empleado_id, fecha, hora_inicio, hora_fin, motivo) values ('${paco}', now(), '07:00', '15:00', 'a mano')`);
+  await bd.query('reset role');
+  const { rows: [aud] } = await bd.query(
+    `select motivo from bitacora_auditoria where tabla = 'ajustes_horario' order by id desc limit 1`);
+  comprobar('(f) cada cambio queda en la bitácora con su motivo', aud?.motivo === 'Ese viernes le tocaba descanso', aud?.motivo);
+
+  // ARCO
+  await entrarComo(ID_ADMIN);
+  const { rows: [{ datos }] } = await bd.query(`select datos_de_empleado($1, 'Solicitud ARCO de prueba') as datos`, [paco]);
+  comprobar('(g) ARCO: la exportación incluye sus cambios de horario y sus pendientes',
+    datos.cambios_de_horario.length > 0 && datos.pendientes.length > 0);
+  await bd.query('reset role');
+
+  // ==========================================================================
+  console.log('\n--- notas (0029) ---');
+  const nota = async (visibilidad, titulo) => {
+    await entrarComo(ID_ADMIN);
+    const { rows: [n] } = await bd.query(
+      `insert into notas (titulo, texto, tareas, visibilidad) values ($1, 'texto', '[{"texto":"Pedir lista a RH","hecha":false}]', $2) returning id`,
+      [titulo, visibilidad]);
+    return n.id;
+  };
+  const veo = async (quien, id) => {
+    await entrarComo(quien);
+    return (await bd.query('select count(*)::int n from notas where id = $1', [id])).rows[0].n === 1;
+  };
+  const privada = await nota('privada', 'Mía');
+  comprobar('(a) quien la escribe la ve (y crearla devuelve la fila)', await veo(ID_ADMIN, privada));
+  comprobar('(a) una nota privada: otro administrador NO la ve', !(await veo(ID_SUPERVISOR, privada)));
+  const paraTodos = await nota('todos', 'De todos');
+  comprobar('(b) una nota para todos: otro administrador sí la ve', await veo(ID_SUPERVISOR, paraTodos));
+  await entrarComo(ID_SUPERVISOR);
+  await bd.query(`update notas set tareas = '[{"texto":"Pedir lista a RH","hecha":true}]' where id = $1`, [paraTodos]);
+  comprobar('(b) y puede palomear sus casillas',
+    (await bd.query('select tareas from notas where id = $1', [paraTodos])).rows[0].tareas[0].hecha === true);
+  await debeFallar('(b) pero no cambiar quién la ve', `update notas set visibilidad = 'privada' where id = '${paraTodos}'`, 'Sólo quien escribió');
+  const { rowCount: borradas } = await bd.query('delete from notas where id = $1', [paraTodos]);
+  comprobar('(b) ni borrarla', borradas === 0);
+  const algunos = await nota('algunos', 'Para algunos');
+  comprobar('(c) "algunos" sin compartir con nadie: el otro no la ve', !(await veo(ID_SUPERVISOR, algunos)));
+  await entrarComo(ID_ADMIN);
+  await bd.query('insert into notas_compartidas (nota_id, user_id) values ($1, $2)', [algunos, ID_SUPERVISOR]);
+  comprobar('(c) al compartirla con él, sí la ve', await veo(ID_SUPERVISOR, algunos));
+  await entrarComo(ID_SUPERVISOR);
+  await debeFallar('(c) quien no es el autor no la comparte con nadie más',
+    `insert into notas_compartidas (nota_id, user_id) values ('${privada}', '${ID_SUPERVISOR}')`);
+  await entrarComo('33333333-3333-3333-3333-333333333333');
+  comprobar('(d) con sesión pero sin ser administrador: ninguna nota',
+    (await bd.query('select count(*)::int n from notas')).rows[0].n === 0);
+  await debeFallar('(d) ...ni puede crear', `insert into notas (titulo) values ('intruso')`);
+  await bd.query('reset role');
+
+  console.log('\n--- hora del servidor (0029) ---');
+  await entrarComo(ID_ADMIN);
+  const { rows: [{ h }] } = await bd.query('select hora_del_servidor() h');
+  comprobar('la hora del servidor llega (para corregir el reloj de la PC del panel)',
+    Math.abs(h.getTime() - Date.now()) < 5 * 60 * 1000);
+  const { rows: [{ v }] } = await bd.query(`select valor v from configuracion where clave = 'identificar_con_numero'`);
+  comprobar('el ajuste "checar con número" existe y empieza apagado (lista)', Number(v) === 0);
+  await bd.query('reset role');
 }
 
 // ============================================================================

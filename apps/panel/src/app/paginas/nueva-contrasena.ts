@@ -105,7 +105,7 @@ export class NuevaContrasena implements OnInit {
       this.error.set(motivo);
       return;
     }
-    await this.router.navigateByUrl('/asistencia');
+    await this.router.navigateByUrl('/');
   }
 
   protected async irAEntrar(): Promise<void> {

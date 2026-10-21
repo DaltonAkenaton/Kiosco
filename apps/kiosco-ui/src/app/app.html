@@ -19,23 +19,52 @@
     rojo de error; confinado a un filete no compite con nada. Queda registrado
     como excepcion, con su motivo, en tema.json.
   -->
+  <!--
+    MANTENER PRESIONADO el letrero unos segundos abre el modo administrador
+    (20-10-2026: ya no hay boton a la vista; servicios/entrada-admin.ts). Pasado
+    el primer segundo aparece una rayita que se llena: asi quien lo hace a
+    proposito sabe que va bien, y un toque normal no muestra nada.
+  -->
   @if (configuracion(); as config) {
     @if (config.institucionMostrarEnKiosco) {
       <header
-        class="flex shrink-0 items-baseline gap-3 border-b-4 px-6 py-3"
+        class="relative flex shrink-0 select-none items-baseline gap-3 border-b-4 px-6 py-3"
         style="
           background-color: var(--kiosko-institucion-primario);
           border-color: var(--kiosko-institucion-secundario);
+          touch-action: none;
         "
+        (pointerdown)="presionarLetrero($event)"
+        (pointerup)="soltarLetrero()"
+        (pointerleave)="soltarLetrero()"
+        (pointercancel)="soltarLetrero()"
+        (contextmenu)="$event.preventDefault()"
       >
         @if (config.institucionLogoArchivo) {
-          <img [src]="config.institucionLogoArchivo" alt="" class="h-8 w-auto self-center" />
+          <img [src]="config.institucionLogoArchivo" alt="" class="h-8 w-auto self-center" draggable="false" />
         }
         <span class="text-xl font-bold tracking-wide">{{ config.institucionNombreCorto }}</span>
         @if (config.institucionFacultad) {
           <span class="text-lg opacity-80">{{ config.institucionFacultad }}</span>
         }
+        @if (avanceVisible()) {
+          <span class="avance-letrero" [style.animation-duration.s]="segundosDeAvance()" aria-hidden="true"></span>
+        }
       </header>
+    } @else {
+      <!-- Sin letrero institucional: una franja delgada en su lugar, para que la entrada siga existiendo. -->
+      <div
+        class="relative h-3 shrink-0 select-none"
+        style="touch-action: none"
+        (pointerdown)="presionarLetrero($event)"
+        (pointerup)="soltarLetrero()"
+        (pointerleave)="soltarLetrero()"
+        (pointercancel)="soltarLetrero()"
+      >
+        @if (avanceVisible()) {
+          <span class="avance-letrero" [style.animation-duration.s]="segundosDeAvance()" aria-hidden="true"></span>
+        }
+      </div>
     }
   }
 

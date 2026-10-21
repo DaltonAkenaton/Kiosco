@@ -2,3 +2,38 @@
    Angular los aisla automaticamente: lo que escribas aqui no puede afectar
    por accidente a otras pantallas. Por ahora todo el aspecto se resuelve con
    clases de Tailwind directamente en el HTML. */
+
+/*
+  La rayita que se llena al mantener presionado el letrero (entrada al modo
+  administrador, servicios/entrada-admin.ts). Su duracion la pone el HTML:
+  lo que falta para completar los segundos de configuracion.ts.
+*/
+.avance-letrero {
+  position: absolute;
+  left: 0;
+  bottom: -4px;
+  height: 4px;
+  width: 100%;
+  transform-origin: left;
+  background-color: var(--kiosko-texto);
+  animation-name: llenar-letrero;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes llenar-letrero {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .avance-letrero {
+    animation: none;
+    transform: scaleX(1);
+    opacity: 0.6;
+  }
+}

@@ -95,6 +95,14 @@ export const IDENTIFICACION = {
    * empleados confirmados, el numero es de DOS digitos (01-20): dos teclas en
    * vez de una, y sigue sin haber nada que memorizar (D-026). La pantalla lo
    * decide sola segun cuantas personas hay.
+   *
+   * 20-10-2026 (junta con el jefe): el personal SI se sabe su numero de
+   * empleado (se les pregunto dos veces) y el jefe prefiere que la lista de
+   * nombres no este a la vista. Desde la 0029 lo decide el JEFE en el panel
+   * (Configuracion → Kioscos → "Los empleados checan con su numero de
+   * empleado", clave `identificar_con_numero`): con 1, modo 'numero'; con 0,
+   * 'lista'. Este valor es solo el de arranque, mientras no llega la
+   * configuracion (configuracion-vigente.ts, `modoIdentificacionVigente`).
    */
   modo: 'lista' as 'usuario' | 'lista' | 'numero',
 
@@ -115,11 +123,21 @@ export const IDENTIFICACION = {
   /** Largo maximo del nombre de usuario. */
   largoUsuarioMaximo: 20,
 
-  /** Digitos minimos que puede tener un numero de empleado. */
-  largoNumeroEmpleadoMinimo: 3,
+  /**
+   * Caracteres minimos y maximos de un numero de empleado.
+   *
+   * 20-10-2026: los de la universidad son de unos 6 caracteres y pueden
+   * llevar LETRAS ("A12345"); todavia no se sabe el formato exacto. Por eso
+   * el largo es variable (se termina con Enter) y amplio. El panel no deja
+   * guardar uno fuera de estos limites: seria alguien que no podria checar.
+   * Cuando se conozca el formato real, se ajustan aqui (usuarios.ts,
+   * `numeroDeEmpleadoValido`, lo usan el panel y el kiosco).
+   * Ese mismo dia el autor pidio que fuera OBLIGATORIO en el panel, de 4 a 12.
+   */
+  largoNumeroEmpleadoMinimo: 4,
 
-  /** Digitos maximos. El teclado en pantalla deja de aceptar teclas al llegar aqui. */
-  largoNumeroEmpleadoMaximo: 4,
+  /** El teclado deja de aceptar teclas al llegar aqui. */
+  largoNumeroEmpleadoMaximo: 12,
 
   /**
    * Digitos del PIN.
@@ -321,6 +339,19 @@ export const INTERFAZ = {
    * cualquier cosa, asi que en la practica nunca estorba a la fila.
    */
   segundosMensajeExito: 6,
+
+  /**
+   * La ENTRADA al modo administrador (20-10-2026, junta con el jefe): ya no
+   * hay boton "Administrador" a la vista. Se mantiene presionado el letrero
+   * de arriba ("UAT  FCACS Nuevo Laredo") estos segundos, y se abre el
+   * usuario y contrasena de siempre. Esta escrito en el manual tecnico: un
+   * acceso que nadie sabe abrir es como si no existiera.
+   *
+   * Tres y no menos: un empleado que se recarga en la pantalla, o que pica el
+   * letrero por curiosidad, no deberia abrirlo por accidente. (Aunque lo
+   * abriera, sin la contrasena no pasa de ahi.)
+   */
+  segundosParaEntrarAlAdministrador: 3,
 
   /**
    * La camara se muestra en espejo (como te ves en un espejo real).

@@ -3,9 +3,10 @@
  *  REGISTRAR UNA INCIDENCIA  (migraciones 0016 y 0020)
  * ============================================================================
  *
- *  La ventana que usan dos pantallas: Incidencias ("+ Registrar incidencia")
- *  y Reportes (boton "Justificar" en un dia con falta o retardo, que llega
- *  con la persona, el dia y un tipo sugerido ya puestos).
+ *  La ventana que usan tres pantallas: Incidencias ("+ Registrar incidencia"),
+ *  Reportes (boton "Justificar" en un dia con falta o retardo) y Pendientes
+ *  (en una falta, un retardo o varias faltas seguidas). Las dos ultimas
+ *  llegan con la persona, el dia y un tipo sugerido ya puestos.
  *
  *  Dos familias, porque cuentan distinto en el reporte:
  *
@@ -21,6 +22,7 @@
  */
 
 import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
+import { ElegirEmpleado, conNumero } from './elegir-empleado';
 import { Dialogo, mensajeDeError } from './dialogo';
 import { Sesion } from '../servicios/sesion';
 
@@ -50,16 +52,18 @@ export function familiaDeIncidencia(valor: string): 'ausencia' | 'por_bueno' | n
   return TIPOS_DE_INCIDENCIA.find((t) => t.valor === valor)?.familia ?? null;
 }
 
-/** Lo que llega ya puesto desde Reportes. */
+/** Lo que llega ya puesto desde Reportes o Pendientes. */
 export interface IncidenciaSugerida {
   empleadoId: string;
   fecha: string;
+  /** Para varios dias seguidos (las faltas seguidas de Pendientes). */
+  hasta?: string;
   tipo: string;
 }
 
 @Component({
   selector: 'panel-registrar-incidencia',
-  imports: [Dialogo],
+  imports: [Dialogo, ElegirEmpleado],
   template: `
     <panel-dialogo
       titulo="Registrar una incidencia"
@@ -81,12 +85,7 @@ export interface IncidenciaSugerida {
 
       @if (para() === 'una') {
         <label class="flex flex-col gap-1">Quién
-          <select class="campo" (change)="empleadoId.set(valor($event))">
-            <option value="">Elige a la persona</option>
-            @for (e of empleados(); track e.id) {
-              <option [value]="e.id" [selected]="e.id === empleadoId()">{{ e.nombre }}</option>
-            }
-          </select>
+          <panel-elegir-empleado [opciones]="empleados()" [valor]="empleadoId()" (elegir)="empleadoId.set($event)" />
         </label>
       } @else if (para() === 'turno') {
         <label class="flex flex-col gap-1">Turno
@@ -161,18 +160,21 @@ export class RegistrarIncidencia implements OnInit {
 
   async ngOnInit(): Promise<void> {
     const s = this.sugerida();
-    const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: this.sesion.zona() }).format(new Date());
+    const hoy = this.sesion.hoy();
     this.empleadoId.set(s?.empleadoId ?? '');
     this.tipo.set(s?.tipo ?? 'vacaciones');
     this.inicio.set(s?.fecha ?? hoy);
-    this.fin.set(s?.fecha ?? hoy);
+    this.fin.set(s?.hasta ?? s?.fecha ?? hoy);
 
     const [emp, tur] = await Promise.all([
-      this.sesion.bd.from('empleados').select('id, nombre, apellido_paterno, apellido_materno').eq('activo', true).order('nombre'),
+      this.sesion.bd.from('empleados').select('id, nombre, apellido_paterno, apellido_materno, numero_empleado').eq('activo', true).order('nombre'),
       this.sesion.bd.from('turnos').select('id, nombre').eq('activo', true).order('hora_inicio'),
     ]);
     this.empleados.set(
-      (emp.data ?? []).map((e) => ({ id: e.id, nombre: [e.nombre, e.apellido_paterno, e.apellido_materno].filter(Boolean).join(' ') })),
+      (emp.data ?? []).map((e) => ({
+        id: e.id,
+        nombre: conNumero([e.nombre, e.apellido_paterno, e.apellido_materno].filter(Boolean).join(' '), e.numero_empleado),
+      })),
     );
     this.turnos.set(tur.data ?? []);
   }

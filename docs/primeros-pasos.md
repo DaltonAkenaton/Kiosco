@@ -60,8 +60,8 @@ ahí llegue al panel.
    **15 minutos**.
 2. En el kiosco, en la barra de abajo: **Dar de alta** → escribe el código
    (con un teclado con letras) → **Dar de alta**.
-3. Espera unos minutos con internet. Entra al kiosco en **⚙ Administrador**
-   con tu usuario del kiosco (paso 2).
+3. Espera unos minutos con internet. Entra al modo administrador del kiosco:
+   Mantén presionado **3 segundos** el letrero de arriba del kiosco (**"UAT FCACS Nuevo Laredo"**): se abre la ventana del **modo administrador**. (Desde la versión 1.0.4 ya no hay botón "Administrador" a la vista.) Usa tu usuario del kiosco (paso 2).
 4. El kiosco avisa en amarillo que falta la **contraseña de recuperación de
    las fotos**. Invéntala, escríbela y **anótala a mano en la hoja de
    credenciales**. Sin ella, si algún día se reinstala Windows, las fotos se

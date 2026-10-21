@@ -11,13 +11,20 @@
  *  Dos vistas: dia por dia, y el resumen por persona. Las dos se descargan
  *  para abrirlas en Excel.
  *
+ *  21-10-2026: "un lugar donde se vea quien falto mas o llega mas tarde". Es
+ *  el mismo resumen, ordenado por faltas, retardos o minutos tarde, con
+ *  periodos de un clic (este mes, mes pasado, este año...). De ahi, "Ver sus
+ *  dias" lleva al dia por dia de esa persona.
+ *
  *  El sistema INFORMA, no descuenta (supuestos 2.4): aqui no hay dinero.
  */
 
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { hoyEn } from '@kiosko/compartido';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Ayuda } from '../componentes/ayuda';
+import { ElegirEmpleado, conNumero } from '../componentes/elegir-empleado';
 import { descargarExcel } from '../servicios/escribir-excel';
+import { RENGLONES_POR_PEDIDO } from '../servicios/respaldo';
 import { type IncidenciaSugerida, RegistrarIncidencia, TIPOS_DE_INCIDENCIA } from '../componentes/registrar-incidencia';
 import { senalRecordada } from '../servicios/recordar';
 import { Sesion } from '../servicios/sesion';
@@ -46,6 +53,8 @@ interface Fila {
   minutos_extra: number | null;
   /** Las horas que cuentan: trabajadas, o las del turno si el dia se dio por bueno (0020). */
   horas_acreditadas: number | null;
+  /** Ese dia tuvo un cambio de horario por un dia (0029): 'cambio' | 'intercambio'. */
+  ajuste: 'cambio' | 'intercambio' | null;
 }
 
 /** Cada estado en palabras, con su color y su explicacion (ⓘ). */
@@ -104,6 +113,29 @@ const INCIDENCIAS: Record<string, string | undefined> = Object.fromEntries(
   TIPOS_DE_INCIDENCIA.map((t) => [t.valor, t.texto]),
 );
 
+/** Como se ordena el resumen: por nombre, o quien tiene mas de algo primero. */
+type OrdenDelResumen = 'nombre' | 'faltas' | 'retardos' | 'minutos';
+
+const ORDENES_DEL_RESUMEN: { valor: OrdenDelResumen; texto: string }[] = [
+  { valor: 'nombre', texto: 'Nombre' },
+  { valor: 'faltas', texto: 'Más faltas primero' },
+  { valor: 'retardos', texto: 'Más retardos primero' },
+  { valor: 'minutos', texto: 'Más minutos tarde primero' },
+];
+
+/** Los periodos de un clic. */
+type Periodo = 'semana' | 'mes' | 'mes_pasado' | 'tres_meses' | 'anio';
+
+const PERIODOS: { valor: Periodo; texto: string }[] = [
+  { valor: 'semana', texto: 'Esta semana' },
+  { valor: 'mes', texto: 'Este mes' },
+  { valor: 'mes_pasado', texto: 'Mes pasado' },
+  { valor: 'tres_meses', texto: 'Últimos 3 meses' },
+  { valor: 'anio', texto: 'Este año' },
+];
+
+const UN_DIA_MS = 86_400_000;
+
 interface Resumen {
   empleadoId: string;
   nombre: string;
@@ -111,6 +143,8 @@ interface Resumen {
   aTiempo: number;
   retardos: number;
   retardosMayores: number;
+  /** Minutos tarde sumados, desde su hora de entrada (los mismos que cuenta Pendientes). */
+  minutosTarde: number;
   faltas: number;
   justificadas: number;
   porBueno: number;
@@ -122,16 +156,18 @@ interface Resumen {
 
 @Component({
   selector: 'panel-reportes',
-  imports: [Ayuda, RegistrarIncidencia],
+  imports: [Ayuda, ElegirEmpleado, RegistrarIncidencia],
   templateUrl: './reportes.html',
 })
 export class Reportes implements OnInit {
   protected readonly sesion = inject(Sesion);
+  private readonly router = inject(Router);
+  private readonly ruta = inject(ActivatedRoute);
   protected readonly zona = this.sesion.zona;
 
   // Los filtros se recuerdan al cambiar de pantalla (servicios/recordar.ts).
-  protected readonly desde = senalRecordada('reportes.desde', this.lunesDeEstaSemana(), { delDia: hoyEn(this.sesion.zona()) });
-  protected readonly hasta = senalRecordada('reportes.hasta', hoyEn(this.sesion.zona()), { delDia: hoyEn(this.sesion.zona()) });
+  protected readonly desde = senalRecordada('reportes.desde', this.lunesDeEstaSemana(), { delDia: this.sesion.hoy() });
+  protected readonly hasta = senalRecordada('reportes.hasta', this.sesion.hoy(), { delDia: this.sesion.hoy() });
   protected readonly empleadoId = senalRecordada('reportes.empleado', '');
   protected readonly vista = senalRecordada<'dias' | 'resumen'>('reportes.vista', 'resumen');
   /**
@@ -140,6 +176,10 @@ export class Reportes implements OnInit {
    * de cada dia se respeta el orden por turno y nombre.
    */
   protected readonly orden = senalRecordada<'recientes' | 'antiguos'>('reportes.orden', 'recientes');
+  /** "Resumen por persona": quien falto mas, quien llega mas tarde... (21-10-2026). */
+  protected readonly ordenResumen = senalRecordada<OrdenDelResumen>('reportes.ordenResumen', 'nombre');
+  protected readonly ORDENES_DEL_RESUMEN = ORDENES_DEL_RESUMEN;
+  protected readonly PERIODOS = PERIODOS;
   protected readonly filasEnOrden = computed<Fila[]>(() => {
     const filas = this.filas();
     if (this.orden() === 'antiguos') return filas;
@@ -163,6 +203,10 @@ export class Reportes implements OnInit {
     'Las horas trabajadas de verdad, MÁS las de los días que se dieron por buenos (se cuenta el turno completo). ' +
     'Las ausencias justificadas (vacaciones, incapacidad) no suman horas.';
 
+  protected readonly AYUDA_MINUTOS =
+    'Todos los minutos que llegó después de su hora de entrada, sumados (también los que quedaron dentro de la ' +
+    'tolerancia: es la misma cuenta de «Tarde en la semana» en Pendientes). Los días justificados no cuentan.';
+
   protected readonly AYUDA_RECALCULO =
     'Este reporte se calcula en el momento. Si cambias la tolerancia en Configuración, los días pasados se ' +
     'vuelven a calcular solos; los registros no se tocan. En cambio, si cambias el HORARIO de un turno, ' +
@@ -175,12 +219,14 @@ export class Reportes implements OnInit {
       const r =
         porPersona.get(f.empleado_id) ??
         ({ empleadoId: f.empleado_id, nombre: this.nombre(f.empleado_id), programados: 0, aTiempo: 0, retardos: 0,
-           retardosMayores: 0, faltas: 0, justificadas: 0, porBueno: 0, horasQueCuentan: 0, sinSalida: 0,
+           retardosMayores: 0, minutosTarde: 0, faltas: 0, justificadas: 0, porBueno: 0, horasQueCuentan: 0, sinSalida: 0,
            fueraDeHorario: 0, horas: 0 } satisfies Resumen);
       if (!['sin_turno', 'festivo', 'pendiente', 'programado'].includes(f.estado)) r.programados++;
       if (f.estado === 'a_tiempo') r.aTiempo++;
       if (f.estado === 'retardo' || f.estado === 'retardo_mayor') r.retardos++;
       if (f.estado === 'retardo_mayor') r.retardosMayores++;
+      // Los dias que vino (un dia justificado ya no cuenta), aunque haya quedado dentro de la tolerancia.
+      if (['a_tiempo', 'retardo', 'retardo_mayor'].includes(f.estado)) r.minutosTarde += f.minutos_tarde ?? 0;
       if (f.estado === 'falta') r.faltas++;
       if (f.estado === 'incidencia') r.justificadas++;
       if (f.estado === 'justificado') r.porBueno++;
@@ -191,15 +237,120 @@ export class Reportes implements OnInit {
       r.horas += Number(f.horas ?? 0);
       porPersona.set(f.empleado_id, r);
     }
-    return [...porPersona.values()].sort((a, b) => a.nombre.localeCompare(b.nombre));
+    // Quien tiene mas primero; los empates, por lo que sigue en importancia y al final por nombre.
+    const cuanto: Record<OrdenDelResumen, (r: Resumen) => number[]> = {
+      nombre: () => [],
+      faltas: (r) => [r.faltas, r.retardos, r.minutosTarde],
+      retardos: (r) => [r.retardos, r.minutosTarde, r.faltas],
+      minutos: (r) => [r.minutosTarde, r.retardos, r.faltas],
+    };
+    const valores = cuanto[this.ordenResumen()] ?? cuanto.nombre;
+    return [...porPersona.values()].sort((a, b) => {
+      const va = valores(a);
+      const vb = valores(b);
+      for (let i = 0; i < va.length; i++) if (va[i] !== vb[i]) return vb[i] - va[i];
+      return a.nombre.localeCompare(b.nombre);
+    });
   });
+
+  /** El periodo de un clic que corresponde a las fechas elegidas (para marcar su boton). */
+  protected readonly periodoActual = computed<Periodo | null>(() => {
+    const hoy = this.sesion.hoy();
+    const p = PERIODOS.find(({ valor }) => {
+      const [desde, hasta] = this.fechasDe(valor, hoy);
+      return desde === this.desde() && hasta === this.hasta();
+    });
+    return p?.valor ?? null;
+  });
+
+  protected elegirPeriodo(periodo: Periodo): void {
+    const [desde, hasta] = this.fechasDe(periodo, this.sesion.hoy());
+    this.resaltado.set(null);
+    this.desde.set(desde);
+    this.hasta.set(hasta);
+    void this.buscar();
+  }
+
+  /** Desde y hasta de cada periodo, contados desde hoy (fechas AAAA-MM-DD). */
+  private fechasDe(periodo: Periodo, hoy: string): [string, string] {
+    const [a, m] = hoy.split('-').map(Number);
+    // Date.UTC acomoda solo los meses fuera de rango: el mes 0 es diciembre del año anterior.
+    const dia = (anio: number, mes: number, d: number): string => new Date(Date.UTC(anio, mes - 1, d)).toISOString().slice(0, 10);
+    switch (periodo) {
+      case 'semana':
+        return [this.lunesDeEstaSemana(), hoy];
+      case 'mes':
+        return [dia(a, m, 1), hoy];
+      case 'mes_pasado':
+        return [dia(a, m - 1, 1), dia(a, m, 0)];
+      case 'tres_meses':
+        return [dia(a, m - 2, 1), hoy];
+      case 'anio':
+        return [dia(a, 1, 1), hoy];
+    }
+  }
+
+  /** Del resumen al dia por dia de esa persona, con las mismas fechas. */
+  protected verDiasDe(empleadoId: string): void {
+    this.resaltado.set(null);
+    this.empleadoId.set(empleadoId);
+    this.vista.set('dias');
+    void this.buscar();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 
   async ngOnInit(): Promise<void> {
     const { data } = await this.sesion.bd.from('empleados').select('id, nombre, apellido_paterno, apellido_materno, numero_empleado').order('nombre');
     this.empleados.set(
       new Map((data ?? []).map((e) => [e.id, { nombre: [e.nombre, e.apellido_paterno, e.apellido_materno].filter(Boolean).join(' '), numero: e.numero_empleado }])),
     );
+    this.filtrosDeLaDireccion();
     await this.buscar();
+  }
+
+  /**
+   * "Ver su reporte" desde Pendientes (faltas y retardos, 20-10-2026) llega
+   * con ?desde=...&hasta=...&empleado=...: aqui se ve el horario, los minutos
+   * tarde de cada dia y el boton Justificar, que en Asistencia no estan.
+   */
+  private filtrosDeLaDireccion(): void {
+    const q = this.ruta.snapshot.queryParamMap;
+    const fechaValida = (v: string | null): v is string => !!v && /^\d{4}-\d{2}-\d{2}$/.test(v);
+    const desde = q.get('desde');
+    const hasta = q.get('hasta');
+    if (!fechaValida(desde) || !fechaValida(hasta)) return;
+    this.desde.set(desde);
+    this.hasta.set(hasta);
+    this.empleadoId.set(q.get('empleado') ?? '');
+    this.vista.set('dias');
+    const resaltar = q.get('resaltar');
+    this.resaltado.set({
+      empleadoId: q.get('empleado') ?? '',
+      fecha: fechaValida(resaltar) ? resaltar : null,
+      tarde: q.get('tarde') === '1',
+    });
+    void this.router.navigate([], { queryParams: {}, replaceUrl: true });
+  }
+
+  /**
+   * Lo que se resalta al llegar desde Pendientes (20-10-2026): el dia del
+   * caso (una falta, un retardo) o, en "Tarde en la semana", los dias que
+   * llego tarde, que son los que suman esos minutos. Se quita al cambiar un
+   * filtro: ya no es la misma busqueda.
+   */
+  protected readonly resaltado = signal<{ empleadoId: string; fecha: string | null; tarde: boolean } | null>(null);
+
+  protected resaltada(f: Fila): boolean {
+    const r = this.resaltado();
+    if (!r || f.empleado_id !== r.empleadoId) return false;
+    if (r.fecha) return f.fecha.slice(0, 10) === r.fecha;
+    return r.tarde && (f.minutos_tarde ?? 0) > 0 && ['a_tiempo', 'retardo', 'retardo_mayor'].includes(f.estado);
+  }
+
+  /** Lleva la vista a la fila resaltada, por si la tabla es larga. */
+  private irAlResaltado(): void {
+    if (!this.resaltado()) return;
+    setTimeout(() => document.querySelector('.fila-resaltada')?.scrollIntoView({ block: 'center', behavior: 'smooth' }));
   }
 
   // --------------------------------------------------------------------------
@@ -253,11 +404,7 @@ export class Reportes implements OnInit {
     this.error.set(null);
     // Una busqueda vieja que llega tarde no pisa a la nueva (filtros cambiados de prisa).
     const esta = ++this.busqueda;
-    const { data, error } = await this.sesion.bd.rpc('reporte_asistencia', {
-      p_desde: this.desde(),
-      p_hasta: this.hasta(),
-      p_empleado_id: this.empleadoId() || null,
-    });
+    const { data, error } = await this.traerFilas(this.desde(), this.hasta(), this.empleadoId() || null);
     if (esta !== this.busqueda) return;
     this.cargando.set(false);
     if (error) {
@@ -266,16 +413,41 @@ export class Reportes implements OnInit {
     }
     // Por dia; dentro del dia, por la hora en que empieza el turno (el
     // matutino antes que el nocturno) y luego por nombre.
-    const filas = (data as Fila[]).sort(
+    const filas = (data ?? []).sort(
       (a, b) =>
         a.fecha.localeCompare(b.fecha) ||
         (a.programado_inicio ?? a.entrada ?? '').localeCompare(b.programado_inicio ?? b.entrada ?? '') ||
         this.nombre(a.empleado_id).localeCompare(this.nombre(b.empleado_id)),
     );
     this.filas.set(filas);
+    this.irAlResaltado();
+  }
+
+  /**
+   * El servidor entrega como mucho 1000 renglones por pedido (como en el
+   * respaldo). Un renglon es una persona en un dia: con 20 personas, mas de
+   * siete semanas ya no cabian y el reporte salia cortado SIN avisar
+   * (21-10-2026). Si un pedido llega lleno, el periodo se parte en dos.
+   */
+  private async traerFilas(desde: string, hasta: string, empleado: string | null): Promise<{ data: Fila[] | null; error: unknown }> {
+    const { data, error } = await this.sesion.bd.rpc('reporte_asistencia', {
+      p_desde: desde,
+      p_hasta: hasta,
+      p_empleado_id: empleado,
+    });
+    if (error) return { data: null, error };
+    const filas = (data ?? []) as Fila[];
+    if (filas.length < RENGLONES_POR_PEDIDO || desde === hasta) return { data: filas, error: null };
+    const dias = Math.round((Date.parse(hasta) - Date.parse(desde)) / UN_DIA_MS);
+    const mitad = new Date(Date.parse(desde) + Math.floor(dias / 2) * UN_DIA_MS).toISOString().slice(0, 10);
+    const despues = new Date(Date.parse(mitad) + UN_DIA_MS).toISOString().slice(0, 10);
+    const [antes, luego] = await Promise.all([this.traerFilas(desde, mitad, empleado), this.traerFilas(despues, hasta, empleado)]);
+    if (antes.error || luego.error) return { data: null, error: antes.error ?? luego.error };
+    return { data: [...(antes.data ?? []), ...(luego.data ?? [])], error: null };
   }
 
   protected cambiar(filtro: 'desde' | 'hasta' | 'empleadoId', valor: string): void {
+    this.resaltado.set(null);
     this[filtro].set(valor);
     void this.buscar();
   }
@@ -307,6 +479,11 @@ export class Reportes implements OnInit {
     return `${Math.floor(total / 60)} h ${String(total % 60).padStart(2, '0')} min`;
   }
 
+  /** "45 min", "2 h 10 min". */
+  protected minutos(m: number): string {
+    return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} min`;
+  }
+
   // --------------------------------------------------------------------------
   //  Descargar en Excel (un .xlsx de verdad, con las dos vistas) e imprimir
   // --------------------------------------------------------------------------
@@ -315,10 +492,10 @@ export class Reportes implements OnInit {
     const z = this.zona();
     const minutosEnHoras = (m: number | null): string => (m ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} min` : '');
     const resumen = [
-      ['Número', 'Nombre', 'Días con turno', 'A tiempo', 'Retardos', 'De ellos, mayores', 'Faltas',
+      ['Número', 'Nombre', 'Días con turno', 'A tiempo', 'Retardos', 'De ellos, mayores', 'Minutos tarde', 'Faltas',
         'Ausencias justificadas', 'Justificados', 'Registros incompletos', 'Fuera de horario', 'Horas trabajadas', 'Horas que cuentan'],
       ...this.resumen().map((r) => [
-        this.numero(r.empleadoId), r.nombre, r.programados, r.aTiempo, r.retardos, r.retardosMayores, r.faltas,
+        this.numero(r.empleadoId), r.nombre, r.programados, r.aTiempo, r.retardos, r.retardosMayores, r.minutosTarde, r.faltas,
         r.justificadas, r.porBueno, r.sinSalida, r.fueraDeHorario, Number(r.horas.toFixed(2)), Number(r.horasQueCuentan.toFixed(2)),
       ]),
     ];
@@ -354,11 +531,11 @@ export class Reportes implements OnInit {
   }
 
   protected fechaImpresion(): string {
-    return new Date().toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short', timeZone: this.zona() });
+    return new Date(this.sesion.ahora()).toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short', timeZone: this.zona() });
   }
 
   private lunesDeEstaSemana(): string {
-    const hoy = hoyEn(this.sesion.zona());
+    const hoy = this.sesion.hoy();
     const d = new Date(`${hoy}T12:00:00Z`);
     const diasDesdeLunes = (d.getUTCDay() + 6) % 7;
     d.setUTCDate(d.getUTCDate() - diasDesdeLunes);
@@ -370,6 +547,6 @@ export class Reportes implements OnInit {
   }
 
   protected listaEmpleados(): { id: string; nombre: string }[] {
-    return [...this.empleados().entries()].map(([id, e]) => ({ id, nombre: e.nombre }));
+    return [...this.empleados().entries()].map(([id, e]) => ({ id, nombre: conNumero(e.nombre, e.numero) }));
   }
 }

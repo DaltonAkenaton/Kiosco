@@ -86,6 +86,8 @@ jobs:
             [turnos]="select * from turnos order by nombre"
             [asignaciones_turno]="select * from asignaciones_turno order by vigente_desde"
             [dias_laborales]="select * from dias_laborales"
+            [ajustes_horario]="select * from ajustes_horario order by fecha"
+            [pendientes]="select * from pendientes order by desde"
             [dispositivos]="select id, nombre, ubicacion, activo, enrolado_en, revocado_en, ultima_conexion, version_app from dispositivos order by nombre"
             [eventos_dispositivo]="select * from eventos_dispositivo order by ocurrido_en"
             [accesos_foto]="select * from accesos_foto order by consultado_en"

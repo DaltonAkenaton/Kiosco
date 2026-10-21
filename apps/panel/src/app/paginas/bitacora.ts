@@ -23,6 +23,7 @@ import { Component, OnInit, WritableSignal, inject, signal } from '@angular/core
 import { diaSiguiente, inicioDelDiaLocal } from '@kiosko/compartido';
 import { Ayuda } from '../componentes/ayuda';
 import { CargandoTabla, RENGLONES_CARGANDO } from '../componentes/cargando-tabla';
+import { ElegirEmpleado, conNumero } from '../componentes/elegir-empleado';
 import { Sesion } from '../servicios/sesion';
 import { ESTADOS_DE_FOTO, PALABRAS_CONFIGURACION, fecha, hora } from '../textos';
 
@@ -49,6 +50,8 @@ const TABLAS: Record<string, string> = {
   asignaciones_turno: 'Horario',
   dias_festivos: 'Día festivo',
   respaldo: 'Respaldo',
+  ajustes_horario: 'Cambio por un día',
+  pendientes: 'Pendiente',
 };
 
 /** Columnas que no dicen nada a una persona. */
@@ -64,6 +67,7 @@ const COLUMNAS: Record<string, string> = {
   revocado_en: 'dado de baja el', revocado_por: 'dado de baja por', anonimizado_en: 'datos suprimidos el',
   dado_de_baja_en: 'dado de baja el',
   ubicacion: 'ubicación', empleado_id: 'persona', turno_id: 'turno', vigente_desde: 'vigente desde',
+  descansa: 'descansa', intercambio_con: 'intercambio con', intercambio_id: 'intercambio', que_se_hizo: 'qué se hizo',
 };
 
 /** Por paginas: la bitacora crece para siempre. */
@@ -90,15 +94,15 @@ const HASHES = new Set(['pin_hash', 'contrasena_kiosco_hash', 'token_hash', 'cod
 
 @Component({
   selector: 'panel-bitacora',
-  imports: [Ayuda, CargandoTabla],
+  imports: [Ayuda, CargandoTabla, ElegirEmpleado],
   template: `
     <h1 class="text-2xl font-bold">Bitácora</h1>
     <p class="text-texto-suave mt-1">Quién cambió qué, cuándo y por qué, del más reciente al más antiguo. Nadie la puede editar ni borrar.</p>
 
     <div class="mt-4 flex flex-wrap items-end gap-4">
-      <label class="flex flex-col gap-1">
+      <label class="flex max-w-full flex-col gap-1">
         <span>Mostrar <panel-ayuda titulo="¿Por qué no salen los registros de los kioscos?" [texto]="AYUDA_FILTRO" alinear="izquierda" /></span>
-        <select class="campo" (change)="cambiarFiltro(valor($event))">
+        <select class="campo max-w-full" (change)="cambiarFiltro(valor($event))">
           <option value="personas" [selected]="filtro() === 'personas'">Lo que hicieron personas (lo normal)</option>
           <option value="todo" [selected]="filtro() === 'todo'">Todo, también cada registro de los kioscos</option>
           @for (t of SECCIONES; track t.tabla) {
@@ -127,12 +131,8 @@ const HASHES = new Set(['pin_hash', 'contrasena_kiosco_hash', 'token_hash', 'cod
       </label>
       <label class="flex flex-col gap-1">
         Sobre qué persona
-        <select class="campo" (change)="cambiar(empleado, valor($event))">
-          <option value="">Cualquiera</option>
-          @for (e of listaEmpleados(); track e.id) {
-            <option [value]="e.id" [selected]="empleado() === e.id">{{ e.nombre }}</option>
-          }
-        </select>
+        <panel-elegir-empleado [opciones]="listaEmpleados()" [valor]="empleado()" textoVacio="Cualquiera"
+                               (elegir)="cambiar(empleado, $event)" />
       </label>
       <label class="flex flex-col gap-1">
         Desde
@@ -234,13 +234,16 @@ export class Bitacora implements OnInit {
   async ngOnInit(): Promise<void> {
     const [admins, empleados] = await Promise.all([
       this.sesion.bd.from('administradores').select('user_id, nombre'),
-      this.sesion.bd.from('empleados').select('id, nombre, apellido_paterno'),
+      this.sesion.bd.from('empleados').select('id, nombre, apellido_paterno, numero_empleado'),
     ]);
     for (const a of admins.data ?? []) this.nombres.set(a.user_id, a.nombre);
     for (const e of empleados.data ?? []) this.empleados.set(e.id, `${e.nombre} ${e.apellido_paterno}`);
     const porNombre = (a: { nombre: string }, b: { nombre: string }): number => a.nombre.localeCompare(b.nombre);
     this.administradores.set([...this.nombres].map(([id, nombre]) => ({ id, nombre })).sort(porNombre));
-    this.listaEmpleados.set([...this.empleados].map(([id, nombre]) => ({ id, nombre })).sort(porNombre));
+    const numeros = new Map((empleados.data ?? []).map((e) => [e.id as string, e.numero_empleado as string | null]));
+    this.listaEmpleados.set(
+      [...this.empleados].map(([id, nombre]) => ({ id, nombre: conNumero(nombre, numeros.get(id)) })).sort(porNombre),
+    );
     await this.cargar(true);
   }
 
@@ -293,7 +296,7 @@ export class Bitacora implements OnInit {
       case 'anulaciones': q = q.eq('tabla', 'correcciones'); break;
       case 'a_mano': q = q.eq('tabla', 'marcas').eq('datos_despues->>origen', 'manual'); break;
       case 'configuracion': q = q.eq('tabla', 'configuracion'); break;
-      case 'horarios': q = q.in('tabla', ['turnos', 'turno_versiones', 'asignaciones_turno']); break;
+      case 'horarios': q = q.in('tabla', ['turnos', 'turno_versiones', 'asignaciones_turno', 'ajustes_horario']); break;
       case 'kioscos': q = q.eq('tabla', 'dispositivos'); break;
       case 'accesos': q = q.eq('tabla', 'administradores'); break;
     }

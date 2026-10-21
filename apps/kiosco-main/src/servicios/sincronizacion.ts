@@ -59,7 +59,7 @@ import {
 import { ES_DESARROLLO } from '../entorno';
 import { type CredencialKiosco, guardarCredencial, leerCredencial } from './credencial-kiosco';
 import { establecerDesfaseServidor } from './reloj';
-import { esPcCompartida } from '../configuracion-vigente';
+import { esPcCompartida, modoIdentificacionVigente } from '../configuracion-vigente';
 import { configurarArranqueConWindows } from '../arranque-automatico';
 
 const S = CONFIG.sincronizacion;
@@ -348,9 +348,9 @@ async function bajar(credencial: CredencialKiosco, segundosLimite?: number): Pro
     );
   }
   ultimaBajadaOkMs = Date.now();
-  // El jefe pudo cambiar "PC compartida" en el panel: la pantalla y el inicio
-  // con Windows se ajustan sin reiniciar.
-  avisar({ pcCompartida: esPcCompartida() });
+  // El jefe pudo cambiar "PC compartida" o "checar con numero" en el panel:
+  // la pantalla y el inicio con Windows se ajustan sin reiniciar.
+  avisar({ pcCompartida: esPcCompartida(), modoIdentificacion: modoIdentificacionVigente() });
   configurarArranqueConWindows();
   if (catalogo.data.empleados.length > 0 || catalogo.data.administradores.length > 0) {
     console.info(

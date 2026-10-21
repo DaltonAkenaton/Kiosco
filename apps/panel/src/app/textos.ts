@@ -211,7 +211,7 @@ export const PALABRAS_CONFIGURACION: Record<string, { nombre: string; explicacio
   },
   dias_avisos_registros: {
     nombre: 'Días de registros por revisar en los avisos',
-    explicacion: 'Los avisos de arriba de Asistencia (registros de personas dadas de baja, o en cuarentena) buscan tantos días hacia atrás. Lo más viejo ya no se avisa, pero sigue en Asistencia → Revisión.',
+    explicacion: 'Los avisos de arriba de Asistencia (registros en cuarentena, y de personas dadas de baja si ésos no se llevan a Pendientes) buscan tantos días hacia atrás. Lo más viejo ya no se avisa, pero sigue en Asistencia → Revisión.',
     seUsaEn: 'Este panel',
   },
   umbral_desfase_reloj_ms: {
@@ -269,6 +269,51 @@ export const PALABRAS_CONFIGURACION: Record<string, { nombre: string; explicacio
     nombre: 'Permitir datos de demostración',
     explicacion: 'Con "Sí", en Empleados aparece el botón para generar empleados y registros FALSOS, para probar el sistema. Sirve sólo en el sistema de pruebas: en el sistema real debe quedar en "No".',
     seUsaEn: 'Este panel',
+  },
+  pendientes_minutos_tarde_dia: {
+    nombre: 'Minutos tarde en un día',
+    explicacion: 'Si alguien llega esta cantidad de minutos tarde (o más) en un solo día, aparece en Pendientes para que lo atiendas. Con 0, esta regla se apaga.',
+    seUsaEn: 'Pendientes',
+  },
+  pendientes_minutos_tarde_semana: {
+    nombre: 'Minutos tarde sumados en la semana',
+    explicacion: 'Si los minutos tarde de alguien suman esto (o más) de lunes a domingo, aparece en Pendientes. Se cuentan desde su hora de entrada, aunque estén dentro de la tolerancia: quien llega 12 minutos tarde cinco días suma 60. Con 0, esta regla se apaga.',
+    seUsaEn: 'Pendientes',
+  },
+  pendientes_faltas: {
+    nombre: 'Las faltas van a Pendientes',
+    explicacion: 'Con "Sí", cada falta (le tocaba trabajar, no vino y no tiene permiso registrado) aparece en Pendientes. Si después registras un permiso o vacaciones para ese día, se cierra sola.',
+    seUsaEn: 'Pendientes',
+  },
+  pendientes_salidas_no_registradas: {
+    nombre: 'Las salidas no registradas van a Pendientes',
+    explicacion: 'Con "Sí", cuando alguien registra su entrada y nunca su salida, aparece en Pendientes. Si registras la salida a mano, se cierra sola.',
+    seUsaEn: 'Pendientes',
+  },
+  pendientes_registros_de_baja: {
+    nombre: 'Registros de personas dadas de baja van a Pendientes',
+    explicacion: 'Con "Sí", cada registro de alguien que ya estaba dado de baja aparece en Pendientes. Con "No", se avisa en la franja de arriba de Asistencia, como antes.',
+    seUsaEn: 'Pendientes',
+  },
+  pendientes_fotos_tapadas: {
+    nombre: 'La cámara tapada va a Pendientes',
+    explicacion: 'Con "Sí", cada día que alguien registra con la cámara tapada aparece en Pendientes. Es la trampa más común: conviene revisar la foto en el kiosco.',
+    seUsaEn: 'Pendientes',
+  },
+  pendientes_dias_revision: {
+    nombre: 'Días hacia atrás que se revisan',
+    explicacion: 'Cuántos días hacia atrás se buscan casos nuevos para Pendientes. Lo que ya está en Pendientes no se borra aunque sea más viejo: sigue ahí hasta que lo atiendas.',
+    seUsaEn: 'Pendientes',
+  },
+  pendientes_revisar_desde: {
+    nombre: 'Revisar desde',
+    explicacion: 'Lo que pasó antes de esta fecha no se vuelve pendiente. Se puso sola el día en que se instaló esta versión, para no empezar con cientos de casos viejos. Si la mueves hacia adelante, lo pendiente de antes se cierra solo; si la mueves hacia atrás, salen los casos de esos días (hasta los «Días hacia atrás que se revisan»).',
+    seUsaEn: 'Pendientes',
+  },
+  identificar_con_numero: {
+    nombre: 'Los empleados checan con su número de empleado',
+    explicacion: 'Con "Sí", en el kiosco cada quien escribe su número de empleado (puede llevar letras), Enter, y su PIN. Con "No", cada quien elige su nombre de una lista. Antes de encenderlo, todos los empleados activos deben tener su número en Empleados.',
+    seUsaEn: 'Los kioscos',
   },
   zona_horaria: {
     nombre: 'Zona horaria',

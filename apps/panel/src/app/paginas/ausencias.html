@@ -1,8 +1,8 @@
 <h1 class="text-2xl font-bold">Incidencias y días festivos</h1>
-<p class="text-texto-suave mt-1 max-w-3xl">
-  Lo que pasó fuera de lo normal: alguien faltó con razón, o vino y el problema no fue suyo (no se registró,
-  se cayó el sistema). Se corrige también hacia atrás: si registras algo de la semana pasada, el reporte de esa
-  semana se corrige solo. Los registros de entrada y salida nunca se tocan.
+<p class="text-texto-suave mt-1 max-w-5xl">
+  Permisos, vacaciones, incapacidades y lo que no fue culpa de la persona.
+  <panel-ayuda titulo="¿Para qué sirve?" alinear="izquierda"
+               texto="Lo que pasó fuera de lo normal: alguien faltó con razón (permiso, vacaciones, incapacidad), o vino y el problema no fue suyo (no se registró, se cayó el sistema). Se corrige también hacia atrás: si registras algo de la semana pasada, el reporte de esa semana se corrige solo, y sus pendientes se cierran solos. Los registros de entrada y salida nunca se tocan." />
 </p>
 @if (error(); as mensaje) {
   <p class="mt-4 font-bold" style="color: var(--kiosko-peligro)">{{ mensaje }}</p>
@@ -14,6 +14,65 @@
     <h2 class="text-xl font-bold">Incidencias</h2>
     <button type="button" class="boton-principal !px-3 !py-1" (click)="registrando.set(true)">+ Registrar incidencia</button>
   </div>
+
+  <div class="mt-3 flex flex-wrap items-end gap-3">
+    <label class="flex flex-col gap-1">
+      <span class="text-texto-suave text-sm">Empleado</span>
+      <panel-elegir-empleado [opciones]="empleados()" [valor]="filtroEmpleado()" textoVacio="Todos"
+                             (elegir)="filtrar('filtroEmpleado', $event)" />
+    </label>
+    <label class="flex max-w-full flex-col gap-1">
+      <span class="text-texto-suave text-sm">Tipo</span>
+      <select class="campo max-w-full" data-prueba="filtro-tipo" (change)="filtrar('filtroTipo', valor($event))">
+        <option value="" [selected]="filtroTipo() === ''">Todos</option>
+        @for (t of TIPOS; track t.valor) {
+          <option [value]="t.valor" [selected]="t.valor === filtroTipo()">{{ t.texto }}</option>
+        }
+      </select>
+    </label>
+    <label class="flex flex-col gap-1">
+      <span class="text-texto-suave text-sm">Desde</span>
+      <input type="date" class="campo" [value]="filtroDesde()" (change)="filtrar('filtroDesde', valor($event))" />
+    </label>
+    <label class="flex flex-col gap-1">
+      <span class="text-texto-suave text-sm">Hasta</span>
+      <input type="date" class="campo" [value]="filtroHasta()" (change)="filtrar('filtroHasta', valor($event))" />
+    </label>
+    <label class="flex max-w-full flex-col gap-1">
+      <span class="text-texto-suave text-sm">Buscar en las notas</span>
+      <!-- Con Enter, al salir del campo o con el boton Buscar (21-10-2026: "hace falta un boton"). -->
+      <span class="flex max-w-full gap-2">
+        <input #textoNotas type="search" class="campo w-60 min-w-0 max-w-full" placeholder="Ej.: IMSS" [value]="filtroTexto()"
+               (change)="filtrar('filtroTexto', valor($event))" (search)="filtrar('filtroTexto', valor($event))" />
+        <button type="button" class="boton-secundario shrink-0 !px-3" (click)="filtrar('filtroTexto', textoNotas.value)">Buscar</button>
+      </span>
+    </label>
+    @if (hayFiltros()) {
+      <button type="button" class="boton-secundario !px-3 !py-2" (click)="quitarFiltros()">Quitar filtros</button>
+    }
+  </div>
+  @if (!cargando()) {
+    <p class="text-texto-suave mt-2">
+      {{ incidencias().length }} incidencia{{ incidencias().length === 1 ? '' : 's' }}
+      ({{ diasEnTotal() }} día{{ diasEnTotal() === 1 ? '' : 's' }} en total){{ hayFiltros() ? ' con esos filtros' : '' }}.
+      @if (incidencias().length >= MAXIMO) {
+        <b style="color: var(--kiosko-atencion)">Se muestran las {{ MAXIMO }} más recientes: elige una persona o unas fechas para ver las demás.</b>
+      }
+    </p>
+    <!-- 21-10-2026: "falta explicar mejor se da por bueno y ausencia". -->
+    <div class="mt-3 grid gap-2 text-base sm:grid-cols-2" data-prueba="leyenda-familias">
+      <p class="border-borde rounded-xl border-2 px-4 py-3">
+        <span class="etiqueta mr-1" style="color: var(--kiosko-texto-suave)">ausencia justificada</span>
+        <b>No vino, pero con razón</b> (vacaciones, incapacidad, permiso…).
+        <span class="text-texto-suave">Ese día <b>no cuenta como falta</b>, pero <b>tampoco suma horas</b> trabajadas.</span>
+      </p>
+      <p class="border-borde rounded-xl border-2 px-4 py-3">
+        <span class="etiqueta mr-1" style="color: var(--kiosko-entrada)">se da por bueno</span>
+        <b>El problema no fue suyo</b> (no se registró, falla del sistema, retardo con razón).
+        <span class="text-texto-suave">Ese día cuenta <b>como si hubiera venido normal</b>: a tiempo y con las horas de su turno.</span>
+      </p>
+    </div>
+  }
   <div class="tabla-desplazable mt-3">
   <table class="w-full border-collapse text-left">
     <thead>
@@ -37,8 +96,11 @@
           <td class="py-2 pr-4 font-semibold">{{ nombre(i.empleado_id) }}</td>
           <td class="py-2 pr-4">
             {{ tipo(i.tipo) }}
-            <span class="etiqueta ml-1" [style.color]="familia(i.tipo) === 'por_bueno' ? 'var(--kiosko-entrada)' : 'var(--kiosko-texto-suave)'">
-              {{ familia(i.tipo) === 'por_bueno' ? 'se da por bueno' : 'ausencia' }}
+            <span class="etiqueta ml-1" [style.color]="familia(i.tipo) === 'por_bueno' ? 'var(--kiosko-entrada)' : 'var(--kiosko-texto-suave)'"
+                  [title]="familia(i.tipo) === 'por_bueno'
+                    ? 'Cuenta como si hubiera venido normal: a tiempo y con las horas de su turno.'
+                    : 'No cuenta como falta, pero tampoco suma horas trabajadas.'">
+              {{ familia(i.tipo) === 'por_bueno' ? 'se da por bueno' : 'ausencia justificada' }}
             </span>
           </td>
           <td class="py-2 pr-4 tabular-nums">{{ dma(i.fecha_inicio) }}</td>
@@ -50,8 +112,13 @@
         </tr>
       } @empty {
         <tr><td colspan="6" class="text-texto-suave py-6 text-center">
+          @if (hayFiltros()) {
+            Ninguna incidencia con esos filtros.
+            <button type="button" class="underline underline-offset-4" (click)="quitarFiltros()">Quitar filtros</button>
+          } @else {
           No hay incidencias registradas. Cuando alguien falte con razón (vacaciones, incapacidad) o no haya podido
           registrar por algo que no fue su culpa, pica <b>+ Registrar incidencia</b>.
+          }
         </td></tr>
       }
       }

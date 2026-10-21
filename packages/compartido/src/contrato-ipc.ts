@@ -513,6 +513,8 @@ export interface ConfiguracionParaInterfaz {
   /** Sin teclear en "Elige tu PIN" estos segundos: se cierra como "Ahora no". */
   segundosSinTeclearAlElegirPin: number;
   segundosMensajeExito: number;
+  /** Cuanto hay que mantener presionado el letrero de arriba para el modo administrador. */
+  segundosParaEntrarAlAdministrador: number;
   videoEnEspejo: boolean;
   mostrarTecladoEnPantalla: boolean;
   intervaloRelojMs: number;

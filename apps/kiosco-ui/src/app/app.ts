@@ -16,7 +16,14 @@
 
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { PantallaPrincipal } from './pantallas/pantalla-principal';
+import { EntradaAdmin } from './servicios/entrada-admin';
 import { PuenteKiosco } from './servicios/puente-kiosco';
+
+/**
+ * Cuanto despues de empezar a presionar aparece la rayita de avance. Antes
+ * no: un toque normal al letrero no debe mostrar nada.
+ */
+const MS_ANTES_DE_MOSTRAR_AVANCE = 1000;
 
 @Component({
   selector: 'app-root',
@@ -56,5 +63,41 @@ export class App implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.puente.detener();
+    this.soltarLetrero();
+  }
+
+  // --------------------------------------------------------------------------
+  //  Mantener presionado el letrero = modo administrador (servicios/entrada-admin.ts)
+  // --------------------------------------------------------------------------
+  private readonly entradaAdmin = inject(EntradaAdmin);
+  private temporizadorLetrero: ReturnType<typeof setTimeout> | null = null;
+  private temporizadorAvance: ReturnType<typeof setTimeout> | null = null;
+  /** Mientras se mantiene presionado (ya pasado el primer segundo): la rayita que se llena. */
+  protected readonly avanceVisible = signal(false);
+  /** Lo que tarda en llenarse la rayita, en segundos (lo que falta despues del primero). */
+  protected readonly segundosDeAvance = signal(0);
+
+  protected presionarLetrero(evento: PointerEvent): void {
+    // Solo el boton principal del raton (o un dedo): el derecho no cuenta.
+    if (evento.button !== 0) return;
+    this.soltarLetrero();
+    const total = (this.configuracion()?.segundosParaEntrarAlAdministrador ?? 3) * 1000;
+    this.temporizadorAvance = setTimeout(() => {
+      this.segundosDeAvance.set(Math.max(0, total - MS_ANTES_DE_MOSTRAR_AVANCE) / 1000);
+      this.avanceVisible.set(true);
+    }, MS_ANTES_DE_MOSTRAR_AVANCE);
+    this.temporizadorLetrero = setTimeout(() => {
+      this.soltarLetrero();
+      this.entradaAdmin.pedir();
+    }, total);
+  }
+
+  /** Se solto, se salio del letrero o Windows cancelo el toque: no pasa nada. */
+  protected soltarLetrero(): void {
+    if (this.temporizadorLetrero) clearTimeout(this.temporizadorLetrero);
+    if (this.temporizadorAvance) clearTimeout(this.temporizadorAvance);
+    this.temporizadorLetrero = null;
+    this.temporizadorAvance = null;
+    this.avanceVisible.set(false);
   }
 }

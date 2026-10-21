@@ -56,6 +56,7 @@ tabla dice qué significa cada palabra **aquí**, en este sistema.
 | **Migración** | Un archivo con instrucciones para cambiar la forma de la base de datos (por ejemplo, agregar una columna). Se aplican en orden y nunca a mano. |
 | **Hash / huella** | Un "código de barras" que se calcula a partir de una foto. Si alguien altera la foto, la huella ya no coincide. A internet sólo viaja la huella, nunca la foto. |
 | **Cifrar** | Guardar algo "con candado": aunque alguien copie el archivo, no lo puede abrir sin la llave. |
+| **Modo administrador del kiosco** | La parte del kiosco para el jefe: ver fotos, guardar en USB, ver la conexión y la versión. Desde la 1.0.4 **no hay botón**: se entra **manteniendo presionado 3 segundos el letrero de arriba** ("UAT FCACS Nuevo Laredo"), y luego usuario y contraseña del kiosco. Pasado un segundo aparece una rayita que se llena: suelta cuando se abra la ventana. |
 
 ---
 
@@ -173,8 +174,8 @@ acepte lo que mande. Un kiosco sin alta no puede mandar registros.
 2. En el kiosco, en la barra de abajo → **Dar de alta** → escribir el código
    (hace falta un teclado con letras) → **Dar de alta**.
 3. En unos segundos, el kiosco baja la lista del personal y aparece en el panel.
-4. En el kiosco → **⚙ Administrador** → entrar con el usuario y contraseña
-   **del kiosco** del jefe. Esos se ponen en el panel, en **Mi cuenta**, y
+4. En el kiosco, entrar al modo administrador: Mantén presionado **3 segundos** el letrero de arriba del kiosco (**"UAT FCACS Nuevo Laredo"**): se abre la ventana del **modo administrador**. (Desde la versión 1.0.4 ya no hay botón "Administrador" a la vista.) Luego el usuario
+   y contraseña **del kiosco** del jefe. Esos se ponen en el panel, en **Mi cuenta**, y
    tardan unos minutos en llegar al kiosco.
 5. El kiosco avisa en amarillo que falta la **contraseña de recuperación de
    las fotos**. Inventarla, escribirla y **anotarla en la hoja de
@@ -213,7 +214,7 @@ C:\Users\<usuario>\AppData\Roaming\Control de Asistencia\
 Texto simple, se abre con el Bloc de notas; la hora es de Nuevo Laredo. Se
 guardan **14 días** y los viejos se borran solos; cada día tiene un tope de
 5 MB para no llenar el disco. **No lleva fotos, PIN, tokens ni contraseñas.**
-Para mandarlo sin ir a la facultad: el jefe entra a **⚙ Administrador →
+Para mandarlo sin ir a la facultad: el jefe entra a **modo administrador →
 🩺 Guardar diagnóstico**, lo guarda en una memoria USB y lo manda por correo.
 La carpeta trae además un `resumen.txt` con la versión, la conexión y el
 estado de la cámara en ese momento.
@@ -230,9 +231,9 @@ estado de la cámara en ese momento.
 
 **Antes de retirar una PC que todavía funciona:**
 
-1. Conectarla a internet y esperar a que la barra de abajo diga
-   **0 pendientes** (así todo ya llegó a la base).
-2. **⚙ Administrador → Guardar en memoria USB**, con las fechas de los
+1. Conectarla a internet, entrar al modo administrador y esperar a que diga
+   **0 por enviar** (así todo ya llegó a la base).
+2. **modo administrador → Guardar en memoria USB**, con las fechas de los
    últimos 30 días (y todas las marcadas "Conservar"). Guardar esa USB junto
    con la hoja de credenciales.
 3. Si además quieres que las fotos sigan viéndose en la PC nueva: cerrar el
@@ -249,7 +250,7 @@ estado de la cámara en ese momento.
    copiando archivos). El kiosco pide **alta** y aparta la llave vieja sin
    borrarla.
 3. Darlo de alta con un código nuevo (sección 3).
-4. **⚙ Administrador** → aparece "N fotos guardadas con un candado anterior" →
+4. **modo administrador** → aparece "N fotos guardadas con un candado anterior" →
    escribir la **contraseña de recuperación** → **Recuperar las fotos**.
 
 ---
@@ -325,7 +326,7 @@ directo a la base de datos, y una página web no puede.
 |---|---|
 | Todos los datos (registros, personal, horarios, ausencias…) en **Excel** | GitHub (automático, lunes y jueves) **y** panel (botón, cuando se quiera) |
 | La base completa para **restaurarla** (SQL) | Sólo GitHub |
-| **Las fotos** | Sólo el kiosco: ⚙ Administrador → Guardar en memoria USB (sección 5) |
+| **Las fotos** | Sólo el kiosco: modo administrador → Guardar en memoria USB (sección 5) |
 
 ### Restaurar en un proyecto nuevo de Supabase
 
@@ -416,7 +417,7 @@ nueva y, si la hay, la descargan sin molestar a nadie. La instalan:
   usado en 5 minutos.
 
 Tarda menos de un minuto, el kiosco vuelve a abrirse solo y no se pierde
-ningún dato. Para instalarla en ese momento: **⚙ Administrador → Instalar la
+ningún dato. Para instalarla en ese momento: **modo administrador → Instalar la
 versión nueva** (el botón aparece cuando ya hay una descargada).
 
 ### Dónde viven las versiones
@@ -606,12 +607,12 @@ reportes.
 | El kiosco dice "dado de baja" o pide alta | Lo dieron de baja en el panel, o se copió a otra PC | Generar un código nuevo en el panel y darlo de alta (sección 3) |
 | "Sin cámara" | Cable suelto, u otro programa está usando la cámara | Reconectar la cámara; cerrar otros programas. Mientras, se sigue registrando. El motivo exacto queda en el diario (sección 4) |
 | El panel avisa "la cámara se desconectó N veces" | Cable flojo, puerto USB dañado o cámara por descomponerse | Probar otro puerto y otro cable; si sigue, cambiar la cámara. El diario dice a qué horas pasó |
-| Algo raro que nadie sabe explicar | — | Pedir el diario: ⚙ Administrador → 🩺 Guardar diagnóstico (sección 4) |
+| Algo raro que nadie sabe explicar | — | Pedir el diario: modo administrador → 🩺 Guardar diagnóstico (sección 4) |
 | Muchos registros con "Foto no guardada" | Disco lleno | Liberar espacio en el disco |
 | "Hora dudosa" en todos los registros | La pila del BIOS se acabó, o la zona horaria está mal | Cambiar la pila; en Windows, poner hora y zona automáticas |
 | El panel no muestra un cambio reciente | Falló "Publicar el panel" | GitHub → Actions → abrir la corrida en rojo y leer el error (casi siempre un secreto) |
 | El panel abre pero no deja entrar a nadie | Nadie tiene cuenta, u olvidaron todas las contraseñas | Sección 11, "Nadie puede entrar al panel" |
-| El jefe no puede entrar al ⚙ Administrador del kiosco | No ha puesto su usuario del kiosco, o el kiosco no se ha actualizado | Panel → Mi cuenta; esperar unos minutos con internet |
+| El jefe no puede entrar al modo administrador del kiosco | No ha puesto su usuario del kiosco, o el kiosco no se ha actualizado | Panel → Mi cuenta; esperar unos minutos con internet |
 | El kiosco muestra "Registros que la oficina no aceptó" | La persona no existe en el panel, o el kiosco estaba dado de baja | Arreglar la causa en el panel y, en el kiosco, "Volver a enviarlos" |
 | Varias tareas de Actions en rojo a la vez | **Venció el token de Supabase** | Sección 8, "Renovar el token de Supabase" |
 | Una tarea de Actions en rojo | Un secreto mal copiado, vencido o cambiado | Abrir la corrida y leer el primer error |

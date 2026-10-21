@@ -1,0 +1,296 @@
+<h1 class="text-2xl font-bold">Pendientes</h1>
+<p class="text-texto-suave mt-1 max-w-5xl">
+  Lo que hay que atender con el personal. Cada caso se queda aquí hasta que lo atiendas.
+  <panel-ayuda titulo="¿Cómo funciona?" [texto]="AYUDA" alinear="izquierda" />
+  @if (revisarDesde(); as d) {
+    <span class="block text-sm">
+      Se revisa desde el {{ fechaLarga(d) }}.
+      <a routerLink="/configuracion" class="underline underline-offset-4">Cambiar las reglas</a>
+    </span>
+  }
+</p>
+
+<div class="mt-5 flex flex-wrap items-end gap-3">
+  <div class="flex flex-wrap gap-1" role="tablist">
+    <button type="button" role="tab" class="enlace-menu" [class.activo]="vista() === 'abiertos'" [attr.aria-selected]="vista() === 'abiertos'"
+            (click)="vista.set('abiertos')">
+      Sin atender
+      @if (abiertos().length > 0) {
+        <span class="insignia-pendientes">{{ abiertos().length }}</span>
+      }
+    </button>
+    <button type="button" role="tab" class="enlace-menu" [class.activo]="vista() === 'atendidos'" [attr.aria-selected]="vista() === 'atendidos'"
+            (click)="vista.set('atendidos')">
+      Atendidos (historia)
+    </button>
+  </div>
+  <label class="flex flex-col gap-1">
+    <span class="text-texto-suave text-sm">Empleado</span>
+    <panel-elegir-empleado [opciones]="empleados()" [valor]="empleadoId()" textoVacio="Todos" (elegir)="elegirEmpleado($event)" />
+  </label>
+</div>
+
+@if (error(); as mensaje) {
+  <p class="mt-4 font-bold" style="color: var(--kiosko-peligro)">{{ mensaje }}</p>
+}
+
+<!-- ====================== SIN ATENDER ====================== -->
+@if (vista() === 'abiertos') {
+  @if (cargando()) {
+    <p class="text-texto-suave mt-6">Revisando…</p>
+  } @else {
+    <div class="mt-5 flex flex-col gap-4">
+      @for (p of porPersona(); track p.id) {
+        @let abierta = desplegada(p);
+        <section class="bg-superficie border-borde rounded-2xl border-2 p-4">
+          <!-- Picar en cualquier parte del encabezado despliega (20-10-2026); el boton sigue para el teclado. -->
+          <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2"
+               [class.cursor-pointer]="porPersona().length > 1" (click)="porPersona().length > 1 && alternar(p)">
+            <div>
+              <h2 class="text-xl font-bold">
+                {{ p.nombre }}
+                @if (p.numero) { <span class="text-texto-suave text-base font-normal">#{{ p.numero }}</span> }
+              </h2>
+              <p class="mt-0.5">
+                @for (r of p.resumen; track r.texto; let ultimo = $last) {
+                  <b [style.color]="r.color">{{ r.texto }}</b>@if (!ultimo) {<span class="text-texto-suave">, </span>}
+                }
+                <span class="text-texto-suave"> · {{ p.rango }}</span>
+              </p>
+            </div>
+            @if (porPersona().length > 1) {
+              <button type="button" class="boton-secundario !px-3 !py-1" [attr.aria-expanded]="abierta" (click)="$event.stopPropagation(); alternar(p)">
+                {{ abierta ? 'Ocultar los casos ▴' : 'Ver los casos (' + p.casos.length + ') ▾' }}
+              </button>
+            }
+          </div>
+          @if (p.seguidas; as r) {
+            <p class="aviso aviso-atencion mt-3 text-base font-normal">
+              <b>Faltó {{ r.dias }} días seguidos</b> ({{ fechasDeRacha(r) }}). ¿Está enfermo, de vacaciones o ya no
+              trabaja aquí? Si es así, regístralo con el botón de abajo
+              (o dalo de baja en <a routerLink="/empleados" class="underline underline-offset-4">Empleados</a>) y estas
+              faltas se cierran solas.
+              <button type="button" class="boton-secundario mt-2 block !px-3 !py-1" (click)="registrarIncidenciaDeRacha(p, r)">
+                Registrar incidencia para esos {{ r.dias }} días
+              </button>
+            </p>
+          }
+          @if (abierta) {
+          <ul class="border-borde mt-3 flex flex-col border-t">
+            @for (c of p.casos; track c.id) {
+              <li class="border-borde flex flex-wrap items-center gap-x-4 gap-y-2 border-t py-3 first:border-t-0">
+                <span class="min-w-48">
+                  <b [style.color]="TIPOS[c.tipo].color">{{ TIPOS[c.tipo].titulo }}</b>
+                  <panel-ayuda [titulo]="TIPOS[c.tipo].titulo" [texto]="TIPOS[c.tipo].ayuda" />
+                  <span class="text-texto-suave block text-sm">{{ cuando(c) }}</span>
+                </span>
+                <span class="flex-1">{{ texto(c) }}</span>
+                <span class="flex flex-wrap gap-2">
+                  <button type="button" class="boton-secundario !px-3 !py-1" (click)="verRegistros(c)">{{ seVeEnReportes(c) ? 'Ver su reporte' : 'Ver sus registros' }}</button>
+                  @if (sePuedeRegistrarIncidencia(c)) {
+                    <button type="button" class="boton-secundario !px-3 !py-1" (click)="registrarIncidencia(c)"
+                            title="Enfermo, permiso, vacaciones, retardo con razón...: se registra y el caso se cierra solo">Registrar incidencia</button>
+                  }
+                  <button type="button" class="boton-principal !px-3 !py-1" (click)="abrirAtender(c)">Atender</button>
+                </span>
+              </li>
+            }
+          </ul>
+          }
+        </section>
+      } @empty {
+        <p class="bg-superficie border-borde rounded-2xl border-2 px-5 py-6 text-lg">
+          <span aria-hidden="true">✔</span>
+          @if (empleadoId()) { Esta persona no tiene nada pendiente. } @else { No hay nada pendiente. }
+        </p>
+      }
+    </div>
+  }
+}
+
+<!-- ====================== ATENDIDOS ====================== -->
+@if (vista() === 'atendidos') {
+  <div class="tabla-desplazable mt-5">
+    <table class="w-full border-collapse text-left">
+      <thead>
+        <tr class="text-texto-suave border-borde border-b text-sm uppercase tracking-wide">
+          <th class="py-2 pr-4">Quién</th>
+          <th class="py-2 pr-4">Qué pasó</th>
+          <th class="py-2 pr-4">Cuándo</th>
+          <th class="py-2 pr-4">Qué se hizo</th>
+          <th class="py-2"></th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (cargando()) {
+          @for (r of RENGLONES_CARGANDO; track r) {
+            <tr panel-cargando-tabla [columnas]="5"></tr>
+          }
+        } @else {
+          @for (c of atendidosVisibles(); track c.id) {
+            <tr class="border-borde border-b align-top">
+              <td class="py-2 pr-4 font-semibold">{{ nombreDe(c) }}</td>
+              <td class="py-2 pr-4">
+                <b [style.color]="TIPOS[c.tipo].color">{{ TIPOS[c.tipo].titulo }}</b>
+                <span class="text-texto-suave block text-sm">{{ texto(c) }}</span>
+              </td>
+              <td class="py-2 pr-4">{{ cuando(c) }}</td>
+              <td class="py-2 pr-4">
+                <span class="text-texto-suave block text-sm">{{ quienCerro(c) }} · {{ fechaCierre(c) }}</span>
+                {{ c.que_se_hizo }}
+                @if (justificaciones().get(c.id); as tipo) {
+                  <span class="mt-1 block font-semibold" style="color: var(--kiosko-entrada)" data-prueba="dia-justificado">
+                    ✓ Día justificado: {{ tipo }} <span class="text-texto-suave font-normal">(ya no cuenta como {{ c.tipo === 'falta' ? 'falta' : 'retardo' }})</span>
+                  </span>
+                } @else if (sePuedeRegistrarIncidencia(c)) {
+                  <span class="text-texto-suave mt-1 block text-sm">Sigue contando como {{ c.tipo === 'falta' ? 'falta' : 'retardo' }} (no se justificó).</span>
+                }
+              </td>
+              <td class="py-2">
+                @if (c.estado === 'atendido') {
+                  <button type="button" class="boton-secundario !px-3 !py-1" (click)="abrirReabrir(c)">Reabrir</button>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="5" class="text-texto-suave py-6 text-center">
+              Todavía no se ha atendido nada. Aquí queda la historia: qué pasó con cada persona y qué se hizo.
+            </td></tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+  @if (hayMasAtendidos() && !cargando()) {
+    <button type="button" class="boton-secundario mt-4" [disabled]="cargandoMas()" (click)="cargarAtendidos(false)">
+      {{ cargandoMas() ? 'Cargando…' : 'Ver más antiguos' }}
+    </button>
+  }
+}
+
+<!-- ====================== DIALOGOS ====================== -->
+@if (atendiendo(); as c) {
+  <panel-dialogo [titulo]="'Atender: ' + nombreDe(c)" textoBoton="Marcar como atendido"
+                 etiquetaMotivo="¿Qué se hizo?" ejemploMotivo="Ej.: se habló con la persona, dice que fue el camión"
+                 [sugerencias]="SUGERENCIAS"
+                 [ocupado]="guardando() || !!porConfirmar()" [error]="errorAccion()" (confirmar)="atender(c, $event)" (cancelar)="atendiendo.set(null)"
+                 (alEscribir)="alEscribirQueSeHizo(c, $event)">
+    <p><b [style.color]="TIPOS[c.tipo].color">{{ TIPOS[c.tipo].titulo }}</b> · {{ cuando(c) }}</p>
+    <p>{{ texto(c) }}</p>
+    @let dias = diasDeLaSemana(c);
+    @if (dias.length > 0) {
+      @let marcados = diasMarcados();
+      <!-- Bien a la vista (20-10-2026): se atendia la semana sin notar que tambien cerraba los dias. -->
+      <fieldset class="rounded-xl border-2 p-4" style="border-color: var(--kiosko-atencion); background-color: color-mix(in srgb, var(--kiosko-atencion) 10%, transparent)">
+        <legend class="px-2 text-lg font-bold" style="color: var(--kiosko-atencion)">
+          ¿Estas llegadas tarde quedan atendidas con lo mismo?
+        </legend>
+        <p class="text-base">
+          Las que dejes marcadas se cierran junto con la semana. Desmarca la que vayas a atender aparte
+          (por ejemplo, el día que llegó muy tarde y lleva su propia acta).
+        </p>
+        <ul class="mt-3 flex flex-col gap-2" data-prueba="dias-de-la-semana">
+          @for (d of dias; track d.id) {
+            <li>
+              <label class="flex items-center gap-3 text-lg">
+                <input type="checkbox" class="casilla h-6 w-6" [checked]="marcados.has(d.id)" (change)="marcarDia(d.id)" />
+                <span><b>{{ cuando(d) }}</b> · llegó {{ d.detalle.minutos }} min tarde</span>
+              </label>
+            </li>
+          }
+        </ul>
+        <p class="mt-3 flex flex-wrap items-center gap-3 text-base">
+          <b>Se cerrarán: la semana{{ marcados.size > 0 ? ' y ' + marcados.size + ' día(s)' : ' sola' }}.</b>
+          <button type="button" class="underline underline-offset-4" (click)="marcarTodos(c, marcados.size < dias.length)">
+            {{ marcados.size < dias.length ? 'Marcar todos' : 'Desmarcar todos' }}
+          </button>
+        </p>
+      </fieldset>
+    }
+    @if (sePuedeRegistrarIncidencia(c)) {
+      <!-- 21-10-2026: atender solo anota; justificar es lo que cambia el reporte. Las dos cosas en un paso. -->
+      <div class="rounded-xl border-2 p-4" data-prueba="justificar-dia"
+           [style.border-color]="justificar() ? 'var(--kiosko-entrada)' : 'var(--kiosko-borde)'">
+        <label class="flex items-start gap-3 text-lg">
+          <input type="checkbox" class="casilla mt-1 h-6 w-6 shrink-0" [checked]="justificar()" (change)="justificar.set(!justificar())" />
+          <span>
+            <b>Además, justificar ese día</b><br />
+            <span class="text-base text-texto-suave">
+              {{ justificar() ? 'Ya no contará como ' + (c.tipo === 'falta' ? 'falta' : 'retardo') + ' en los reportes.'
+                              : 'Si no la marcas, sigue contando como ' + (c.tipo === 'falta' ? 'falta' : 'retardo') + ' en los reportes.' }}
+            </span>
+          </span>
+        </label>
+        @if (justificar()) {
+          <label class="mt-3 flex flex-col gap-1 text-base">
+            <span>¿Como qué?</span>
+            <select class="campo max-w-full" [value]="tipoJustificacion()" (change)="tipoJustificacion.set(valor($event))">
+              @for (g of gruposParaJustificar(c); track g.familia) {
+                <optgroup [label]="g.familia === 'ausencia' ? 'No vino, con razón (ausencia justificada)' : 'Se da por bueno (el problema no fue suyo)'">
+                  @for (t of g.tipos; track t.valor) {
+                    <option [value]="t.valor" [selected]="t.valor === tipoJustificacion()">{{ t.texto }} — {{ t.ejemplo }}</option>
+                  }
+                </optgroup>
+              }
+            </select>
+          </label>
+          <p class="mt-2 text-base" data-prueba="explica-familia">
+            @if (familiaDe(tipoJustificacion()) === 'por_bueno') {
+              <b style="color: var(--kiosko-entrada)">Se da por bueno:</b> ese día cuenta como si hubiera venido normal, a tiempo
+              y con las horas de su turno.
+            } @else {
+              <b>Ausencia justificada:</b> ese día no cuenta como falta, pero tampoco suma horas trabajadas.
+            }
+          </p>
+        }
+      </div>
+    }
+    <p class="text-texto-suave text-base">
+      Lo que escribas queda en la historia de la persona (pestaña «Atendidos»). Si hay que corregir un registro, hazlo en Asistencia.
+      @if (sePuedeRegistrarIncidencia(c)) {
+        Con la casilla marcada, también queda en «Incidencias».
+      } @else {
+        Si estaba enfermo o tenía permiso, usa «Registrar incidencia».
+      }
+    </p>
+  </panel-dialogo>
+}
+
+@if (porConfirmar(); as p) {
+  <!-- Encima de "Atender", que espera (ocupado) por si se elige "No, volver" para cambiar el tipo. -->
+  <panel-dialogo titulo="¿Justificar este día?" textoBoton="Sí, justificar y atender" [pedirMotivo]="false"
+                 (confirmar)="atender(p.caso, p.queSeHizo, true)" (cancelar)="porConfirmar.set(null)">
+    <div data-prueba="confirmar-justificacion" class="flex flex-col gap-3">
+      <p>
+        La {{ p.caso.tipo === 'falta' ? 'falta' : 'llegada tarde' }} de <b>{{ nombreDe(p.caso) }}</b> del
+        <b>{{ cuando(p.caso) }}</b> quedará justificada como:
+      </p>
+      <p class="rounded-xl border-2 px-4 py-3 text-2xl font-bold" style="border-color: var(--kiosko-entrada); color: var(--kiosko-entrada)">
+        {{ textoDelTipo(tipoJustificacion()) }}
+      </p>
+      <p>
+        Ya <b>no contará como {{ p.caso.tipo === 'falta' ? 'falta' : 'retardo' }}</b> en los reportes, y quedará en «Incidencias».
+        @if (familiaDe(tipoJustificacion()) === 'por_bueno') {
+          <b>Se da por bueno:</b> cuenta como si hubiera venido normal, con las horas de su turno.
+        } @else {
+          <b>Ausencia justificada:</b> no suma horas trabajadas.
+        }
+      </p>
+      <p class="text-texto-suave text-base">Lo que se hizo: «{{ p.queSeHizo }}»</p>
+      <p class="text-texto-suave text-base">¿No es el tipo correcto? Pica <b>Cancelar</b>: regresas a la ventana anterior, sin perder lo escrito, y lo cambias en «¿Como qué?».</p>
+    </div>
+  </panel-dialogo>
+}
+
+@if (reabriendo(); as c) {
+  <panel-dialogo [titulo]="'Volver a abrir: ' + nombreDe(c)" textoBoton="Volver a abrir"
+                 ejemploMotivo="Ej.: lo cerré por error, falta hablar con la persona"
+                 [ocupado]="guardando()" [error]="errorAccion()" (confirmar)="reabrir(c, $event)" (cancelar)="reabriendo.set(null)">
+    <p>{{ TIPOS[c.tipo].titulo }} · {{ cuando(c) }}. Vuelve a «Sin atender».</p>
+  </panel-dialogo>
+}
+
+@if (registrando(); as s) {
+  <panel-registrar-incidencia [sugerida]="s" [permitirVarios]="false"
+                              (guardado)="alRegistrarIncidencia($event)" (cancelar)="registrando.set(null)" />
+}

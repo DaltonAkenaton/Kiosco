@@ -12,7 +12,7 @@
   </div>
 </div>
 
-<!-- El mismo aviso (y el mismo color) que la franja de Asistencia: servicios/pendientes.ts. -->
+<!-- El mismo aviso (y el mismo color) que la franja de Asistencia: servicios/avisos-del-panel.ts. -->
 @if (alertas().length > 0) {
   <div class="mt-4 rounded-2xl px-5 py-4" style="background-color: rgb(239 68 68 / 0.1); border: 2px solid var(--kiosko-peligro)">
     <p class="text-lg font-bold" style="color: var(--kiosko-peligro)">⚠ Para atender ({{ alertas().length }})</p>
@@ -20,7 +20,7 @@
       @for (a of alertas(); track a.clave) {
         <li class="flex flex-wrap items-center gap-x-3">
           <span>{{ a.texto }}</span>
-          <button type="button" class="boton-secundario !px-3 !py-1 text-sm" (click)="pendientes.yaLoVi(a)"
+          <button type="button" class="boton-secundario !px-3 !py-1 text-sm" (click)="avisosDelPanel.yaLoVi(a)"
                   title="Esconder este aviso. Vuelve a salir sólo si la situación empeora.">✓ Ya lo vi</button>
         </li>
       }
@@ -154,8 +154,8 @@
 }
 
 @if (codigo(); as c) {
-  <div class="fixed inset-0 z-50 flex items-center justify-center p-6" style="background-color: rgb(0 0 0 / 0.8)">
-    <div class="ventana bg-superficie border-borde flex w-full max-w-xl flex-col gap-4 rounded-3xl border-2 p-8 text-center">
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-6" style="background-color: rgb(0 0 0 / 0.8)">
+    <div class="ventana bg-superficie border-borde flex w-full max-w-xl flex-col gap-4 rounded-3xl border-2 p-5 sm:p-8 text-center">
       <h2 class="text-2xl font-bold">Código para «{{ c.nombre }}»</h2>
       <p class="font-mono text-6xl font-bold tracking-widest">{{ c.codigo.slice(0, 4) }}-{{ c.codigo.slice(4) }}</p>
       <p class="text-lg">Sirve <b>una sola vez</b> y vence a las <b>{{ hora(c.expira, zona()) }}</b>.</p>

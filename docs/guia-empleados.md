@@ -10,15 +10,19 @@ Doble clic al icono del **reloj con palomita** en el escritorio. Cuando
 termines de registrar, pica **Minimizar** o **Cerrar kiosco** (abajo a la derecha).
 Si está minimizado, está en la barra de tareas de abajo: pícale ahí.
 
-## 1. Busca tu número en la pantalla
+## 1. Di quién eres
 
-La pantalla muestra la lista del personal con un número de dos cifras:
-**01, 02, 03…**
+**Si la pantalla dice "Escribe tu número de empleado":** escribe tu número de
+empleado (el de tu gafete; puede llevar letras, como `A12345`) y presiona
+**Enter**.
 
-Teclea **tu número**. Ejemplos:
+**Si la pantalla muestra la lista del personal** con un número de dos cifras
+(**01, 02, 03…**), teclea **el número junto a tu nombre**. Ejemplos:
 
 - Si eres el **07**: teclea `0` `7` (o sólo `7` y **Enter**).
 - Si eres el **15**: teclea `1` `5`.
+
+(Cuál de las dos sale lo decide el jefe en el panel.)
 
 ## 2. Teclea tu PIN
 

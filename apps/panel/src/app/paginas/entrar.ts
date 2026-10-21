@@ -58,7 +58,7 @@ import { Sesion } from '../servicios/sesion';
                    [type]="mostrar() ? 'text' : 'password'" [value]="contrasena()"
                    (input)="contrasena.set(valor($event))"
                    (keydown)="revisarMayusculas($event)" (keyup)="revisarMayusculas($event)" />
-            <button type="button" class="boton-secundario" (click)="mostrar.set(!mostrar())">
+            <button type="button" class="boton-secundario shrink-0 !px-3" (click)="mostrar.set(!mostrar())">
               {{ mostrar() ? 'Ocultar' : 'Mostrar' }}
             </button>
           </span>
@@ -158,7 +158,7 @@ export class Entrar {
       this.error.set(motivo);
       return;
     }
-    await this.router.navigateByUrl('/asistencia');
+    await this.router.navigateByUrl('/');
   }
 
   protected revisarMayusculas(evento: KeyboardEvent): void {

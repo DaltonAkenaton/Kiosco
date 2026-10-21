@@ -44,6 +44,10 @@ export const TABLAS_DEL_RESPALDO: TablaDelRespaldo[] = [
   { tabla: 'asignaciones_turno', columnas: '*', orden: ['vigente_desde', 'id'] },
   { tabla: 'dias_laborales', columnas: '*', orden: ['asignacion_id', 'dia_semana'] },
   { tabla: 'dias_festivos', columnas: '*', orden: ['fecha'] },
+  // 0029. Las notas NO van: son apuntes de cada administrador, algunos
+  // privados; quien baja el respaldo solo veria las suyas y las compartidas.
+  { tabla: 'ajustes_horario', columnas: '*', orden: ['fecha', 'id'] },
+  { tabla: 'pendientes', columnas: '*', orden: ['desde', 'id'] },
   { tabla: 'accesos_foto', columnas: '*', orden: ['consultado_en', 'id'] },
   { tabla: 'administradores', orden: ['nombre', 'user_id'],
     columnas: 'user_id, nombre, correo, rol, activo, usuario_kiosco, creado_en' },

@@ -20,13 +20,14 @@
  */
 
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
-import { diaSiguiente, hoyEn, inicioDelDiaLocal, instanteLocal } from '@kiosko/compartido';
+import { ActivatedRoute, Router } from '@angular/router';
+import { diaSiguiente, inicioDelDiaLocal, instanteLocal } from '@kiosko/compartido';
 import { Ayuda } from '../componentes/ayuda';
 import { Dialogo, mensajeDeError } from '../componentes/dialogo';
+import { ElegirEmpleado, conNumero } from '../componentes/elegir-empleado';
 import { Avisos } from '../servicios/avisos';
 import { descargarExcel } from '../servicios/escribir-excel';
-import { Pendiente, Pendientes } from '../servicios/pendientes';
+import { AvisoDelPanel, AvisosDelPanel } from '../servicios/avisos-del-panel';
 import { senalRecordada } from '../servicios/recordar';
 import { Sesion } from '../servicios/sesion';
 import {
@@ -77,20 +78,21 @@ const SEGUNDOS_PARA_REFRESCAR = 60;
 
 @Component({
   selector: 'panel-asistencia',
-  imports: [Ayuda, Dialogo],
+  imports: [Ayuda, Dialogo, ElegirEmpleado],
   templateUrl: './asistencia.html',
 })
 export class Asistencia implements OnInit, OnDestroy {
   protected readonly sesion = inject(Sesion);
   private readonly avisos = inject(Avisos);
   private readonly router = inject(Router);
-  /** La franja "Para atender" de arriba (servicios/pendientes.ts). */
-  protected readonly pendientes = inject(Pendientes);
+  private readonly ruta = inject(ActivatedRoute);
+  /** La franja "Para atender" de arriba (servicios/avisos-del-panel.ts). */
+  protected readonly avisosDelPanel = inject(AvisosDelPanel);
   protected readonly zona = this.sesion.zona;
 
   // Los filtros se recuerdan al cambiar de pantalla (servicios/recordar.ts).
-  protected readonly desde = senalRecordada('asistencia.desde', hoyEn(this.sesion.zona()), { delDia: hoyEn(this.sesion.zona()) });
-  protected readonly hasta = senalRecordada('asistencia.hasta', hoyEn(this.sesion.zona()), { delDia: hoyEn(this.sesion.zona()) });
+  protected readonly desde = senalRecordada('asistencia.desde', this.sesion.hoy(), { delDia: this.sesion.hoy() });
+  protected readonly hasta = senalRecordada('asistencia.hasta', this.sesion.hoy(), { delDia: this.sesion.hoy() });
   protected readonly empleadoId = senalRecordada('asistencia.empleado', '');
   protected readonly dispositivoId = senalRecordada('asistencia.kiosco', '');
   protected readonly revision = senalRecordada<Revision>('asistencia.revision', '');
@@ -119,7 +121,8 @@ export class Asistencia implements OnInit, OnDestroy {
   protected readonly empleadosParaCaptura = computed(() =>
     this.empleados()
       .filter((e) => !e.anonimizado)
-      .sort((a, b) => Number(b.activo) - Number(a.activo)),
+      .sort((a, b) => Number(b.activo) - Number(a.activo))
+      .map((e) => ({ id: e.id, nombre: e.nombre + (e.activo ? '' : ' (dado de baja)') })),
   );
   protected readonly dispositivos = signal<{ id: string; nombre: string }[]>([]);
   protected readonly marcas = signal<Marca[]>([]);
@@ -163,15 +166,15 @@ export class Asistencia implements OnInit, OnDestroy {
   /** El boton "Actualizar": trae lo ultimo que llego de los kioscos. */
   protected actualizar(): void {
     void this.buscar();
-    void this.pendientes.actualizar();
+    void this.avisosDelPanel.actualizar();
   }
 
   /**
-   * "Ver" en la franja de pendientes. Lo de kioscos se atiende en Kioscos; lo
+   * "Ver" en la franja de avisos. Lo de kioscos se atiende en Kioscos; lo
    * de registros, aqui mismo: pone el filtro de Revisión y las fechas desde el
    * caso mas antiguo, para que se vean todos de un jalon.
    */
-  protected verPendiente(p: Pendiente): void {
+  protected verAviso(p: AvisoDelPanel): void {
     if (p.donde === 'kioscos' || !p.revision) {
       void this.router.navigateByUrl('/kioscos');
       return;
@@ -181,7 +184,7 @@ export class Asistencia implements OnInit, OnDestroy {
       this.desde.set(new Intl.DateTimeFormat('en-CA', { timeZone: zona, year: 'numeric', month: '2-digit', day: '2-digit' })
         .format(new Date(p.desde)));
     }
-    this.hasta.set(hoyEn(zona));
+    this.hasta.set(this.sesion.hoy());
     this.empleadoId.set('');
     this.dispositivoId.set('');
     this.turnoFiltro.set('');
@@ -191,7 +194,7 @@ export class Asistencia implements OnInit, OnDestroy {
 
   async ngOnInit(): Promise<void> {
     this.temporizador = setInterval(() => {
-      const incluyeHoy = !this.hasta() || this.hasta() >= hoyEn(this.sesion.zona());
+      const incluyeHoy = !this.hasta() || this.hasta() >= this.sesion.hoy();
       if (!document.hidden && incluyeHoy && !this.cargando()) void this.buscar();
     }, SEGUNDOS_PARA_REFRESCAR * 1000);
 
@@ -206,13 +209,34 @@ export class Asistencia implements OnInit, OnDestroy {
     this.empleados.set(
       (emp.data ?? []).map((e) => ({
         id: e.id,
-        nombre: `${e.numero_empleado ? '#' + e.numero_empleado + ' · ' : ''}${e.nombre} ${e.apellido_paterno}`,
+        nombre: conNumero(`${e.nombre} ${e.apellido_paterno}`, e.numero_empleado),
         activo: e.activo as boolean,
         anonimizado: e.anonimizado_en !== null,
       })),
     );
     this.dispositivos.set(disp.data ?? []);
+    this.filtrosDeLaDireccion();
     await this.buscar();
+  }
+
+  /**
+   * "Ver sus registros" desde Pendientes (0029) llega con
+   * ?desde=...&hasta=...&empleado=...: se ponen esos filtros (y se quitan los
+   * demas, para que no se escondan registros) y se limpia la direccion.
+   */
+  private filtrosDeLaDireccion(): void {
+    const q = this.ruta.snapshot.queryParamMap;
+    const fechaValida = (v: string | null): v is string => !!v && /^\d{4}-\d{2}-\d{2}$/.test(v);
+    if (!fechaValida(q.get('desde')) && !q.get('empleado')) return;
+    const desde = q.get('desde');
+    const hasta = q.get('hasta');
+    if (fechaValida(desde)) this.desde.set(desde);
+    if (fechaValida(hasta)) this.hasta.set(hasta);
+    this.empleadoId.set(q.get('empleado') ?? '');
+    this.dispositivoId.set('');
+    this.turnoFiltro.set('');
+    this.revision.set('');
+    void this.router.navigate([], { queryParams: {}, replaceUrl: true });
   }
 
   protected cambiar(filtro: 'desde' | 'hasta' | 'empleadoId' | 'dispositivoId' | 'revision', valor: string): void {
@@ -277,7 +301,7 @@ export class Asistencia implements OnInit, OnDestroy {
     }
     this.marcas.set((data ?? []) as unknown as Marca[]);
     this.actualizadoA.set(
-      new Intl.DateTimeFormat('es-MX', { timeZone: zona, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date()),
+      new Intl.DateTimeFormat('es-MX', { timeZone: zona, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(this.sesion.ahora())),
     );
   }
 
@@ -354,7 +378,7 @@ export class Asistencia implements OnInit, OnDestroy {
   }
 
   protected fechaImpresion(): string {
-    return new Date().toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short', timeZone: this.sesion.zona() });
+    return new Date(this.sesion.ahora()).toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short', timeZone: this.sesion.zona() });
   }
 
   protected nombreCompleto(m: Marca): string {
@@ -423,8 +447,8 @@ export class Asistencia implements OnInit, OnDestroy {
 
   protected abrirManual(): void {
     const zona = this.sesion.zona();
-    const ahora = new Intl.DateTimeFormat('en-GB', { timeZone: zona, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date());
-    this.manual.set({ empleadoId: '', tipo: 'entrada', fecha: hoyEn(zona), hora: ahora });
+    const ahora = new Intl.DateTimeFormat('en-GB', { timeZone: zona, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(this.sesion.ahora()));
+    this.manual.set({ empleadoId: '', tipo: 'entrada', fecha: this.sesion.hoy(), hora: ahora });
     this.errorAccion.set(null);
     this.registrandoAMano.set(true);
   }

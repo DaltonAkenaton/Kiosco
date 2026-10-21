@@ -52,12 +52,24 @@ export type ModoIdentificacion = 'usuario' | 'lista' | 'numero';
  * guardara la suya, unas quedarian actualizadas y otras no.
  */
 const vigente = {
-  modoIdentificacion: CONFIG.identificacion.modo as ModoIdentificacion,
+  /** Solo en desarrollo: el modo elegido con el selector de la pantalla. */
+  modoDeDesarrollo: null as ModoIdentificacion | null,
 };
 
-/** Lee el modo de identificacion que manda ahora mismo. */
+/**
+ * Lee el modo de identificacion que manda ahora mismo.
+ *
+ * Desde la 0029 (20-10-2026) lo decide el JEFE en el panel: el ajuste
+ * `identificar_con_numero` (1 = numero de empleado, 0 = lista). Si todavia
+ * no llega (kiosco sin alta, o sin nube), el de configuracion.ts. En
+ * desarrollo, el selector de la pantalla manda sobre los dos.
+ */
 export function modoIdentificacionVigente(): ModoIdentificacion {
-  return vigente.modoIdentificacion;
+  if (vigente.modoDeDesarrollo) return vigente.modoDeDesarrollo;
+  const conNumero = numeroConfigurado('identificar_con_numero', -1, { minimo: 0, maximo: 1 });
+  if (conNumero === 1) return 'numero';
+  if (conNumero === 0) return 'lista';
+  return CONFIG.identificacion.modo;
 }
 
 /**
@@ -157,7 +169,7 @@ export function cambiarModoIdentificacion(modo: ModoIdentificacion): boolean {
     return false;
   }
 
-  vigente.modoIdentificacion = modo;
+  vigente.modoDeDesarrollo = modo;
   console.info(`[config] modo de identificacion -> ${modo}`);
   return true;
 }
