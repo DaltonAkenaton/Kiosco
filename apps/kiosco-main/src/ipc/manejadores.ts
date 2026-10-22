@@ -50,6 +50,7 @@ import {
   type ResultadoCambioPin,
   type ResultadoPausa,
   type ResultadoRegistro,
+  type ResultadoRevisionNumero,
 } from '@kiosko/compartido';
 import {
   cambiarModoIdentificacion,
@@ -96,6 +97,7 @@ import {
   EsquemaPausa,
   EsquemaRegistro,
   esquemaIdentificacion,
+  esquemaRevisionNumero,
 } from './esquemas';
 
 /**
@@ -248,7 +250,10 @@ function mensajeDeDatosIncorrectos(): string {
     case 'lista':
       return 'PIN incorrecto. Revisa que elegiste tu nombre y vuelve a teclear tu PIN. Si no lo recuerdas, avisa a tu jefe.';
     case 'numero':
-      return 'Número o PIN incorrecto. Vuelve a intentarlo. Si no los recuerdas, avisa a tu jefe.';
+      // Desde la 1.0.5 el numero se revisa ANTES del PIN (revisarNumeroEmpleado),
+      // asi que aqui casi siempre el que fallo es el PIN. Aun asi se pide revisar
+      // el numero: pudo teclear el de un companero, que si existe.
+      return 'PIN incorrecto. Revisa que el número de arriba sea el tuyo y vuelve a teclear tu PIN. Si no lo recuerdas, avisa a tu jefe.';
     case 'usuario':
       return 'Usuario o PIN incorrecto. Vuelve a intentarlo. Si no los recuerdas, avisa a tu jefe.';
   }
@@ -611,6 +616,39 @@ export function registrarManejadoresIpc(): void {
     anotarUso();
     void ponerseAlDia();
   });
+
+  // ---------------------------------------------------------------------
+  //  revisarNumeroEmpleado (1.0.5, 21-10-2026): ¿existe ese numero?
+  // ---------------------------------------------------------------------
+  //  Antes el numero no se revisaba hasta tener el PIN, y el mensaje era
+  //  "Numero o PIN incorrecto" (sin decir cual, para no delatar que numeros
+  //  existen). En la practica, quien teclea mal su numero cree que su PIN
+  //  esta mal y lo intenta una y otra vez, con fila detras: el cuello de
+  //  botella que el sistema no debe crear (CLAUDE.md 1). Con ~20 personas
+  //  que se conocen, los numeros no son secreto; lo que protege es el PIN,
+  //  con su bloqueo y su retardo, y eso no cambia. Por eso aqui no se
+  //  simula la espera: se responde al momento.
+  //
+  //  Solo dice SI existe, nunca de quien es (el cliente no quiere nombres en
+  //  la pantalla). Fuera del modo 'numero' responde 'existe': no estorba.
+  ipcMain.handle(
+    CANALES.revisarNumeroEmpleado,
+    async (_evento, numeroCrudo): Promise<ResultadoRevisionNumero> => {
+      anotarUso();
+      if (modoIdentificacionVigente() !== 'numero') return 'existe';
+      const validacion = esquemaRevisionNumero().safeParse(numeroCrudo);
+      if (!validacion.success) return 'no_existe';
+
+      // Alguien que el jefe dio de alta hace un momento: antes de decir que no
+      // existe, se pide el catalogo al dia (si hay internet; tiene su limite).
+      const empleado =
+        buscarPorNumeroEmpleado(validacion.data) ??
+        ((await ponerseAlDia()) ? buscarPorNumeroEmpleado(validacion.data) : null);
+
+      if (!empleado) return 'no_existe';
+      return empleado.activo ? 'existe' : 'de_baja';
+    },
+  );
 
   // ---------------------------------------------------------------------
   //  obtenerEstado: para la barra de conexion / pendientes / camara

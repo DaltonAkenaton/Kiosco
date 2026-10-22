@@ -1008,6 +1008,10 @@
           Se muestra a quien se esta identificando. Es util para que el
           empleado confirme que no se equivoco de usuario antes de teclear.
         -->
+        @if (modo() === 'numero') {
+          <!-- 1.0.5: solo el numero, nunca el nombre (el cliente no quiere nombres en pantalla). -->
+          <p class="text-texto-suave -mb-4 text-2xl">Número de empleado</p>
+        }
         <p class="texto-nombre-grande font-bold">{{ nombreEnProceso() }}</p>
 
         <!--

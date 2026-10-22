@@ -60,6 +60,8 @@ import type {
 export const CANALES = {
   /** Valida numero de empleado + PIN y devuelve a quien pertenece. */
   identificar: 'kiosco:identificar',
+  /** Modo 'numero': ¿existe ese numero? Antes de pedir el PIN (1.0.5). */
+  revisarNumeroEmpleado: 'kiosco:revisar-numero-empleado',
   /** Guarda la marca (entrada o salida) con su foto. */
   registrarMarca: 'kiosco:registrar-marca',
   /** El empleado cancelo en la confirmacion: se tira el pase sin registrar nada. */
@@ -139,6 +141,18 @@ export interface SolicitudIdentificacion {
   identificador: string;
   pin: string;
 }
+
+/**
+ * Lo que responde `revisarNumeroEmpleado` (1.0.5, 21-10-2026).
+ *
+ *   'existe'     se pasa al PIN;
+ *   'no_existe'  se queda en el numero: lo tecleo mal;
+ *   'de_baja'    ese numero es de alguien dado de baja.
+ *
+ * Solo dice SI existe, nunca de quien es: el cliente no quiere nombres en la
+ * pantalla del kiosco.
+ */
+export type ResultadoRevisionNumero = 'existe' | 'no_existe' | 'de_baja';
 
 /** Un empleado tal como se muestra en el modo 'lista'. */
 export interface EmpleadoParaLista {
@@ -250,6 +264,8 @@ export interface EstadoCamaraReportado {
  */
 export interface ApiKiosco {
   identificar(solicitud: SolicitudIdentificacion): Promise<ResultadoIdentificacion>;
+  /** Modo 'numero': revisa el numero antes de pedir el PIN. */
+  revisarNumeroEmpleado(numero: string): Promise<ResultadoRevisionNumero>;
   registrarMarca(solicitud: SolicitudRegistro): Promise<ResultadoRegistro>;
 
   /**

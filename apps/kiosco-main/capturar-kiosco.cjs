@@ -158,12 +158,26 @@ app.whenReady().then(async () => {
     await js(`window.kiosco.cambiarModoIdentificacion('numero')`);
     await esperar(800);
     await capturar('numero-vacio');
+    // 1.0.5: un numero que no existe no pasa al PIN.
+    await teclear('9999');
+    await oprimir('Enter');
+    await esperar(600);
+    await capturar('numero-que-no-existe');
+    console.log('  numero que no existe ->', await js(`document.body.innerText.includes('No hay nadie con el número 9999') ? 'avisa y se queda' : 'NO AVISO'`),
+      '| sigue en el numero:', await js(`!document.body.innerText.includes('Ahora teclea tu PIN')`));
+    for (let i = 0; i < 4; i++) await oprimir('Backspace');
     await teclear('1003');
     await esperar(300);
     await capturar('numero-tecleado');
     await oprimir('Enter');
     await esperar(400);
     await capturar('numero-pide-pin');
+    console.log('  numero que si existe ->', await js(`document.body.innerText.includes('Ahora teclea tu PIN') ? 'pide el PIN' : 'NO PASO AL PIN'`),
+      '| sin nombre:', await js(`document.body.innerText.includes('Número de empleado')`));
+    await teclear('9876');
+    await esperar(2500);
+    await capturar('numero-pin-incorrecto');
+    console.log('  PIN incorrecto ->', await js(`document.body.innerText.includes('Revisa que el número de arriba sea el tuyo') ? 'pide revisar el numero' : 'OTRO MENSAJE'`));
     await oprimir('Escape');
     await js(`window.kiosco.cambiarModoIdentificacion('lista')`);
     await esperar(800);

@@ -40,6 +40,7 @@ import type {
   ResultadoIdentificacion,
   ResultadoPausa,
   ResultadoRegistro,
+  ResultadoRevisionNumero,
   SolicitudIdentificacion,
   SolicitudRegistro,
 } from '@kiosko/compartido';
@@ -134,6 +135,18 @@ export class PuenteKiosco {
       };
     }
     return window.kiosco.identificar(solicitud);
+  }
+
+  /**
+   * Modo 'numero': ¿existe ese numero? (1.0.5). Si el puente falla, se dice
+   * que si: el PIN lo revisa igual, y el kiosco nunca debe impedir checar.
+   */
+  async revisarNumeroEmpleado(numero: string): Promise<ResultadoRevisionNumero> {
+    try {
+      return (await window.kiosco?.revisarNumeroEmpleado?.(numero)) ?? 'existe';
+    } catch {
+      return 'existe';
+    }
   }
 
   /** Lista de empleados activos. Solo se usa en el modo 'lista'. */

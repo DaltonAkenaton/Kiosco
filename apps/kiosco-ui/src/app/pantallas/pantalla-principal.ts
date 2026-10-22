@@ -245,6 +245,7 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
     if (this.paso() === 'guardando') return 'Guardando…';
     if (this.paso() === 'confirmando') return 'Confirma tu registro';
     if (this.paso() === 'pin') return 'Ahora teclea tu PIN';
+    if (this.revisandoNumero()) return 'Revisando tu número…';
 
     switch (this.modo()) {
       case 'usuario':
@@ -844,14 +845,49 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
       return;
     }
 
-    if (!this.puedeAceptar()) return;
+    if (!this.puedeAceptar() || this.revisandoNumero()) return;
 
     if (this.paso() === 'identificador') {
+      if (this.modo() === 'numero') {
+        await this.revisarNumero();
+        return;
+      }
       this.paso.set('pin');
       return;
     }
 
     await this.identificar();
+  }
+
+  /** Mientras se revisa el numero (casi siempre al instante; hasta 3 s si va a la nube). */
+  protected readonly revisandoNumero = signal(false);
+
+  /**
+   * Modo 'numero' (1.0.5, 21-10-2026): el numero se revisa ANTES de pedir el
+   * PIN. Antes un numero mal tecleado pasaba al PIN y fallaba como "Numero o
+   * PIN incorrecto": la persona creia que su PIN estaba mal y lo intentaba
+   * una y otra vez, con fila detras. Solo se dice si existe; nunca un nombre
+   * (el cliente no quiere nombres en la pantalla del kiosco).
+   */
+  private async revisarNumero(): Promise<void> {
+    const numero = this.identificador();
+    this.revisandoNumero.set(true);
+    const resultado = await this.puente.revisarNumeroEmpleado(numero);
+    this.revisandoNumero.set(false);
+    // Si mientras tanto siguio tecleando o cancelo, esta respuesta ya no aplica.
+    if (this.paso() !== 'identificador' || this.identificador() !== numero) return;
+
+    if (resultado === 'existe') {
+      this.paso.set('pin');
+      return;
+    }
+    this.sonidos.reproducir('error');
+    this.error.set(
+      resultado === 'no_existe'
+        ? `No hay nadie con el número ${numero}. Revísalo y vuelve a escribirlo.`
+        : `El número ${numero} está dado de baja. Avisa a tu jefe para que registre tu asistencia.`,
+    );
+    this.reiniciarInactividad();
   }
 
   protected reiniciar(): void {

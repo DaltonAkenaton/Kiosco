@@ -44,6 +44,7 @@ import {
   type ApiKiosco,
   type ConfiguracionParaInterfaz,
   type EmpleadoParaLista,
+  type ResultadoRevisionNumero,
   type MarcaParaMostrar,
   type EstadoCamaraReportado,
   type EstadoKiosco,
@@ -67,6 +68,10 @@ import {
 const api: ApiKiosco = {
   identificar(solicitud: SolicitudIdentificacion): Promise<ResultadoIdentificacion> {
     return ipcRenderer.invoke(CANALES.identificar, solicitud);
+  },
+
+  revisarNumeroEmpleado(numero: string): Promise<ResultadoRevisionNumero> {
+    return ipcRenderer.invoke(CANALES.revisarNumeroEmpleado, numero);
   },
 
   registrarMarca(solicitud: SolicitudRegistro): Promise<ResultadoRegistro> {

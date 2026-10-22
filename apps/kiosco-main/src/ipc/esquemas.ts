@@ -77,20 +77,31 @@ function esquemaDelIdentificador() {
       return z.uuid();
 
     case 'numero':
-      // 20-10-2026: los numeros de la universidad pueden llevar LETRAS
-      // ("A12345"). Letras sin acento, digitos y guion; se normaliza
-      // (mayusculas, sin espacios a los lados) igual que en el panel.
-      return z
-        .string()
-        .transform(normalizarNumeroEmpleado)
-        .pipe(
-          z
-            .string()
-            .min(identificacion.largoNumeroEmpleadoMinimo)
-            .max(identificacion.largoNumeroEmpleadoMaximo)
-            .regex(/^[A-Z0-9-]+$/, 'Numero de empleado invalido'),
-        );
+      return esquemaNumeroEmpleado();
   }
+}
+
+/**
+ * 20-10-2026: los numeros de la universidad pueden llevar LETRAS ("A12345").
+ * Letras sin acento, digitos y guion; se normaliza (mayusculas, sin espacios
+ * a los lados) igual que en el panel.
+ */
+function esquemaNumeroEmpleado() {
+  return z
+    .string()
+    .transform(normalizarNumeroEmpleado)
+    .pipe(
+      z
+        .string()
+        .min(identificacion.largoNumeroEmpleadoMinimo)
+        .max(identificacion.largoNumeroEmpleadoMaximo)
+        .regex(/^[A-Z0-9-]+$/, 'Numero de empleado invalido'),
+    );
+}
+
+/** `revisarNumeroEmpleado` (1.0.5): solo el numero, con la misma regla. */
+export function esquemaRevisionNumero() {
+  return esquemaNumeroEmpleado();
 }
 
 /**

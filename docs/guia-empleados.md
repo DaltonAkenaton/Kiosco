@@ -14,7 +14,8 @@ Si está minimizado, está en la barra de tareas de abajo: pícale ahí.
 
 **Si la pantalla dice "Escribe tu número de empleado":** escribe tu número de
 empleado (el de tu gafete; puede llevar letras, como `A12345`) y presiona
-**Enter**.
+**Enter**. Si dice **"No hay nadie con el número…"**, lo tecleaste mal:
+bórralo y escríbelo otra vez.
 
 **Si la pantalla muestra la lista del personal** con un número de dos cifras
 (**01, 02, 03…**), teclea **el número junto a tu nombre**. Ejemplos:
