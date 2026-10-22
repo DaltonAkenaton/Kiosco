@@ -374,6 +374,17 @@ export class Reportes implements OnInit {
     );
   }
 
+  /**
+   * Que dice el boton (21-10-2026: "¿por que el de A tiempo esta a
+   * justificar?"). Llego a tiempo pero se fue antes: el boton decia solo
+   * "Justificar", junto a "A tiempo", y no se entendia que.
+   */
+  protected textoJustificar(f: Fila): string {
+    if (['falta', 'retardo', 'retardo_mayor', 'sin_entrada'].includes(f.estado)) return 'Justificar';
+    if (['salida_no_registrada', 'salida_sin_entrada'].includes(f.estado_salida ?? '')) return 'Justificar la salida';
+    return `Justificar: se fue ${f.minutos_salida_anticipada} min antes`;
+  }
+
   /** Abre la ventana con la persona, el dia y el tipo que mas probablemente sea. */
   protected justificar(f: Fila): void {
     const tipo =

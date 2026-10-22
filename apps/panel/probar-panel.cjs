@@ -528,16 +528,17 @@ app.whenReady().then(async () => {
     })()`);
     await ir('/reportes');
     const antes = await js(`[...document.querySelectorAll('tbody tr')].filter((t) => t.textContent.includes('Justificado')).length`);
-    // Se fue antes de su hora (una emergencia): "Justificar" propone Permiso.
+    // Se fue antes de su hora (una emergencia): el boton DICE que es por eso
+    // (21-10-2026: junto a "A tiempo" no se entendia) y propone Permiso.
     const salidaAntes = await js(`(() => {
       const fila = [...document.querySelectorAll('tbody tr')].find((t) => t.textContent.includes('min antes)')
-        && !t.textContent.includes('Retardo') && [...t.querySelectorAll('button')].some((x) => x.textContent.trim() === 'Justificar'));
+        && !t.textContent.includes('Retardo') && [...t.querySelectorAll('button')].some((x) => /^Justificar: se fue \\d+ min antes$/.test(x.textContent.trim())));
       if (!fila) return false;
-      [...fila.querySelectorAll('button')].find((x) => x.textContent.trim() === 'Justificar').click();
+      [...fila.querySelectorAll('button')].find((x) => x.textContent.trim().startsWith('Justificar: se fue')).click();
       return true; })()`);
     if (salidaAntes) {
       await esperar(800);
-      comprobar('quien se fue antes de su hora: "Justificar" propone Permiso',
+      comprobar('quien se fue antes de su hora: "Justificar: se fue N min antes" propone Permiso',
         await js(`[...document.querySelectorAll('panel-dialogo select')].some((s) => s.value === 'permiso')`));
       await js(`[...document.querySelectorAll('panel-dialogo button')].find((x) => x.textContent.includes('Cancelar'))?.click()`);
       await esperar(500);

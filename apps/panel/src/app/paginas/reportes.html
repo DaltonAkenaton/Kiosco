@@ -204,7 +204,7 @@
             @if (f.corregida) { <span class="text-texto-suave"> · corregido</span> }
             @if (f.en_cuarentena) { <span style="color: var(--kiosko-atencion)"> · en cuarentena</span> }
             @if (sePuedeJustificar(f)) {
-              <button type="button" class="boton-secundario no-imprimir ml-2 !px-2 !py-0.5 text-sm" (click)="justificar(f)">Justificar</button>
+              <button type="button" class="boton-secundario no-imprimir ml-2 !px-2 !py-0.5 text-sm" (click)="justificar(f)">{{ textoJustificar(f) }}</button>
             }
           </td>
         </tr>

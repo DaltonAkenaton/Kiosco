@@ -436,6 +436,13 @@ valor choca con otra regla (por ejemplo, una tolerancia mayor que los minutos
 de "retardo mayor"), el panel no lo deja guardar y explica por qué. Un cambio
 llega a los kioscos en unos minutos y los reportes se recalculan solos.
 
+**Tolerancia para salir antes** (Asistencia): cuántos minutos antes de su
+hora de salida puede irse alguien sin que cuente como "se fue antes". Viene en
+**0**: cualquier minuto cuenta. Con 10, quien sale a las 13:52 de un turno
+que termina a las 14:00 no aparece; quien sale a las 13:45, sí, y en Reportes
+tiene el botón **Justificar: se fue 15 min antes**. Las horas trabajadas no
+cambian: siempre se cuentan con la hora real.
+
 **Checar con el número de empleado** (Configuración → Kioscos): con "Sí", en
 el kiosco cada quien escribe su **número de empleado** (puede llevar letras,
 como A12345) y **Enter**, y luego su PIN; ya no se ve la lista de nombres. Con

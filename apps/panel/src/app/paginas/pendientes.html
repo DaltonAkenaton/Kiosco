@@ -171,8 +171,8 @@
 <!-- ====================== DIALOGOS ====================== -->
 @if (atendiendo(); as c) {
   <panel-dialogo [titulo]="'Atender: ' + nombreDe(c)" textoBoton="Marcar como atendido"
-                 etiquetaMotivo="¿Qué se hizo?" ejemploMotivo="Ej.: se habló con la persona, dice que fue el camión"
-                 [sugerencias]="SUGERENCIAS"
+                 etiquetaMotivo="¿Qué se hizo?" [ejemploMotivo]="AL_ATENDER[c.tipo].ejemplo"
+                 [sugerencias]="AL_ATENDER[c.tipo].sugerencias"
                  [ocupado]="guardando() || !!porConfirmar()" [error]="errorAccion()" (confirmar)="atender(c, $event)" (cancelar)="atendiendo.set(null)"
                  (alEscribir)="alEscribirQueSeHizo(c, $event)">
     <p><b [style.color]="TIPOS[c.tipo].color">{{ TIPOS[c.tipo].titulo }}</b> · {{ cuando(c) }}</p>
@@ -249,8 +249,10 @@
       Lo que escribas queda en la historia de la persona (pestaña «Atendidos»). Si hay que corregir un registro, hazlo en Asistencia.
       @if (sePuedeRegistrarIncidencia(c)) {
         Con la casilla marcada, también queda en «Incidencias».
-      } @else {
-        Si estaba enfermo o tenía permiso, usa «Registrar incidencia».
+      } @else if (c.tipo === 'foto_tapada') {
+        La foto se ve sólo en el kiosco, en el modo administrador.
+      } @else if (c.tipo === 'retardos_semana') {
+        Si algún día tenía permiso, usa «Registrar incidencia».
       }
     </p>
   </panel-dialogo>

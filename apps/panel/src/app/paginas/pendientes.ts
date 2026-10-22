@@ -106,13 +106,38 @@ export const TIPOS_DE_PENDIENTE: Record<Tipo, { titulo: string; color: string; a
   },
 };
 
-/** Lo que se escribe casi siempre al atender: un clic y listo (se puede editar). */
-const SUGERENCIAS = [
-  'Se habló con la persona',
-  'Tenía permiso del jefe',
-  'Se levantó acta administrativa',
-  'Fue un error del registro',
-];
+/**
+ * Lo que se escribe casi siempre al atender: un clic y listo (se puede
+ * editar). Y el ejemplo del campo. CADA TIPO LOS SUYOS (21-10-2026: en una
+ * camara tapada salia "dice que fue el camion" y "Tenia permiso del jefe",
+ * que ahi no tienen sentido).
+ */
+const AL_ATENDER: Record<Tipo, { sugerencias: string[]; ejemplo: string }> = {
+  falta: {
+    sugerencias: ['Se habló con la persona', 'Tenía permiso del jefe', 'Se levantó acta administrativa', 'Fue un error del registro'],
+    ejemplo: 'Ej.: se habló con la persona, dice que se enfermó',
+  },
+  retardo_dia: {
+    sugerencias: ['Se habló con la persona', 'Tenía permiso del jefe', 'Se levantó acta administrativa', 'Fue un error del registro'],
+    ejemplo: 'Ej.: se habló con la persona, dice que fue el camión',
+  },
+  retardos_semana: {
+    sugerencias: ['Se habló con la persona', 'Se le dio una advertencia', 'Se levantó acta administrativa'],
+    ejemplo: 'Ej.: se habló con la persona sobre sus llegadas tarde',
+  },
+  salida_no_registrada: {
+    sugerencias: ['Se registró su salida a mano', 'Se le recordó registrar su salida', 'Se habló con la persona'],
+    ejemplo: 'Ej.: salió a las 14:00, se registró a mano en Asistencia',
+  },
+  registro_de_baja: {
+    sugerencias: ['Sí trabajó ese día, cuenta', 'Se anuló el registro', 'Se habló con la persona'],
+    ejemplo: 'Ej.: vino a entregar su gafete; se anuló el registro',
+  },
+  foto_tapada: {
+    sugerencias: ['Se revisó la foto: sí era la persona', 'Se habló con la persona', 'Se levantó acta administrativa', 'La cámara falló, no fue la persona'],
+    ejemplo: 'Ej.: se revisó en el kiosco, tapó la cámara con la mano',
+  },
+};
 
 /**
  * Atender y justificar en un paso (21-10-2026: el jefe elegia "Tenia permiso
@@ -202,7 +227,7 @@ export class PaginaPendientes implements OnInit {
     'qué se hizo: así no se olvida aunque pasen días, y queda en la historia de la persona (pestaña «Atendidos»). ' +
     'Si un caso deja de aplicar (por ejemplo, se registró un permiso), se cierra solo y dice por qué. Lo que pasó ' +
     'antes de la fecha «Revisar desde» de Configuración no se vuelve pendiente.';
-  protected readonly SUGERENCIAS = SUGERENCIAS;
+  protected readonly AL_ATENDER = AL_ATENDER;
   protected readonly RENGLONES_CARGANDO = RENGLONES_CARGANDO;
 
   /**

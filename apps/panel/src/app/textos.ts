@@ -154,6 +154,11 @@ export const PALABRAS_CONFIGURACION: Record<string, { nombre: string; explicacio
     explicacion: 'Minutos después de la hora de entrada en que todavía NO se cuenta retardo. Con 10, quien entra a las 6:00 y llega a las 6:09 llegó a tiempo.',
     seUsaEn: 'Los reportes de asistencia',
   },
+  tolerancia_salida_minutos: {
+    nombre: 'Tolerancia para salir antes',
+    explicacion: 'Minutos antes de la hora de salida en que todavía NO se cuenta que se fue antes. Con 10, quien sale a las 13:52 de un turno que termina a las 14:00 no aparece como "se fue antes". Con 0, cualquier minuto cuenta.',
+    seUsaEn: 'Los reportes de asistencia (el botón "Justificar: se fue N min antes")',
+  },
   minutos_para_falta: {
     nombre: 'Minutos tarde para "retardo mayor"',
     explicacion: 'A partir de cuántos minutos tarde el retardo se marca como RETARDO MAYOR. No es falta: la persona sí vino. (Si quieres que llegar así de tarde cuente como falta, enciende la opción de abajo.)',

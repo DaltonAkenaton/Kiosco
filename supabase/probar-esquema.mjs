@@ -1701,6 +1701,24 @@ console.log('\n--- pendientes (0029) ---');
   const { rows: [{ v }] } = await bd.query(`select valor v from configuracion where clave = 'identificar_con_numero'`);
   comprobar('el ajuste "checar con número" existe y empieza apagado (lista)', Number(v) === 0);
   await bd.query('reset role');
+
+  // 0030 (21-10-2026): tolerancia para salir antes. Reglas que valen con
+  // cualquier dato: en 0 cuenta cualquier minuto; con N, nada de 1 a N.
+  console.log('\n--- tolerancia para salir antes (0030) ---');
+  const { rows: [{ v: tolSalida }] } = await bd.query(`select valor v from configuracion where clave = 'tolerancia_salida_minutos'`);
+  comprobar('el ajuste "tolerancia para salir antes" existe y empieza en 0 (como antes)', Number(tolSalida) === 0);
+  const desdeHace = `(now() at time zone 'America/Matamoros')::date - 31`;
+  const hoyLocal = `(now() at time zone 'America/Matamoros')::date`;
+  const { rows: [{ n: sinContar }] } = await bd.query(
+    `select count(*)::int n from reporte_asistencia(${desdeHace}, ${hoyLocal})
+      where salida < programado_fin - interval '1 minute' and minutos_salida_anticipada is null`);
+  comprobar('con 0, toda salida antes de la hora se cuenta', sinContar === 0, `${sinContar} sin contar`);
+  await bd.query(`update configuracion set valor = '120'::jsonb where clave = 'tolerancia_salida_minutos'`);
+  const { rows: [{ n: dentro }] } = await bd.query(
+    `select count(*)::int n from reporte_asistencia(${desdeHace}, ${hoyLocal})
+      where minutos_salida_anticipada between 1 and 120`);
+  comprobar('con 120, nadie aparece con 1 a 120 minutos antes', dentro === 0, `${dentro}`);
+  await bd.query(`update configuracion set valor = '0'::jsonb where clave = 'tolerancia_salida_minutos'`);
 }
 
 // ============================================================================
