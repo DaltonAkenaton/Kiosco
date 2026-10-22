@@ -17,9 +17,9 @@
  └──────────────┘                 └─────────────────────┘
 ```
 
-- El personal checa en el **kiosco**: elige su número de la lista (o escribe su
-  número de empleado, según Configuración), teclea su PIN, y el kiosco toma una
-  foto.
+- El personal checa en el **kiosco**: escribe su **número de empleado** y
+  Enter, teclea su PIN, y el kiosco toma una foto. La pantalla del kiosco no
+  muestra la lista de nombres del personal.
 - La **foto se queda en el kiosco**, con candado. Nunca viaja por internet.
 - El **registro** (quién, a qué hora, entrada o salida) llega a tu **panel** en
   segundos. Si no hay internet, el kiosco lo guarda y lo manda cuando vuelve.
@@ -240,7 +240,7 @@ Cómo se decide cada cosa (se ajusta en **Configuración**):
 - **Sin entrada**: registró su **salida** pero no su entrada: sí vino. No es
   falta; con **Justificar → No se registró** el día cuenta completo.
 - **Falta**: **no vino** en todo su turno. Si fue por enfermedad, un accidente
-  u otra razón válida, regístralo en **Ausencias** (falta justificada o
+  u otra razón válida, regístralo en **Incidencias** (falta justificada o
   incapacidad) y deja de contar como falta.
 - Si prefieres la regla de antes (llegar muy tarde = falta), en Configuración
   pon "Llegar muy tarde cuenta como falta" en **Sí**.
@@ -253,7 +253,7 @@ Cómo se decide cada cosa (se ajusta en **Configuración**):
   hora: corrígelo tú con "Registrar a mano" si sabes a qué hora salió. Si al
   día siguiente ya registró su entrada nueva, el día anterior queda en "No
   registró salida" en ese momento y el día nuevo se cuenta normal.
-- **Ausencia justificada** / **Festivo**: lo que registres en Ausencias.
+- **Ausencia justificada** / **Festivo**: lo que registres en Incidencias.
 
 ### Resumen diario por correo
 
@@ -446,7 +446,9 @@ cambian: siempre se cuentan con la hora real.
 **Checar con el número de empleado** (Configuración → Kioscos): con "Sí", en
 el kiosco cada quien escribe su **número de empleado** (puede llevar letras,
 como A12345) y **Enter**, y luego su PIN; ya no se ve la lista de nombres. Con
-"No", cada quien elige su nombre de la lista. **Antes de encenderlo**, ponle
+"No", cada quien elige su nombre de una lista en pantalla. **Se decidió usar
+el número** (junta del 20 de octubre de 2026): déjalo en **Sí**. Si el número
+no existe, el kiosco lo dice en ese momento y no pide el PIN. **Antes de encenderlo**, ponle
 su número a todos en **Empleados → Corregir datos**: el panel no te deja
 encenderlo si falta alguien, y si después das de alta a alguien sin número,
 Empleados te avisa en rojo (no podría checar).
@@ -590,7 +592,7 @@ panel.
 | Se robaron o cambiaron la PC | Kioscos → **Dar de baja este kiosco**. Después, alta de la PC nueva. |
 | Alguien dice que no llegó tarde | Mira el registro; si hay duda, ve la foto en el kiosco y márcala **Conservar**. |
 | Una persona pide sus datos | Empleados → **Sus datos (ARCO)**. |
-| Vienen vacaciones o un día festivo | **Ausencias**: el festivo con **+ Agregar día festivo**; el periodo vacacional con **+ Registrar incidencia** → Vacaciones (sección 4, "Vacaciones de la universidad"). |
+| Vienen vacaciones o un día festivo | **Incidencias**: el festivo con **+ Agregar día festivo**; el periodo vacacional con **+ Registrar incidencia** → Vacaciones (sección 4, "Vacaciones de la universidad"). |
 | Aparecen faltas en días que no se trabajó | Faltó registrar ese festivo o esas vacaciones: regístralos ahora y las faltas desaparecen solas. |
 
 Soporte técnico: ver el [manual técnico](manual-tecnico.md).

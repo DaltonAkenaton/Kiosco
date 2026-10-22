@@ -34,6 +34,8 @@ fotos se borran a los 30 días, etc.). Sólo confirma una cosa:
 
 - **"La PC del kiosco se usa para otras cosas"**: déjala en **Sí** si en esa
   PC también se trabaja; ponla en **No** si la PC es sólo para checar.
+- **"Checar con el número de empleado"**: se enciende en **Sí** al terminar
+  el paso 6, cuando todos tengan su número.
 
 Cada opción tiene un **ⓘ** que explica qué hace.
 
@@ -76,11 +78,16 @@ En el panel: **Empleados**. Dos formas:
 - **Muchos a la vez (recomendado):** **Importar lista de Excel** → **Descargar
   plantilla** → llena un renglón por persona → guárdala → elígela. Al final,
   **imprime la hoja con los PIN**.
-- **Uno por uno:** **+ Agregar empleado** → nombre y apellidos.
+- **Uno por uno:** **+ Agregar empleado** → nombre, apellidos y **número de
+  empleado**.
 
-El sistema le da a cada persona un **PIN temporal**, que se muestra **una sola
-vez**. Entrégaselo a cada quien **en privado**. La primera vez que cheque, el
-kiosco le pide elegir uno propio.
+El **número de empleado es obligatorio** (de 4 a 12 letras o números, como
+A12345): es con lo que cada quien checa. El sistema le da a cada persona un
+**PIN temporal**, que se muestra **una sola vez**. Entrégaselo a cada quien
+**en privado**. La primera vez que cheque, el kiosco le pide elegir uno propio.
+
+Cuando todos tengan su número: **Configuración → Kioscos → "Checar con el
+número de empleado" → Sí**.
 
 *Manual del jefe, sección 4, "Empleados".*
 
@@ -100,7 +107,7 @@ registros.
 
 ## 8. Registra festivos y vacaciones
 
-En el panel: **Ausencias**. Con el **calendario escolar de la UAT** en la mano:
+En el panel: **Incidencias**. Con el **calendario escolar de la UAT** en la mano:
 
 - cada día festivo: **+ Agregar día festivo**;
 - cada periodo vacacional: **+ Registrar incidencia** → tipo **Vacaciones** →
@@ -130,7 +137,8 @@ y todos sepan usarlo, ya se puede dejar el método viejo.
 
 | Cada cuándo | Qué | Dónde |
 |---|---|---|
-| Cada día (si quieres) | Ver la asistencia en el panel | Manual del jefe, sección 3 |
+| Cada día | Revisar **Pendientes**: el panel abre ahí cuando hay algo que atender (faltas, llegadas tarde, salidas sin registrar) | Manual del jefe, sección 3, "Pendientes" |
+| Cuando quieras | Ver la asistencia y los reportes (quién falta más, quién llega más tarde) | Manual del jefe, sección 3 |
 | Cada mes | Panel → Configuración → Respaldo → **Descargar respaldo**, y guardarlo en el Drive de la facultad | Manual del jefe, sección 4, "Respaldo" |
 | Cada mes | GitHub → Actions: que los respaldos automáticos estén en verde | Manual técnico, sección 8 |
 | Cada semestre | Festivos y vacaciones del calendario escolar | Paso 8 |

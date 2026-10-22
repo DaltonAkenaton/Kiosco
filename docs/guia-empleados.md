@@ -12,18 +12,11 @@ Si está minimizado, está en la barra de tareas de abajo: pícale ahí.
 
 ## 1. Di quién eres
 
-**Si la pantalla dice "Escribe tu número de empleado":** escribe tu número de
-empleado (el de tu gafete; puede llevar letras, como `A12345`) y presiona
-**Enter**. Si dice **"No hay nadie con el número…"**, lo tecleaste mal:
-bórralo y escríbelo otra vez.
+Escribe tu **número de empleado** (el de tu gafete; puede llevar letras, como
+`A12345`) y presiona **Enter**.
 
-**Si la pantalla muestra la lista del personal** con un número de dos cifras
-(**01, 02, 03…**), teclea **el número junto a tu nombre**. Ejemplos:
-
-- Si eres el **07**: teclea `0` `7` (o sólo `7` y **Enter**).
-- Si eres el **15**: teclea `1` `5`.
-
-(Cuál de las dos sale lo decide el jefe en el panel.)
+Si dice **"No hay nadie con el número…"**, lo tecleaste mal: bórralo y
+escríbelo otra vez.
 
 ## 2. Teclea tu PIN
 
