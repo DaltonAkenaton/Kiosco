@@ -50,6 +50,9 @@ env:
 
 jobs:
   crear:
+    # Solo en el repositorio real: la copia de portafolio no tiene esta variable
+    # ni los secretos, asi que el trabajo se salta (gris) en lugar de fallar.
+    if: vars.DESPLIEGUE_ACTIVO == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

@@ -68,9 +68,11 @@ env:
 jobs:
   publicar:
     # Automatico solo si las pruebas pasaron y fue un push a main.
+    # Solo en el repositorio real (la copia de portafolio no tiene la variable).
     if: >-
+      vars.DESPLIEGUE_ACTIVO == 'true' && (
       github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:

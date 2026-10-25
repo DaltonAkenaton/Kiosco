@@ -43,6 +43,9 @@ permissions:
 
 jobs:
   instalador:
+    # Solo en el repositorio real: la copia de portafolio no tiene esta variable
+    # ni los secretos, asi que el trabajo se salta (gris) en lugar de fallar.
+    if: vars.DESPLIEGUE_ACTIVO == 'true'
     runs-on: windows-latest
     timeout-minutes: 40
     steps:
