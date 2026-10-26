@@ -10,7 +10,7 @@
  *    3. Pone la version del kiosco en 1.0.0.
  *    4. Guarda el cambio (commit), lo sube y publica la etiqueta v1.0.0.
  *
- *  Al subirlo, GitHub hace el resto SOLO (docs/PASOS-FINALES.md):
+ *  Al subirlo, GitHub hace el resto SOLO:
  *    - "Pruebas" -> "Publicar en Supabase": tablas, funciones y acceso en la
  *      base de PRODUCCION;
  *    - "Publicar el panel": panel.mi-cuenta.workers.dev pasa a
@@ -79,7 +79,7 @@ Listo. Ahora GitHub trabaja solo (10-15 minutos). En GitHub -> Actions deben
 salir en verde: "Pruebas", "Publicar en Supabase", "Publicar el panel" e
 "Instalador del kiosco".
 
-Después (docs/PASOS-FINALES.md, "Pasar a producción"):
+Después:
   1. Actions -> "Crear administrador" -> tu correo y nombre -> la contraseña
      temporal sale en el resumen de esa corrida.
   2. Entrar a https://panel.mi-cuenta.workers.dev y cambiarla.

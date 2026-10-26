@@ -56,7 +56,7 @@ import { COLORES } from './tema';
 //  reves) y empezara a hablar con la base equivocada.
 //
 //  PASAR A PRODUCCION = cambiar 'pruebas' por 'produccion', commit, y
-//  publicar la version (docs/PASOS-FINALES.md, paso 4).
+//  publicar la version (ver docs/manual-tecnico.md).
 export const AMBIENTE: 'pruebas' | 'produccion' = 'produccion';
 
 /** La "Project URL" de cada proyecto de Supabase. Son publicas: no son llaves. */

@@ -3,7 +3,7 @@
 -- ============================================================================
 --
 --  Cada arreglo corresponde a un "¿que pasaria si...?" que se comprobo con
---  datos antes de corregirlo (docs/curso/puesta-en-marcha.md, seccion 13):
+--  datos antes de corregirlo:
 --
 --   a. Un empleado DADO DE BAJA seguia acumulando FALTAS todos los dias: su
 --      horario nunca se cerraba. Ahora, al darlo de baja, su horario termina

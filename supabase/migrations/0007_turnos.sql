@@ -73,7 +73,7 @@ create table turnos (
     TURNO LIBRE (CLAUDE.md 8): no hay hora de entrada, hay horas que cumplir a
     la semana. Se evalua por total, no por puntualidad.
 
-    Se asume que no se usa (supuestos.md), pero la columna existe porque el
+    Se asume que no se usa (CLAUDE.md 1.2), pero la columna existe porque el
     modelo no cuesta nada ahora y una migracion despues, si.
   */
   es_libre boolean not null default false,

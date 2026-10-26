@@ -2,7 +2,7 @@
 --  0017 · ADMINISTRADORES DESDE EL PANEL, DERECHOS ARCO Y LIMITE DE ALTAS
 -- ============================================================================
 --
---  Tres cosas que estaban anotadas como deuda (docs/curso/estado-actual.md):
+--  Tres cosas que estaban anotadas como deuda:
 --
 --    1. Dar de alta ADMINISTRADORES desde el panel. Crear la cuenta de
 --       Supabase Auth necesita la llave service_role, asi que lo hace la Edge

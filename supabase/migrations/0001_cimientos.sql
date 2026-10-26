@@ -104,7 +104,7 @@ alter table configuracion enable row level security;
 -- ----------------------------------------------------------------------------
 --  Valores iniciales
 -- ----------------------------------------------------------------------------
---  Son los supuestos de CLAUDE.md 1.2, documentados en docs/curso/supuestos.md.
+--  Son los supuestos de CLAUDE.md 1.2.
 --  NO son invenciones: son decisiones tomadas por el equipo, escritas donde el
 --  cliente pueda cambiarlas al ver el sistema funcionando.
 insert into configuracion (clave, valor, descripcion, grupo) values

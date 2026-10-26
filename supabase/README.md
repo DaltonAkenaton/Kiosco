@@ -149,8 +149,7 @@ No es exageración: una prueba de sincronización manda marcas inventadas, y una
 marca inventada en producción es un registro de asistencia falso de una persona
 real. No hay forma limpia de deshacerlo, porque las marcas no se borran.
 
-Cómo se crean y se conectan: [docs/PASOS-FINALES.md](../docs/PASOS-FINALES.md),
-paso 3. Las migraciones y las funciones se publican con GitHub → Actions →
+Cómo se conectan: ver el [manual técnico](../docs/manual-tecnico.md). Las migraciones y las funciones se publican con GitHub → Actions →
 **"Publicar en Supabase"** (primero pruebas, luego producción). `db push` nunca
 aplica `seed.sql`.
 

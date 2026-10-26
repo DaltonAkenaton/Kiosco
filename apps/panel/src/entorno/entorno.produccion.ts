@@ -4,7 +4,7 @@
  * ============================================================================
  *
  *  VACIO a proposito hasta que exista la cuenta de produccion (se decidio
- *  conectar las cuentas al final, ver docs/curso/estado-actual.md). Con los
+ *  conectar las cuentas al final). Con los
  *  campos vacios, el panel lo dice en pantalla en vez de fallar raro.
  *
  *  Cuando exista el proyecto: Supabase -> Project Settings -> API. Copiar la

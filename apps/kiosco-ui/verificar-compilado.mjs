@@ -142,8 +142,7 @@ for (const problema of problemas) {
 
 console.error(
   'Esto se veria bien en `npm run kiosco:dev` y roto en el .exe instalado.\n' +
-    'Revisa la seccion `optimization` de angular.json y el error E-015 en\n' +
-    'docs/curso/errores-y-aprendizajes.md.\n',
+    'Revisa la seccion `optimization` de angular.json.\n',
 );
 
 process.exit(1);

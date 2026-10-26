@@ -1127,8 +1127,7 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
        * Al reves —que es como estaba escrito hasta el bloque 3— el mensaje no
        * se veia NUNCA, porque `reiniciar()` hace `error.set(null)` como parte
        * de dejar la pantalla limpia. El empleado veia la pantalla volver al
-       * inicio sin explicacion, y su marca no se habia guardado. Ver E-013 en
-       * errores-y-aprendizajes.md.
+       * inicio sin explicacion, y su marca no se habia guardado.
        */
       this.reiniciar();
       this.error.set(registro.mensaje);

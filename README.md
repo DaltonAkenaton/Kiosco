@@ -125,8 +125,7 @@ apps/kiosco-main      Proceso principal de Electron + preload, SQLite, cifrado, 
 apps/panel            Panel administrativo en Angular
 packages/compartido   Configuración, tema y tipos compartidos
 supabase/             Migraciones, políticas RLS, Edge Functions y sus pruebas
-docs/                 Manual del jefe, manual técnico, guía para empleados
-docs/curso/           Curso interno: decisiones, errores y aprendizajes, guía de estudio
+docs/                 Manual del jefe, manual técnico, guía para empleados y registro de decisiones
 ```
 
 ## Cómo correrlo en local

@@ -9,9 +9,7 @@
 > te pasó y ve directo ahí. Si una palabra no la conoces, está en la sección
 > "Palabras que vas a encontrar".
 >
-> Para el **por qué** de cada decisión, ver el curso interno (`docs/curso/`).
-> Para la puesta en marcha desde cero (crear las cuentas), ver
-> `docs/PASOS-FINALES.md`.
+> Para el **por qué** de cada decisión, ver `docs/decisiones.md`.
 
 ## Índice
 
@@ -334,7 +332,7 @@ Esto sólo hace falta si se perdió el proyecto de Supabase completo (lo
 borraron, la cuenta se perdió, etc.). Es trabajo de alguien con experiencia;
 mejor hacerlo con calma y primero en pruebas.
 
-1. Crear un proyecto de Supabase nuevo (`docs/PASOS-FINALES.md`, paso 3).
+1. Crear un proyecto de Supabase nuevo.
 2. En GitHub, actualizar los secretos `SUPABASE_REF_PRODUCCION` y
    `SUPABASE_PASSWORD_PRODUCCION` con los datos del proyecto nuevo.
 3. En una PC con [PostgreSQL](https://www.postgresql.org/download/) instalado
@@ -624,8 +622,7 @@ reportes.
 
 ## 15. Trabajar en el código (para programadores)
 
-Lo que hay que saber antes de cambiar algo: `docs/curso/estado-actual.md` y
-`docs/decisiones.md`.
+Lo que hay que saber antes de cambiar algo: `docs/decisiones.md`.
 
 Requisitos: Node 24, Docker Desktop y Git.
 

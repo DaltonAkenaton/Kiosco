@@ -159,7 +159,7 @@ select
   ], null)
 from marcas_demo;
 
--- Los horarios de los 20 (bloque 9), segun los supuestos (docs/curso/supuestos.md):
+-- Los horarios de los 20 (bloque 9), segun los supuestos (CLAUDE.md 1.2):
 -- los primeros 15 en el matutino de lunes a sabado; los ultimos 5, en el
 -- vespertino de lunes a viernes. Desde hace un mes, para que el reporte
 -- tenga historia.

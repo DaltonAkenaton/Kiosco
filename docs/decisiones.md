@@ -358,8 +358,7 @@ cada máquina** donde se toque el proyecto.
 
 Eso choca de frente con la restricción central del CLAUDE.md sección 1: *"el
 sistema debe poder mantenerse con documentación, sin su autor presente"*, en
-una facultad que *"no tiene departamento de TI"*. Ver el error E-007 para los
-cuatro intentos y sus mensajes exactos.
+una facultad que *"no tiene departamento de TI"*.
 
 **Costo honesto:** `node:sqlite` está marcado como experimental y su API puede
 cambiar entre versiones mayores de Node. `better-sqlite3` es más maduro y algo
@@ -376,9 +375,6 @@ diferencia de rendimiento es irrelevante; la de mantenibilidad es enorme.
 **Reconsiderar si:** `node:sqlite` introduce un cambio incompatible, o el
 sistema crece a un volumen donde el rendimiento importe. Para entonces quizá
 ya existan binarios de `better-sqlite3` para esa versión de Electron.
-
-**Pendiente:** actualizar la sección 2 del CLAUDE.md, que todavía dice
-`better-sqlite3`.
 
 ---
 
@@ -505,7 +501,7 @@ instante**. `registrarMarca` recibe ese pase, lo canjea y lo borra.
 **Descartado:**
 
 - *Seguir mandando el `empleadoId`.* Era lo que había, y permitía registrar a
-  nombre de cualquiera saltándose el PIN (ver E-014). La pantalla es la parte
+  nombre de cualquiera saltándose el PIN. La pantalla es la parte
   no confiable del sistema; no puede ser ella quien diga a nombre de quién se
   registra una marca.
 - *Volver a leer el reloj al guardar.* Es lo más simple, y rompe el CLAUDE.md
@@ -674,7 +670,7 @@ segundos, sin generar el instalador.
 **Descartado:**
 
 - *Sólo dos escalones* (`kiosco:dev` y el instalador), que es lo que había.
-  Por ese hueco se coló el E-015: la pantalla se veía perfecta en desarrollo y
+  Por ese hueco se coló un error real: la pantalla se veía perfecta en desarrollo y
   salía sin un solo estilo en el `.exe`, porque la CSP estricta y las rutas
   `file://` sólo existen al empaquetar. Reproducirlo costaba 107 MB y una
   instalación — algo que nadie hace mientras prueba una idea.
