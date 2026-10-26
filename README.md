@@ -6,7 +6,7 @@ entregado: un kiosco en Windows
 donde el personal de limpieza y los veladores registran su entrada y salida, y
 un panel web donde su jefe revisa la asistencia.
 
-![Kiosco: confirmación de ENTRADA con cuenta regresiva](docs/capturas/01-kiosco-entrada.png)
+![Kiosco: pantalla principal con cámara en vivo, reloj y captura del número de empleado](docs/capturas/01-kiosco-inicio.png)
 
 ---
 
@@ -39,11 +39,11 @@ un panel web donde su jefe revisa la asistencia.
 
 Con datos de demostración (nombres ficticios).
 
-| Panel: Pendientes | Panel: Reportes |
+| Kiosco: confirmación de ENTRADA | Panel: Pendientes |
 |---|---|
-| ![Pendientes: casos por persona con faltas, retardos y cámara tapada](docs/capturas/03-panel-pendientes.png) | ![Reportes: resumen por persona con retardos, faltas y horas](docs/capturas/04-panel-reportes.png) |
-| **Kiosco: alta con código de un solo uso** | |
-| ![Alta del kiosco con código de 8 caracteres que vence en 15 minutos](docs/capturas/02-kiosco-alta.png) | |
+| ![Confirmación de ENTRADA con cuenta regresiva y opción de cambiar a SALIDA](docs/capturas/02-kiosco-entrada.png) | ![Pendientes: casos por persona con faltas, retardos y cámara tapada](docs/capturas/03-panel-pendientes.png) |
+| **Panel: Pendientes, detalle por persona** | **Panel: Reportes** |
+| ![Detalle de los casos de una persona: llegó tarde, cámara tapada, faltó](docs/capturas/04-panel-pendientes-detalle.png) | ![Reportes: resumen por persona con retardos, faltas y horas](docs/capturas/05-panel-reportes.png) |
 
 ## Arquitectura
 
