@@ -1,160 +1,164 @@
-# Offline-first attendance kiosk
+# Kiosco de asistencia sin conexión
 
-**Time-and-attendance system in production at a public university faculty in Mexico**
-(FCACS Nuevo Laredo, UAT): a Windows kiosk where cleaning and night-watch staff
-clock in and out, plus a web panel where their supervisor reviews attendance.
-
-> 🇲🇽 **Resumen en español:** sistema de control de asistencia para el personal
-> de limpieza y veladores de una facultad. Kiosco de escritorio (Electron +
-> Angular) que funciona sin internet, toma una foto cifrada como evidencia en
-> cada registro y sincroniza con Supabase; panel web (Angular) para el jefe con
-> retardos, faltas, pendientes y reportes. En producción desde octubre de 2026.
-> Toda la documentación interna está en español en [`docs/`](docs/).
+**Sistema de control de asistencia en producción en una facultad de una
+universidad pública en México** (FCACS Nuevo Laredo, UAT): un kiosco en Windows
+donde el personal de limpieza y los veladores registran su entrada y salida, y
+un panel web donde su jefe revisa la asistencia.
 
 ---
 
-## The problem
+## El problema
 
-- ~20 employees across three shifts, including a **night shift that crosses
-  midnight**, in a border city with **daylight saving time**.
-- Internet and power fail now and then. **Nobody can ever be prevented from
-  clocking in**: the network must never block the screen.
-- The design must prevent irregular punches and time inconsistencies (proxy
-  punching, a changed PC clock), assuming anyone can physically touch the kiosk.
-- The faculty has **no IT department**, and kiosk PCs get swapped often. Every
-  machine has to be replaceable, and the system has to be maintainable from
-  its documentation alone.
-- Photos of employees are personal data under Mexican law, so the client asked
-  that **photos never leave the kiosk**.
+- Alrededor de 20 empleados en tres turnos, incluido un **turno nocturno que
+  cruza la medianoche**, en una ciudad fronteriza con **horario de verano**.
+- El internet y la luz fallan de vez en cuando. **Nunca se le puede impedir a
+  nadie registrar su asistencia**: la red jamás debe bloquear la pantalla.
+- El diseño debe prevenir marcajes irregulares e inconsistencias de horario
+  (registrar por otra persona, cambiar el reloj de la PC), asumiendo que
+  cualquiera tiene acceso físico al kiosco.
+- La facultad **no tiene departamento de TI** y las computadoras del kiosco
+  cambian con frecuencia. Toda PC debe ser reemplazable, y el sistema debe
+  poder mantenerse sólo con su documentación.
+- Las fotos de los empleados son datos personales según la ley mexicana; por
+  eso el cliente pidió que **las fotos nunca salgan del kiosco**.
 
-## What I built
+## Lo que construí
 
-| Part | What it does |
+| Parte | Qué hace |
 |---|---|
-| **Kiosk** (Electron + Angular) | Live camera, big numeric keypad, employee number + PIN, photo on success, suggested ENTRY/EXIT with a 5 s auto-confirm. Works 100% offline and responds in < 1 s. |
-| **Admin mode in the kiosk** | Hidden entry (long-press), offline-validated admin credentials, photo audit decrypted **in memory only**, watermarked ZIP export to USB, every access logged. |
-| **Cloud** (Supabase) | PostgreSQL with RLS on every table, 30 versioned migrations, Edge Functions for device enrollment, push and pull sync, and heartbeat. |
-| **Admin panel** (Angular, Cloudflare Workers) | Attendance with lateness/absence/overtime computed server-side, a "Pending" inbox of cases to resolve, shift templates with per-person/per-day overrides and swaps, manual entries with mandatory reasons, PIN resets, device enrollment/revocation, configuration screen, Excel/PDF reports, GDPR-style (ARCO) export and anonymization. |
-| **Operations** (GitHub Actions) | CI that boots a local Supabase and runs schema/RLS and Edge Function tests on every push; deploy of migrations, functions and panel; kiosk installer build with auto-update; twice-weekly SQL + CSV backups; daily email summary. |
+| **Kiosco** (Electron + Angular) | Cámara en vivo, teclado numérico grande, número de empleado + PIN, foto al validar, sugerencia de ENTRADA/SALIDA con confirmación automática a los 5 s. Funciona 100% sin internet y responde en menos de 1 s. |
+| **Modo administrador en el kiosco** | Acceso oculto (mantener presionado), credenciales validadas sin internet, revisión de fotos descifradas **sólo en memoria**, exportación a USB en ZIP con marca de agua, y bitácora de cada consulta. |
+| **Nube** (Supabase) | PostgreSQL con RLS en todas las tablas, 30 migraciones versionadas, Edge Functions para el alta de kioscos, la sincronización en ambos sentidos y el latido (heartbeat). |
+| **Panel administrativo** (Angular, Cloudflare Workers) | Asistencia con retardos, faltas y tiempo extra calculados en el servidor; bandeja de "Pendientes" por atender; turnos como plantillas con ajustes por persona y por día, e intercambios; registro manual con motivo obligatorio; reseteo de PIN; alta y baja de kioscos; pantalla de configuración; reportes en Excel y PDF; derechos ARCO (exportar y anonimizar). |
+| **Operación** (GitHub Actions) | Pruebas automáticas en cada cambio (levantan un Supabase local y prueban esquema, RLS y Edge Functions); publicación de migraciones, funciones y panel; armado del instalador del kiosco con actualización automática; respaldos SQL + CSV dos veces por semana; resumen diario por correo. |
 
-## Architecture
+## Arquitectura
 
 ```mermaid
 flowchart LR
-  subgraph Kiosk["Kiosk PC (Windows)"]
-    UI["Angular renderer<br/>(sandboxed, no Node)"]
-    Main["Electron main<br/>SQLite · bcrypt · AES-GCM"]
-    Fotos[("Encrypted photos<br/>userData/fotos")]
-    UI -- "typed IPC<br/>(contextBridge + zod)" --> Main
+  subgraph Kiosco["PC del kiosco (Windows)"]
+    UI["Interfaz Angular<br/>(aislada, sin Node)"]
+    Main["Proceso principal Electron<br/>SQLite · bcrypt · AES-GCM"]
+    Fotos[("Fotos cifradas<br/>userData/fotos")]
+    UI -- "IPC tipado<br/>(contextBridge + zod)" --> Main
     Main --> Fotos
   end
-  subgraph Cloud["Supabase"]
-    EF["Edge Functions<br/>(device token → service_role)"]
+  subgraph Nube["Supabase"]
+    EF["Edge Functions<br/>(token del kiosco → service_role)"]
     DB[("PostgreSQL + RLS")]
     EF --> DB
   end
-  Panel["Admin panel<br/>(Angular on Cloudflare)"]
-  Main -- "outbox push: records + photo SHA-256" --> EF
-  EF -- "pull: employees, PIN hashes, config" --> Main
+  Panel["Panel administrativo<br/>(Angular en Cloudflare)"]
+  Main -- "subida: registros + SHA-256 de la foto" --> EF
+  EF -- "bajada: empleados, hashes de PIN, configuración" --> Main
   Panel -- "Supabase Auth + RLS / RPC" --> DB
 ```
 
-## Engineering decisions worth discussing
+## Decisiones técnicas para conversar
 
-All 50 decisions are written up as ADRs in
-[`docs/decisiones.md`](docs/decisiones.md). The most interesting ones:
+Las 50 decisiones están documentadas, con su porqué, en
+[`docs/decisiones.md`](docs/decisiones.md). Las más interesantes:
 
-1. **Offline-first with an idempotent outbox.** Every record gets a UUID on the
-   kiosk; the server inserts with `ON CONFLICT DO NOTHING`, so retries with
-   exponential backoff can never duplicate a punch. A PC can be unplugged at
-   any moment without losing data.
-2. **Photos stay on the kiosk; only their hash goes to the cloud.** Each JPEG
-   is hashed (SHA-256) *before* AES-256-GCM encryption. The panel can flag a
-   photo as *missing* or *tampered* without ever having it. Files are named by
-   record UUID, never by employee.
-3. **A recovery password for the encryption key.** The key is protected with
-   Windows DPAPI (`safeStorage`), which dies with the Windows profile. That
-   clashes with "every PC is replaceable", so the key is also wrapped with an
-   admin-chosen recovery password.
-4. **Clock-tampering detection without ever blocking.** Each punch stores wall
-   clock, monotonic clock, boot ID and last known server offset. Jumps, records
-   older than the last one, or absurd dates (dead BIOS battery) raise a
-   `reloj_sospechoso` flag for review instead of rejecting the punch.
-5. **The kiosk doesn't know what "late" means.** It only records punches.
-   Lateness, absences and worked hours are computed **at query time** on the
-   server, from timestamps, shifts and the current configuration. Changing the
-   tolerance recalculates history without touching a single immutable record.
-6. **Time zones done properly.** Everything is stored in UTC. Shift times are
-   local (`America/Matamoros`, never a fixed offset) and are combined with the
-   *work date* on the server, so a 22:00–06:00 shift lasts 7 or 9 real hours
-   on DST nights. Those nights have dedicated tests.
-7. **Hardened Electron.** `contextIsolation`, `sandbox`, no `nodeIntegration`,
-   strict CSP, navigation and new windows blocked, only the camera permission
-   allowed. The preload exposes specific operations (`registrarMarca`), never
-   generic ones, and every IPC handler validates its input with zod.
-8. **Nothing in the `.exe` is trusted.** The kiosk never uses Supabase Auth or
-   talks to tables. It calls Edge Functions with a per-device token that it
-   got through a one-time, 15-minute enrollment code and stores DPAPI-encrypted.
-   The server keeps only the token's hash. There is no `UPDATE` or `DELETE` on
-   punches for any role: corrections are separate rows with a mandatory reason.
-9. **Business rules are data, not code.** Tolerances, shifts, retention days,
-   lockout attempts and similar settings live in a `configuracion` table that the
-   supervisor edits from the panel. The kiosk caches it to keep working offline.
-10. **Privacy by design.** No facial recognition (that would turn photos into
-    sensitive biometric data). Photos are auto-deleted after 30 days unless an
-    admin marks them "keep". Data-subject rights are implemented as logged
-    anonymization, because records are immutable.
+1. **Primero sin conexión, con bandeja de salida idempotente.** Cada registro
+   recibe un UUID en el kiosco y el servidor inserta con
+   `ON CONFLICT DO NOTHING`, así que los reintentos (con espera creciente)
+   nunca duplican una marca. Se puede desconectar la PC en cualquier momento
+   sin perder datos.
+2. **Las fotos se quedan en el kiosco; a la nube sólo va su hash.** Cada JPEG
+   se resume con SHA-256 *antes* de cifrarlo con AES-256-GCM. El panel puede
+   señalar una foto como *faltante* o *alterada* sin tenerla nunca. Los
+   archivos se nombran con el UUID del registro, nunca con el del empleado.
+3. **Contraseña de recuperación para la llave de cifrado.** La llave se protege
+   con DPAPI de Windows (`safeStorage`), que muere con el perfil de Windows.
+   Eso choca con "toda PC es reemplazable", así que la llave también se
+   envuelve con una contraseña de recuperación que elige el administrador.
+4. **Detección de cambios de reloj sin bloquear jamás.** Cada marca guarda la
+   hora del sistema, el reloj monotónico, el identificador del arranque y el
+   último desfase conocido con el servidor. Los saltos, los registros
+   anteriores al último o las fechas absurdas (pila del BIOS agotada) levantan
+   la bandera `reloj_sospechoso` para revisión, en lugar de rechazar el registro.
+5. **El kiosco no sabe qué es un retardo.** Sólo registra marcas. Retardos,
+   faltas y horas trabajadas se calculan **al consultar**, en el servidor, con
+   timestamps, turnos y la configuración vigente. Cambiar la tolerancia
+   recalcula el histórico sin tocar un solo registro, que además es inmutable.
+6. **Zonas horarias bien hechas.** Todo se guarda en UTC. Los horarios de los
+   turnos son locales (`America/Matamoros`, nunca un desfase fijo) y se
+   combinan con la *fecha laboral* en el servidor, así que un turno de
+   22:00 a 06:00 dura 7 u 9 horas reales en las noches de cambio de horario.
+   Esas noches tienen pruebas propias.
+7. **Electron endurecido.** `contextIsolation`, `sandbox`, sin
+   `nodeIntegration`, CSP estricta, navegación y ventanas nuevas bloqueadas, y
+   sólo el permiso de cámara. El preload expone operaciones específicas
+   (`registrarMarca`), nunca genéricas, y cada handler de IPC valida su
+   entrada con zod.
+8. **Nada dentro del `.exe` es de confianza.** El kiosco nunca usa Supabase
+   Auth ni consulta tablas: llama Edge Functions con un token propio, obtenido
+   con un código de alta de un solo uso que expira en 15 minutos y guardado
+   cifrado con DPAPI. El servidor sólo conserva el hash del token. Ningún rol
+   puede hacer `UPDATE` ni `DELETE` sobre las marcas: las correcciones son
+   filas aparte, con motivo obligatorio.
+9. **Las reglas de negocio son datos, no código.** Tolerancias, turnos, días de
+   retención, intentos de PIN y demás viven en la tabla `configuracion`, que el
+   jefe edita desde el panel. El kiosco guarda una copia para seguir
+   funcionando sin internet.
+10. **Privacidad desde el diseño.** Sin reconocimiento facial (eso convertiría
+    las fotos en datos biométricos sensibles). Las fotos se borran solas a los
+    30 días, salvo las que un administrador marca como "Conservar". Los
+    derechos ARCO se resuelven con anonimización registrada en bitácora,
+    porque los registros son inmutables.
 
-## Tech stack
+## Tecnologías
 
-**Kiosk:** Electron 44 · Angular 21 (standalone components, signals) ·
-Tailwind CSS 4 · SQLite via `node:sqlite` · bcryptjs · zod ·
+**Kiosco:** Electron 44 · Angular 21 (standalone components, signals) ·
+Tailwind CSS 4 · SQLite con `node:sqlite` · bcryptjs · zod ·
 electron-builder (NSIS) · electron-updater
-**Cloud:** Supabase (PostgreSQL, RLS, Auth, Deno Edge Functions, pgcrypto)
-**Panel:** Angular 21 · Tailwind CSS 4 · Cloudflare Workers (static assets)
-**Tooling:** TypeScript (strict) · npm workspaces monorepo · esbuild · GitHub Actions
+**Nube:** Supabase (PostgreSQL, RLS, Auth, Edge Functions en Deno, pgcrypto)
+**Panel:** Angular 21 · Tailwind CSS 4 · Cloudflare Workers (archivos estáticos)
+**Herramientas:** TypeScript estricto · monorepo con npm workspaces · esbuild · GitHub Actions
 
-## Repository layout
+## Estructura del repositorio
 
 ```
-apps/kiosco-ui        Angular kiosk UI (Electron renderer)
-apps/kiosco-main      Electron main process + preload, SQLite, crypto, sync
-apps/panel            Angular admin panel
-packages/compartido   Shared configuration, theme and types
-supabase/             Migrations, RLS policies, Edge Functions and their tests
-docs/                 User manual, technical manual, employee guide
-docs/curso/           Internal handbook: decisions (ADRs), lessons learned, study guide
+apps/kiosco-ui        Interfaz Angular del kiosco (renderer de Electron)
+apps/kiosco-main      Proceso principal de Electron + preload, SQLite, cifrado, sincronización
+apps/panel            Panel administrativo en Angular
+packages/compartido   Configuración, tema y tipos compartidos
+supabase/             Migraciones, políticas RLS, Edge Functions y sus pruebas
+docs/                 Manual del jefe, manual técnico, guía para empleados
+docs/curso/           Curso interno: decisiones, errores y aprendizajes, guía de estudio
 ```
 
-## Running it locally
+## Cómo correrlo en local
 
-Requires Node 24, Docker (for local Supabase) and Windows for the kiosk.
+Requiere Node 24, Docker (para Supabase local) y Windows para el kiosco.
 
 ```bash
 npm install
-npm run supabase:local          # local Supabase with demo data (supabase/seed.sql)
-npm run supabase:probar         # schema, RLS and report tests
-npm run panel:servir            # admin panel at http://localhost:4200
-npm run kiosco:dev              # kiosk in development mode
-npm run probar                  # kiosk tests (PIN, clock, encryption, sync)
+npm run supabase:local          # Supabase local con datos de demostración (supabase/seed.sql)
+npm run supabase:probar         # pruebas del esquema, RLS y reportes
+npm run panel:servir            # panel en http://localhost:4200
+npm run kiosco:dev              # kiosco en modo desarrollo
+npm run probar                  # pruebas del kiosco (PIN, reloj, cifrado, sincronización)
 ```
 
-The deploy workflows only run when the repository variable
-`DESPLIEGUE_ACTIVO` is `true`, which it is not in this public copy. Only the
-test workflow runs here.
+Los workflows de publicación sólo corren si el repositorio tiene la variable
+`DESPLIEGUE_ACTIVO` en `true`, y esta copia pública no la tiene. Aquí sólo
+corren las pruebas.
 
-## About this repository
+## Sobre este repositorio
 
-This is a **portfolio copy** of a system I designed and built on my own for
-the Facultad de Comercio, Administración y Ciencias Sociales (UAT, Nuevo Laredo).
-Production runs from the faculty's private repository. In this copy,
-project IDs, account names, emails and URLs have been replaced with
-placeholders. The employee names in the demo data are fictitious.
+Es una **copia de portafolio** de un sistema que diseñé y desarrollé para la
+Facultad de Comercio, Administración y Ciencias Sociales (UAT, Nuevo Laredo).
+La versión en producción vive en el repositorio privado de la facultad. En esta
+copia, los identificadores de proyecto, nombres de cuenta, correos y
+direcciones se reemplazaron por valores de ejemplo. Los nombres de empleados de
+los datos de demostración son ficticios.
 
-Commits co-authored with Claude reflect AI-assisted development. The
-[`CLAUDE.md`](CLAUDE.md) specification shows how the requirements, security
-rules and client decisions were written down to drive that work.
+Los commits en coautoría con Claude reflejan desarrollo asistido por IA. La
+especificación [`CLAUDE.md`](CLAUDE.md) muestra cómo se pusieron por escrito
+los requisitos, las reglas de seguridad y las decisiones del cliente para guiar
+ese trabajo.
 
-**Author:** Dalton Akenaton Gómez Arellano · [github.com/DaltonAkenaton](https://github.com/DaltonAkenaton)
+**Autor:** Dalton Akenaton Gómez Arellano · [github.com/DaltonAkenaton](https://github.com/DaltonAkenaton)
 
-All rights reserved. The code is published for portfolio and review purposes only.
+Todos los derechos reservados. El código se publica sólo para fines de portafolio y revisión.
