@@ -1,7 +1,8 @@
 # Kiosco de asistencia sin conexión
 
-**Sistema de control de asistencia en producción en una facultad de una
-universidad pública en México** (FCACS Nuevo Laredo, UAT): un kiosco en Windows
+**Sistema de control de asistencia desarrollado para una facultad de una
+universidad pública en México** (FCACS Nuevo Laredo, UAT), ya instalado y
+entregado: un kiosco en Windows
 donde el personal de limpieza y los veladores registran su entrada y salida, y
 un panel web donde su jefe revisa la asistencia.
 
@@ -149,7 +150,7 @@ corren las pruebas.
 
 Es una **copia de portafolio** de un sistema que diseñé y desarrollé para la
 Facultad de Comercio, Administración y Ciencias Sociales (UAT, Nuevo Laredo).
-La versión en producción vive en el repositorio privado de la facultad. En esta
+La versión instalada en la facultad vive en su repositorio privado. En esta
 copia, los identificadores de proyecto, nombres de cuenta, correos y
 direcciones se reemplazaron por valores de ejemplo. Los nombres de empleados de
 los datos de demostración son ficticios.
