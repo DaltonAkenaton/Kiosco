@@ -19,8 +19,8 @@ clock in and out, plus a web panel where their supervisor reviews attendance.
   midnight**, in a border city with **daylight saving time**.
 - Internet and power fail now and then. **Nobody can ever be prevented from
   clocking in**: the network must never block the screen.
-- Some staff try to cheat (buddy punching, changing the PC clock), and anyone
-  can physically touch the kiosk.
+- The design must prevent irregular punches and time inconsistencies (proxy
+  punching, a changed PC clock), assuming anyone can physically touch the kiosk.
 - The faculty has **no IT department**, and kiosk PCs get swapped often. Every
   machine has to be replaceable, and the system has to be maintainable from
   its documentation alone.
