@@ -6,6 +6,8 @@ entregado: un kiosco en Windows
 donde el personal de limpieza y los veladores registran su entrada y salida, y
 un panel web donde su jefe revisa la asistencia.
 
+![Kiosco: confirmación de ENTRADA con cuenta regresiva](docs/capturas/01-kiosco-entrada.png)
+
 ---
 
 ## El problema
@@ -32,6 +34,16 @@ un panel web donde su jefe revisa la asistencia.
 | **Nube** (Supabase) | PostgreSQL con RLS en todas las tablas, 30 migraciones versionadas, Edge Functions para el alta de kioscos, la sincronización en ambos sentidos y el latido (heartbeat). |
 | **Panel administrativo** (Angular, Cloudflare Workers) | Asistencia con retardos, faltas y tiempo extra calculados en el servidor; bandeja de "Pendientes" por atender; turnos como plantillas con ajustes por persona y por día, e intercambios; registro manual con motivo obligatorio; reseteo de PIN; alta y baja de kioscos; pantalla de configuración; reportes en Excel y PDF; derechos ARCO (exportar y anonimizar). |
 | **Operación** (GitHub Actions) | Pruebas automáticas en cada cambio (levantan un Supabase local y prueban esquema, RLS y Edge Functions); publicación de migraciones, funciones y panel; armado del instalador del kiosco con actualización automática; respaldos SQL + CSV dos veces por semana; resumen diario por correo. |
+
+## Capturas
+
+Con datos de demostración (nombres ficticios).
+
+| Panel: Pendientes | Panel: Reportes |
+|---|---|
+| ![Pendientes: casos por persona con faltas, retardos y cámara tapada](docs/capturas/03-panel-pendientes.png) | ![Reportes: resumen por persona con retardos, faltas y horas](docs/capturas/04-panel-reportes.png) |
+| **Kiosco: alta con código de un solo uso** | |
+| ![Alta del kiosco con código de 8 caracteres que vence en 15 minutos](docs/capturas/02-kiosco-alta.png) | |
 
 ## Arquitectura
 
