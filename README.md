@@ -148,7 +148,7 @@ Requiere Node 24, Docker (para Supabase local) y Windows para el kiosco.
 npm install
 npm run supabase:local          # Supabase local con datos de demostración (supabase/seed.sql)
 npm run supabase:probar         # pruebas del esquema, RLS y reportes
-npm run panel:servir            # panel en http://localhost:4200
+npm run panel:servir            # panel en http://localhost:4300
 npm run kiosco:dev              # kiosco en modo desarrollo
 npm run probar                  # pruebas del kiosco (PIN, reloj, cifrado, sincronización)
 ```
