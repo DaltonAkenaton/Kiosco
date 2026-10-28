@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- *  FOTOS: HUELLA, CIFRADO Y DISCO  (CLAUDE.md 5.1)
+ *  FOTOS: HUELLA, CIFRADO Y DISCO  (ARQUITECTURA.md 5.1)
  * ============================================================================
  *
  *  > LA FOTO NUNCA SALE DEL KIOSCO. A la nube viaja solo su hash.
@@ -46,7 +46,7 @@
  *  sale como ALTERADA.
  *
  *  ---------------------------------------------------------------------------
- *  Privacidad (CLAUDE.md 12)
+ *  Privacidad (ARQUITECTURA.md 12)
  *  ---------------------------------------------------------------------------
  *    - El nombre del archivo es el UUID de la marca, nunca el del empleado.
  *    - Descifrada, la foto existe SOLO en memoria. Nunca se escribe en claro.
@@ -171,7 +171,7 @@ export function rutaAbsolutaDeFoto(rutaRelativa: string): string {
  *
  * Local y no UTC: una foto de las 19:00 del 31 de octubre en Nuevo Laredo ya
  * es 1 de noviembre en UTC, y quien busque la carpeta de octubre no la
- * encontraria (CLAUDE.md 6).
+ * encontraria (ARQUITECTURA.md 6).
  */
 function carpetaDelMes(capturadaEnMs: number): string {
   const partes = new Intl.DateTimeFormat('en-CA', {
@@ -234,7 +234,7 @@ export function guardarBytesDeFoto(
   // despues pareceria "alterada" sin que nadie la haya tocado.
   escribirAtomico(rutaAbsoluta, cifrarFoto(jpeg, llave, marcaId));
 
-  // El TAMANO y nada mas (CLAUDE.md 16: nunca fotos en los logs).
+  // El TAMANO y nada mas (ARQUITECTURA.md 14: nunca fotos en los logs).
   console.info(`[fotos] guardada cifrada (${Math.round(jpeg.length / 1024)} KB)`);
   return { rutaRelativa, hash, llaveId: llave.id };
 }
@@ -248,7 +248,7 @@ export function guardarBytesDeFoto(
  *     marca (y que viajo a la nube).
  *
  * El JPEG devuelto vive SOLO en memoria. Quien lo reciba no debe escribirlo
- * en disco (CLAUDE.md 5.2).
+ * en disco (ARQUITECTURA.md 5.2).
  *
  * @param llavesExtra llaves anteriores abiertas con la contrasena de recuperacion
  */

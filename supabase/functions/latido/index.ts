@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- *  LATIDO  (CLAUDE.md 7, "heartbeat")
+ *  LATIDO  (ARQUITECTURA.md 7, "heartbeat")
  * ============================================================================
  *
  *  Cada pocos minutos el kiosco dice "sigo vivo" y como esta:

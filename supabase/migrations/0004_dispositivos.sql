@@ -2,13 +2,13 @@
 --  0004 · DISPOSITIVOS  (los kioscos) Y SU ENROLAMIENTO
 -- ============================================================================
 --
---  CLAUDE.md 3.3. El problema que resuelve esta migracion:
+--  ARQUITECTURA.md 3.3. El problema que resuelve esta migracion:
 --
 --      ¿como sabe el servidor que quien le manda marcas es un kiosco de
 --      verdad, y no cualquiera con la URL?
 --
 --  No se puede resolver metiendo una contrasena dentro del .exe: "todo lo
---  empaquetado en el .exe se considera publico" (CLAUDE.md 3.2). Una contrasena
+--  empaquetado en el .exe se considera publico" (ARQUITECTURA.md 3.2). Una contrasena
 --  igual para todos los kioscos es una contrasena que el primero que abra el
 --  instalador con un editor de texto puede leer.
 --
@@ -59,19 +59,19 @@ create table dispositivos (
 
     Cuando se cambia la PC de un kiosco, la anterior se revoca. Pero esa PC
     pudo haber registrado marcas ANTES de la revocacion que todavia no habia
-    subido — justo el caso de "la PC se retiro sin aviso" del CLAUDE.md 7.
+    subido — justo el caso de "la PC se retiro sin aviso" del ARQUITECTURA.md 7.
 
     Con esta fecha se puede distinguir:
       evento ANTES de revocado_en  -> se acepta, en cuarentena para revisar
       evento DESPUES               -> se rechaza
 
     Descartar en silencio las marcas de un dispositivo revocado seria perder
-    asistencia real de gente que si trabajo (CLAUDE.md 3.3).
+    asistencia real de gente que si trabajo (ARQUITECTURA.md 3.3).
   */
   revocado_en  timestamptz,
   revocado_por uuid references auth.users (id),
 
-  -- Lo que reporta el heartbeat (CLAUDE.md 7). Es lo que el panel muestra
+  -- Lo que reporta el heartbeat (ARQUITECTURA.md 7). Es lo que el panel muestra
   -- como "ultima conexion" y lo que permite alertar de un kiosco caido.
   ultima_conexion timestamptz,
   version_app     text,
@@ -144,7 +144,7 @@ create table codigos_enrolamiento (
   creado_por  uuid not null references auth.users (id),
   creado_en   timestamptz not null default now(),
 
-  -- 15 minutos (CLAUDE.md 3.3). Suficiente para caminar del escritorio al
+  -- 15 minutos (ARQUITECTURA.md 3.3). Suficiente para caminar del escritorio al
   -- kiosco y teclearlo; poco para que sirva de algo si se queda en un papel.
   expira_en   timestamptz not null,
 

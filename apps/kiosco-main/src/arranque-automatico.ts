@@ -3,7 +3,7 @@
  *  QUE LA APP ESTE SIEMPRE PRENDIDA
  * ============================================================================
  *
- *  CLAUDE.md 4: "La app arranca sola con Windows y se recupera si se cierra."
+ *  ARQUITECTURA.md 4: "La app arranca sola con Windows y se recupera si se cierra."
  *
  *  Detras de esa frase corta hay tres problemas distintos, y cada uno se
  *  resuelve en un lugar diferente. Vale la pena separarlos, porque es facil
@@ -37,7 +37,7 @@
  *  queda nadie vivo para reaccionar: un programa no puede resucitarse a si
  *  mismo. Eso se cubre fuera de la app, en el sistema operativo:
  *
- *    - cuenta de Windows estandar, sin privilegios (CLAUDE.md 13), para que
+ *    - cuenta de Windows estandar, sin privilegios (ARQUITECTURA.md 13), para que
  *      el personal no tenga Administrador de tareas util;
  *    - modo kiosco de Windows (Assigned Access o Shell Launcher), que vuelve
  *      a lanzar la aplicacion configurada si se cierra.

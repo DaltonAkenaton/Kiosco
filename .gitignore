@@ -25,7 +25,7 @@ dist-instalador/
 *.db-shm
 fotos_pendientes/
 
-# Fotos cifradas y la llave que las abre (CLAUDE.md 5.1). Viven en AppData, no
+# Fotos cifradas y la llave que las abre (ARQUITECTURA.md 5.1). Viven en AppData, no
 # aqui; estas lineas son por si alguien las copia al proyecto por error. La
 # llave va envuelta, pero junto con las fotos seria regalar las dos mitades.
 fotos/

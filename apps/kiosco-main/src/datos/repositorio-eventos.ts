@@ -30,7 +30,7 @@
  *  se reintenta con espera creciente, y llega al servidor con su id propio,
  *  asi que reenviarlo dos veces no lo duplica.
  *
- *  En el servidor aterrizaran en la tabla `eventos_dispositivo` (CLAUDE.md 8),
+ *  En el servidor aterrizaran en la tabla `eventos_dispositivo` (ARQUITECTURA.md 8),
  *  que se construye en el bloque 4.
  */
 
@@ -97,7 +97,7 @@ export type TipoDeEvento =
  * `detalle` es libre (un objeto que se guarda como JSON) porque cada tipo de
  * evento necesita cosas distintas: la pausa guarda cuantos minutos, la camara
  * guarda el mensaje de error. Lo unico prohibido es meter aqui datos
- * personales: nombres, PINes o fotos (CLAUDE.md 16).
+ * personales: nombres, PINes o fotos (ARQUITECTURA.md 14).
  */
 export function registrarEvento(
   tipo: TipoDeEvento,

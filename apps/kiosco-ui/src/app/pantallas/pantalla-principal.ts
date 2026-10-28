@@ -3,7 +3,7 @@
  *  PANTALLA PRINCIPAL DEL KIOSCO
  * ============================================================================
  *
- *  Es la pantalla que el personal ve todo el dia (CLAUDE.md 4.1):
+ *  Es la pantalla que el personal ve todo el dia (ARQUITECTURA.md 4.1):
  *  video en vivo, reloj grande, identificacion, y una barra discreta de estado.
  *
  *  ---------------------------------------------------------------------------
@@ -46,7 +46,7 @@
  *  sugiere ENTRADA — correcto. Pero cuando se va otra vez ese mismo dia, sin
  *  confirmacion no tendria forma de decir "no, esto es salida".
  *
- *  CLAUDE.md 4.4 lo resuelve asi, y es lo que hace este paso:
+ *  ARQUITECTURA.md 4.4 lo resuelve asi, y es lo que hace este paso:
  *    - se MUESTRA lo que se va a registrar, en grande, antes de guardarlo;
  *    - hay un boton para cambiarlo y otro para cancelar;
  *    - si el empleado no hace nada, se confirma solo a los 3 segundos.
@@ -437,7 +437,7 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
    * Escucha las teclas en toda la ventana.
    *
    * Es la forma de entrada PRINCIPAL del kiosco: la PC tiene teclado fisico
-   * (CLAUDE.md 13.1). No usamos un <input> porque en un kiosco el foco se
+   * (ARQUITECTURA.md 13.1). No usamos un <input> porque en un kiosco el foco se
    * pierde con cualquier clic, y entonces el empleado teclea y no pasa nada.
    * Escuchando la ventana entera, siempre funciona.
    */
@@ -714,7 +714,7 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
   // --------------------------------------------------------------------------
 
   // --------------------------------------------------------------------------
-  //  La conexion con la oficina (CLAUDE.md 7) y el alta del kiosco
+  //  La conexion con la oficina (ARQUITECTURA.md 7) y el alta del kiosco
   // --------------------------------------------------------------------------
 
   /**
@@ -921,7 +921,7 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
     /**
      * LA FOTO SE TOMA AQUI, no despues.
      *
-     * CLAUDE.md 4.3: "Al validar, EN ESE INSTANTE: se captura timestamp,
+     * ARQUITECTURA.md 4.3: "Al validar, EN ESE INSTANTE: se captura timestamp,
      * lecturas de reloj y foto."
      *
      * El motivo es anti-trampa: si la foto se tomara en la pantalla de
@@ -931,7 +931,7 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
     const foto = this.camara.capturar(this.elementoVideo().nativeElement);
 
     if (!foto) {
-      // Sin camara se registra IGUAL (CLAUDE.md 5). La bandera `sin_camara`
+      // Sin camara se registra IGUAL (ARQUITECTURA.md 5). La bandera `sin_camara`
       // la pondra el proceso principal al guardar, en el bloque 2.
       console.warn('[pantalla] registro sin foto: la camara no esta disponible');
     }
@@ -975,7 +975,7 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
   }
 
   // --------------------------------------------------------------------------
-  //  CONFIRMACION  (CLAUDE.md 4.4)
+  //  CONFIRMACION  (ARQUITECTURA.md 4.4)
   // --------------------------------------------------------------------------
 
   /** Lo que espera confirmacion. `null` = no hay ninguna abierta. */
@@ -1063,7 +1063,7 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
       if (restante <= 0) {
         this.msRestantes.set(0);
         this.detenerCuentaRegresiva();
-        // Nadie toco nada: se confirma solo (CLAUDE.md 4.4).
+        // Nadie toco nada: se confirma solo (ARQUITECTURA.md 4.4).
         void this.confirmarRegistro();
         return;
       }
@@ -1387,7 +1387,7 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
    * Los numeros NO escriben: eligen. Es el mismo lenguaje que ya usa la lista
    * de empleados ("presiona el numero que esta junto a tu nombre"), y es lo
    * que permite manejar toda la confirmacion con el teclado NUMERICO, que es
-   * el que de verdad va a estar conectado al kiosco (CLAUDE.md 13.1).
+   * el que de verdad va a estar conectado al kiosco (ARQUITECTURA.md 13.1).
    *
    *     Enter  o  1   registrar ya
    *               2   cambiar entrada por salida
@@ -1608,7 +1608,7 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
    *
    * El dialogo de pausa solo escuchaba el TECLADO FISICO. En el kiosco eso
    * basta —hay un teclado numerico conectado, es la entrada principal
-   * (CLAUDE.md 13.1)—, pero deja fuera dos casos que si ocurren:
+   * (ARQUITECTURA.md 13.1)—, pero deja fuera dos casos que si ocurren:
    *
    *   - alguien probando la app en una laptop, con el raton;
    *   - el dia que el teclado del kiosco se descomponga, que es justo el dia
@@ -1700,7 +1700,7 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
   // --------------------------------------------------------------------------
   //
   //  Es la PRIMERA VERSION de la pantalla de auditoria del modo administrador
-  //  (CLAUDE.md 5.2, bloque 3.b). Hoy muestra la tabla de lo que se guardo;
+  //  (ARQUITECTURA.md 5.2, bloque 3.b). Hoy muestra la tabla de lo que se guardo;
   //  manana quedara detras de usuario y contrasena, y cada renglon llevara su
   //  foto al lado.
   //
@@ -1709,7 +1709,7 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
   //  demuestra que la app responde; enseñar la tabla demuestra que GUARDA.
 
   // --------------------------------------------------------------------------
-  //  Modo administrador (CLAUDE.md 5.2): el boton del engrane
+  //  Modo administrador (ARQUITECTURA.md 5.2): el boton del engrane
   // --------------------------------------------------------------------------
   protected readonly modoAdminAbierto = signal(false);
   /** "Intento fallido. Quedo registrado..." o "la sesion se cerro". */
@@ -1765,7 +1765,7 @@ export class PantallaPrincipal implements OnInit, OnDestroy {
    *
    * `Intl.DateTimeFormat` con la zona explicita, NUNCA `toLocaleString()` a
    * secas: sin la zona, el navegador usa la de Windows, y toda la pantalla
-   * mentiria en una PC con la zona mal puesta. Justo lo que el CLAUDE.md 6
+   * mentiria en una PC con la zona mal puesta. Justo lo que el ARQUITECTURA.md 6
    * prohibe.
    */
   protected fechaHoraDe(ms: number): string {

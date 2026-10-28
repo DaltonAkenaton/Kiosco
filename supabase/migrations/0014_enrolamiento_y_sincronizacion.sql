@@ -23,7 +23,7 @@
 
 
 -- ============================================================================
---  0. EL LATIDO TAMBIEN REPORTA EL DESFASE DEL RELOJ  (CLAUDE.md 7)
+--  0. EL LATIDO TAMBIEN REPORTA EL DESFASE DEL RELOJ  (ARQUITECTURA.md 7)
 -- ============================================================================
 --  Cuanto se aparta la hora de Windows del kiosco de la del servidor. Un
 --  kiosco con 20 minutos de desfase explica marcas "raras" antes de que el
@@ -32,7 +32,7 @@ alter table dispositivos add column desfase_reloj_ms integer;
 
 
 -- ============================================================================
---  1. CREDENCIALES DEL MODO ADMINISTRADOR DEL KIOSCO  (CLAUDE.md 5.2)
+--  1. CREDENCIALES DEL MODO ADMINISTRADOR DEL KIOSCO  (ARQUITECTURA.md 5.2)
 -- ============================================================================
 --
 --  El kiosco valida al jefe SIN internet, asi que el hash de su contrasena
@@ -106,7 +106,7 @@ alter table codigos_enrolamiento
 
 insert into configuracion (clave, valor, descripcion, grupo) values
   ('minutos_vigencia_codigo_enrolamiento', '15'::jsonb,
-   'Cuanto dura un codigo para dar de alta un kiosco (CLAUDE.md 3.3).',
+   'Cuanto dura un codigo para dar de alta un kiosco (ARQUITECTURA.md 3.3).',
    'dispositivos');
 
 /*
@@ -269,10 +269,10 @@ $$;
 --  Reglas:
 --    - IDEMPOTENTE. Cada cosa trae su UUID del kiosco. Si ya estaba, cuenta
 --      como aceptada: el kiosco reintenta tras un corte y no debe duplicar
---      nada (CLAUDE.md 7).
+--      nada (ARQUITECTURA.md 7).
 --    - UNA COSA MALA NO TUMBA EL LOTE. Cada una va en su propio bloque; si
 --      falla, se rechaza ESA con su motivo y se sigue.
---    - KIOSCO REVOCADO (CLAUDE.md 3.3): lo que paso ANTES de la revocacion se
+--    - KIOSCO REVOCADO (ARQUITECTURA.md 3.3): lo que paso ANTES de la revocacion se
 --      acepta en cuarentena, con la bandera `dispositivo_revocado`. Lo de
 --      despues se rechaza. Nunca se descarta en silencio.
 --    - Las marcas van PRIMERO: un acceso a foto apunta a una marca, y puede
@@ -439,7 +439,7 @@ $$;
 --  6. EL CATALOGO QUE BAJA AL KIOSCO  (Edge Function `catalogo`)
 -- ============================================================================
 --
---  INCREMENTAL (CLAUDE.md 7): con `p_desde`, solo lo que cambio despues. Los
+--  INCREMENTAL (ARQUITECTURA.md 7): con `p_desde`, solo lo que cambio despues. Los
 --  empleados dados de baja TAMBIEN bajan, con `activo = false`: es la unica
 --  forma de que el kiosco se entere de que tiene que desactivarlos.
 --

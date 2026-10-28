@@ -2,7 +2,7 @@
 --  0007 · TURNOS, ASIGNACIONES Y DIAS FESTIVOS
 -- ============================================================================
 --
---  CLAUDE.md 8: "Horarios, tolerancias y turnos van en TABLAS, nunca en codigo."
+--  ARQUITECTURA.md 8: "Horarios, tolerancias y turnos van en TABLAS, nunca en codigo."
 --
 --  Las tablas se crean AHORA aunque los calculos que las usan sean de la fase
 --  3. El motivo es practico: asi el jefe puede capturar sus horarios desde el
@@ -15,7 +15,7 @@
 --  El kiosco no sabe que es un retardo. Solo registra marcas.
 --
 --  Retardos, faltas y horas se calculan AQUI, con la configuracion vigente
---  (CLAUDE.md 8). La consecuencia es la parte buena: cambiar la tolerancia de
+--  (ARQUITECTURA.md 8). La consecuencia es la parte buena: cambiar la tolerancia de
 --  10 a 15 minutos recalcula tambien el historico, sin tocar ni una marca y
 --  sin actualizar ningun kiosco.
 
@@ -49,7 +49,7 @@ create table turnos (
     Es imposible que quede mal, porque no hay forma de equivocarse al llenarla.
 
     El turno nocturno de 22:00 a 06:00 esta incluido A PROPOSITO desde el
-    principio (CLAUDE.md 8), aunque hoy no haya veladores. La razon: si el
+    principio (ARQUITECTURA.md 8), aunque hoy no haya veladores. La razon: si el
     cruce de medianoche se deja para el final, no se resuelve, se PARCHEA — y
     el parche se nota justo la noche del cambio de horario, cuando el turno
     dura 7 u 9 horas de reloj en vez de 8.
@@ -70,10 +70,10 @@ create table turnos (
   minutos_para_falta  integer not null default 30 check (minutos_para_falta >= 0),
 
   /*
-    TURNO LIBRE (CLAUDE.md 8): no hay hora de entrada, hay horas que cumplir a
+    TURNO LIBRE (ARQUITECTURA.md 8): no hay hora de entrada, hay horas que cumplir a
     la semana. Se evalua por total, no por puntualidad.
 
-    Se asume que no se usa (CLAUDE.md 1.2), pero la columna existe porque el
+    Se asume que no se usa (ARQUITECTURA.md 1.2), pero la columna existe porque el
     modelo no cuesta nada ahora y una migracion despues, si.
   */
   es_libre boolean not null default false,
@@ -106,7 +106,7 @@ alter table turnos enable row level security;
 
 
 -- ----------------------------------------------------------------------------
---  Turnos iniciales  (supuestos de CLAUDE.md 1.2)
+--  Turnos iniciales  (supuestos de ARQUITECTURA.md 1.2)
 -- ----------------------------------------------------------------------------
 --  Tres turnos de 8 horas, incluido el nocturno que cruza la medianoche.
 insert into turnos (nombre, hora_inicio, hora_fin) values
@@ -193,7 +193,7 @@ create table dias_laborales (
 
 comment on table dias_laborales is
   'Dias de la semana de cada asignacion. 0 = domingo. [PENDIENTE] confirmar '
-  'con el cliente si existen rotaciones mas complejas (CLAUDE.md 8).';
+  'con el cliente si existen rotaciones mas complejas (ARQUITECTURA.md 8).';
 
 alter table dias_laborales enable row level security;
 

@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- *  LA SESION DEL JEFE  (Supabase Auth, CLAUDE.md 3.2)
+ *  LA SESION DEL JEFE  (Supabase Auth, ARQUITECTURA.md 3.2)
  * ============================================================================
  *
  *  Entrar con correo y contrasena NO basta para usar el panel: ademas hay que

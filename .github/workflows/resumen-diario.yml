@@ -1,5 +1,5 @@
 # ============================================================================
-#  RESUMEN DIARIO POR CORREO AL JEFE  (CLAUDE.md 13.4)
+#  RESUMEN DIARIO POR CORREO AL JEFE  (ARQUITECTURA.md 13.4)
 # ============================================================================
 #
 #  Cada manana (lunes a sabado, 7:30 hora de Nuevo Laredo aprox.) manda al
@@ -8,7 +8,7 @@
 #  el estado de cada kiosco (sin conexion, camara caida).
 #
 #  El texto lo arma supabase/resumen-diario.sql. Se envia desde la cuenta de
-#  Gmail DEDICADA al sistema (CLAUDE.md 1.1), con una "contrasena de
+#  Gmail DEDICADA al sistema (ARQUITECTURA.md 1.1), con una "contrasena de
 #  aplicacion" (no la contrasena normal de Gmail):
 #    Cuenta de Google -> Seguridad -> Verificacion en dos pasos (activarla) ->
 #    Contrasenas de aplicaciones -> crear una llamada "Resumen asistencia".

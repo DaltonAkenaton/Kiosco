@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- *  KIOSCOS: como esta cada uno  (CLAUDE.md 7 "heartbeat", 10)
+ *  KIOSCOS: como esta cada uno  (ARQUITECTURA.md 7 "heartbeat", 10)
  * ============================================================================
  *
  *  Lo que cada kiosco reporta en su latido: ultima conexion, camara,
@@ -8,7 +8,7 @@
  *  lo que hay que atender: un kiosco que no se reporta, una camara caida,
  *  fotos que faltan o se alteraron.
  *
- *  Tambien: dar de alta uno nuevo (codigo de 8 caracteres, CLAUDE.md 3.3) y
+ *  Tambien: dar de alta uno nuevo (codigo de 8 caracteres, ARQUITECTURA.md 3.3) y
  *  dar de baja uno (revocar), ambos solo el rol admin.
  */
 

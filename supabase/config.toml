@@ -112,7 +112,7 @@ port = 54324
 # sender_name = "Admin"
 
 [storage]
-enabled = false  # CLAUDE.md 2: sin Storage, las fotos no salen del kiosco
+enabled = false  # ARQUITECTURA.md 2: sin Storage, las fotos no salen del kiosco
 # The maximum file size allowed (e.g. "5MB", "500KB").
 file_size_limit = "50MiB"
 
@@ -421,7 +421,7 @@ enabled = true
 # ============================================================================
 #  EDGE FUNCTIONS DEL KIOSCO
 # ============================================================================
-#  El kiosco NO usa Supabase Auth (CLAUDE.md 3.2): se identifica con su token
+#  El kiosco NO usa Supabase Auth (ARQUITECTURA.md 3.2): se identifica con su token
 #  en el encabezado `x-kiosco-token`, y cada funcion lo comprueba contra
 #  `dispositivos`. Por eso aqui no se exige el JWT de Supabase: el kiosco no
 #  tiene uno, y meter la llave `anon` en el .exe no agregaria seguridad.

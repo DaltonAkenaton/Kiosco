@@ -83,7 +83,7 @@ export const INSTITUCION = tema.institucion;
  *
  *   Aqui el color NO es decoracion: es INFORMACION.
  *
- *   El CLAUDE.md (seccion 4) pide "la mayor distincion visual posible entre
+ *   El ARQUITECTURA.md (seccion 4) pide "la mayor distincion visual posible entre
  *   ENTRADA y SALIDA". Si manana el color institucional fuera verde y
  *   pintaramos toda la pantalla de verde, el boton de ENTRADA dejaria de
  *   destacar, y alguien medio dormido registraria salida creyendo que entro.

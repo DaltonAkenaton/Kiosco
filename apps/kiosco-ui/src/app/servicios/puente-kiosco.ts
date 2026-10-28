@@ -248,7 +248,7 @@ export class PuenteKiosco {
   }
 
   /**
-   * El modo administrador (CLAUDE.md 5.2), o `null` si no hay puente.
+   * El modo administrador (ARQUITECTURA.md 5.2), o `null` si no hay puente.
    *
    * Se entrega el objeto tal cual en vez de envolver cada metodo: todos piden
    * el token y devuelven `ResultadoAdmin`, asi que envolverlos uno por uno

@@ -1,15 +1,15 @@
 /**
  * ============================================================================
- *  ASISTENCIA: la tabla de registros  (CLAUDE.md 10)
+ *  ASISTENCIA: la tabla de registros  (ARQUITECTURA.md 10)
  * ============================================================================
  *
  *  Todas las marcas que llegaron de los kioscos y las capturadas a mano, con
  *  filtros de fecha, empleado, kiosco y revision.
  *
- *  REGISTRO MANUAL (CLAUDE.md 11): sin luz, sin kiosco, olvido de PIN. Lo
+ *  REGISTRO MANUAL (ARQUITECTURA.md 11): sin luz, sin kiosco, olvido de PIN. Lo
  *  puede hacer tambien un supervisor; pide motivo y queda en la bitacora.
  *
- *  Lo que NO hay aqui: la foto. Nunca sale del kiosco (CLAUDE.md 5.1). El
+ *  Lo que NO hay aqui: la foto. Nunca sale del kiosco (ARQUITECTURA.md 5.1). El
  *  panel solo sabe su ESTADO (en el kiosco, borrada, falta, alterada...), y
  *  el filtro "Revisar la foto en el kiosco" junta los casos para que el jefe
  *  haga un solo viaje en vez de uno por caso.
@@ -269,7 +269,7 @@ export class Asistencia implements OnInit, OnDestroy {
       .order('hora_estimada', { ascending: false })
       .limit(MAXIMO);
 
-    // El dia se corta a medianoche de Matamoros, no de UTC (CLAUDE.md 6).
+    // El dia se corta a medianoche de Matamoros, no de UTC (ARQUITECTURA.md 6).
     if (this.desde()) consulta = consulta.gte('hora_estimada', new Date(inicioDelDiaLocal(this.desde(), zona)).toISOString());
     if (this.hasta()) {
       consulta = consulta.lt('hora_estimada', new Date(inicioDelDiaLocal(diaSiguiente(this.hasta()), zona)).toISOString());
@@ -397,7 +397,7 @@ export class Asistencia implements OnInit, OnDestroy {
   protected readonly MAXIMO = MAXIMO;
 
   // --------------------------------------------------------------------------
-  //  Correcciones: la marca original NO se toca (CLAUDE.md 8)
+  //  Correcciones: la marca original NO se toca (ARQUITECTURA.md 8)
   // --------------------------------------------------------------------------
   protected readonly corrigiendo = signal<Marca | null>(null);
   protected readonly accionCorreccion = signal<'anular' | 'cambiar_tipo'>('cambiar_tipo');

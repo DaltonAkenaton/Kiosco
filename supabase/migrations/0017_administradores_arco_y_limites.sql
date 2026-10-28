@@ -10,9 +10,9 @@
 --       (solo service_role) y las que el panel llama directo (cambiar rol,
 --       dar de baja).
 --
---    2. DERECHOS ARCO (CLAUDE.md 12): exportar todo lo que el sistema sabe de
+--    2. DERECHOS ARCO (ARQUITECTURA.md 12): exportar todo lo que el sistema sabe de
 --       un empleado y, cuando proceda, SUPRIMIR sus datos. Suprimir NO borra
---       sus marcas (son registro laboral y son inmutables, CLAUDE.md 8): se
+--       sus marcas (son registro laboral y son inmutables, ARQUITECTURA.md 8): se
 --       ANONIMIZA lo que lo identifica, y la anonimizacion queda en bitacora.
 --
 --    3. Limite de intentos para dar de alta un kiosco (`enrolar-kiosco`), que
@@ -184,7 +184,7 @@ $$;
 
 
 -- ============================================================================
---  2. DERECHOS ARCO  (CLAUDE.md 12)
+--  2. DERECHOS ARCO  (ARQUITECTURA.md 12)
 -- ============================================================================
 
 alter table empleados add column anonimizado_en timestamptz;
@@ -197,7 +197,7 @@ comment on column empleados.anonimizado_en is
  * ACCESO: todo lo que el sistema guarda de un empleado, en un solo documento.
  *
  * Sin el hash del PIN (no es un dato de la persona, es un candado). Sin fotos:
- * esas viven solo en el kiosco (CLAUDE.md 5.1) y se exportan desde alla.
+ * esas viven solo en el kiosco (ARQUITECTURA.md 5.1) y se exportan desde alla.
  *
  * La consulta queda en la bitacora: pedir los datos de alguien tambien es
  * tratar sus datos.
@@ -275,7 +275,7 @@ $$;
  *     (si no, "suprimir" seria solo cambiar la etiqueta de la puerta).
  *
  *   Lo que NO se toca: sus marcas (horas de entrada y salida), porque son el
- *   registro laboral y son inmutables (CLAUDE.md 8). Ya no dicen de quien son.
+ *   registro laboral y son inmutables (ARQUITECTURA.md 8). Ya no dicen de quien son.
  *
  *   Las fotos del kiosco se borran solas a los 30 dias; si alguna esta
  *   marcada "Conservar", hay que quitarle la marca en el kiosco (lo dice el
@@ -498,7 +498,7 @@ alter table marcas add constraint marcas_banderas_conocidas check (
 --  5. EVENTO NUEVO DEL KIOSCO: fotos_recuperadas
 -- ============================================================================
 --  El modo administrador del kiosco ya puede recuperar las fotos de una llave
---  anterior con la contrasena de recuperacion (CLAUDE.md 5.1). Queda anotado.
+--  anterior con la contrasena de recuperacion (ARQUITECTURA.md 5.1). Queda anotado.
 
 alter table eventos_dispositivo drop constraint eventos_dispositivo_tipo_check;
 alter table eventos_dispositivo add constraint eventos_dispositivo_tipo_check

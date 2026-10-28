@@ -9,7 +9,7 @@
  *
  *  Tambien es una proteccion: la pantalla solo puede elegir una LETRA de esta
  *  lista. Nunca manda una ruta, asi que no puede pedir "escribe las fotos en
- *  C:\Users\Public" (CLAUDE.md 3.1: operaciones especificas, nunca genericas).
+ *  C:\Users\Public" (ARQUITECTURA.md 3.1: operaciones especificas, nunca genericas).
  *
  *  ¿Como se sabe que una unidad es USB? Se le pregunta a Windows (WMI):
  *  `DriveType = 2` es "disco removible". Node no trae esa pregunta, y un
@@ -92,7 +92,7 @@ export function interpretarRespuesta(salida: string): MemoriaUsb[] {
  * ¿Esta ruta cae en el disco de ESTA computadora (o en una carpeta de red)?
  *
  * Las fotos exportadas van descifradas. En el disco del kiosco quedarian en
- * claro, justo donde el CLAUDE.md 5.2 dice que nunca debe haber una copia
+ * claro, justo donde el ARQUITECTURA.md 5.2 dice que nunca debe haber una copia
  * legible. En una carpeta de red, saldrian a otra computadora sin que nadie
  * lo haya decidido.
  */

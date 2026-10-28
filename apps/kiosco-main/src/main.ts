@@ -218,7 +218,7 @@ if (!esLaPrimeraCopia) {
     configurarArranqueConWindows();
     iniciarActualizaciones();
 
-    // La sincronizacion con la nube (CLAUDE.md 7). En segundo plano: nada de
+    // La sincronizacion con la nube (ARQUITECTURA.md 7). En segundo plano: nada de
     // lo que haga, ni una red caida, puede retrasar a quien viene a checar.
     iniciarSincronizacion({ avisar: actualizarEstado, obtenerEstado: estadoActual });
 

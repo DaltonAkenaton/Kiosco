@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- *  HORARIOS: turnos y el horario de cada persona  (CLAUDE.md 8)
+ *  HORARIOS: turnos y el horario de cada persona  (ARQUITECTURA.md 8)
  * ============================================================================
  *
  *  TURNOS: plantillas para asignar rapido ("Matutino 06:00-14:00"). Su

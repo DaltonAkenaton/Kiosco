@@ -22,7 +22,7 @@
  *  mas facil de atacar. Si el renderer pudiera leer archivos, cualquier fallo
  *  en la interfaz se convertiria en acceso total a la PC del kiosco.
  *
- *  CLAUDE.md 3.1 lo exige asi:
+ *  ARQUITECTURA.md 3.1 lo exige asi:
  *    "Exponer operaciones ESPECIFICAS (ej. registrarMarca, obtenerEstado),
  *     jamas genericas (ejecutarSQL, leerArchivo)."
  *
@@ -90,7 +90,7 @@ export const CANALES = {
   /** Canal de un solo sentido: el proceso principal AVISA a la interfaz que algo cambio. */
   estadoActualizado: 'kiosco:estado-actualizado',
 
-  // --- Modo administrador (CLAUDE.md 5.2) --------------------------------
+  // --- Modo administrador (ARQUITECTURA.md 5.2) --------------------------------
   // Cada canal pide el token de la sesion. Sin sesion viva, no hay datos.
   adminEntrar: 'admin:entrar',
   adminSalir: 'admin:salir',
@@ -203,7 +203,7 @@ export interface SolicitudRegistro {
   /**
    * La foto como texto en formato data URL ("data:image/jpeg;base64,...").
    * `null` si la camara no estaba disponible: el registro se hace igual y se
-   * levanta la bandera `sin_camara` (CLAUDE.md 5).
+   * levanta la bandera `sin_camara` (ARQUITECTURA.md 5).
    */
   fotoJpegBase64: string | null;
   /**
@@ -229,7 +229,7 @@ export type ResultadoPausa =
  *
  * Fijate en lo que NO trae: ni el hash del PIN, ni la ruta de la foto, ni el id
  * del empleado. Para pintar una tabla no hacen falta, asi que no viajan
- * (CLAUDE.md 3.1, minimo privilegio). De la foto solo se dice SI existe.
+ * (ARQUITECTURA.md 3.1, minimo privilegio). De la foto solo se dice SI existe.
  */
 export interface MarcaParaMostrar {
   id: string;
@@ -332,7 +332,7 @@ export interface ApiKiosco {
 }
 
 // ============================================================================
-//  MODO ADMINISTRADOR  (CLAUDE.md 5.2)
+//  MODO ADMINISTRADOR  (ARQUITECTURA.md 5.2)
 // ============================================================================
 //  La UNICA forma de ver las fotos. Todo pasa por aqui, y todo pide la sesion.
 

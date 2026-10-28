@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- *  FECHAS EN LA ZONA DEL SISTEMA  (CLAUDE.md 6)
+ *  FECHAS EN LA ZONA DEL SISTEMA  (ARQUITECTURA.md 6)
  * ============================================================================
  *
  *  Lo usan el kiosco (auditoria, exportacion) y el panel (filtros de la

@@ -11,7 +11,7 @@
  *  otra cosa— entonces una aplicacion que no se quita de en medio es un
  *  estorbo serio, y la primera reaccion de cualquiera seria desinstalarla.
  *
- *  Todavia NO esta confirmado como es esa computadora (CLAUDE.md 14), asi que
+ *  No se sabe de antemano como es cada computadora, asi que
  *  se asume lo mas flexible y se deja apagable: \`CONFIG.pausa.permitida\`.
  *
  *  ---------------------------------------------------------------------------
@@ -134,7 +134,7 @@ export type ResultadoPausa =
  * pantalla. La pantalla solo sabe CUANTOS digitos tiene, para dibujar los
  * puntos.
  *
- * ¿Y de que sirve, si el codigo va dentro del .exe y el CLAUDE.md 3.2 dice que
+ * ¿Y de que sirve, si el codigo va dentro del .exe y el ARQUITECTURA.md 3.2 dice que
  * todo lo empaquetado es publico? De que no aparezca en el codigo de la
  * interfaz, que es la parte mas facil de inspeccionar. Es minimo privilegio
  * aplicado con honestidad: no vuelve secreto el codigo, pero tampoco lo

@@ -4,7 +4,7 @@
  * ============================================================================
  *
  *  Todo esto corre en el PROCESO PRINCIPAL, nunca en la pantalla
- *  (CLAUDE.md 3.4: "la verificacion ocurre en el proceso main").
+ *  (ARQUITECTURA.md 3.4: "la verificacion ocurre en el proceso main").
  *
  *  ¿Por que importa tanto donde corre?
  *  Porque para comparar el PIN hay que tener el hash. Si la comparacion
@@ -38,7 +38,7 @@ import { reglasDelPin } from '../configuracion-vigente';
  *  combinaciones, son 10 minutos por empleado... y eso suponiendo que pudiera
  *  probarlas todas seguidas, que es justo lo que impide el bloqueo de abajo.
  *
- *  Y recuerda lo que dice el CLAUDE.md 3.4: "el PIN identifica; LA FOTO es la
+ *  Y recuerda lo que dice el ARQUITECTURA.md 3.4: "el PIN identifica; LA FOTO es la
  *  evidencia". La seguridad de verdad del sistema es la fotografia. El PIN
  *  solo evita el chiste facil de checar por un compañero.
  */

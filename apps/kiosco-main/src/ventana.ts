@@ -4,7 +4,7 @@
  * ============================================================================
  *
  *  Aqui se crea la unica ventana de la aplicacion y se le ponen las tres
- *  banderas de seguridad que el CLAUDE.md marca como obligatorias.
+ *  banderas de seguridad que el ARQUITECTURA.md marca como obligatorias.
  *
  *  Estas tres son LAS MAS IMPORTANTES de todo el proyecto en materia de
  *  seguridad de Electron. Si alguna vez dudas, no las toques.

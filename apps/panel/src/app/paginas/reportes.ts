@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- *  REPORTES: a tiempo, retardo, falta, horas  (CLAUDE.md 8, bloque 9)
+ *  REPORTES: a tiempo, retardo, falta, horas  (ARQUITECTURA.md 8, bloque 9)
  * ============================================================================
  *
  *  Todo lo calcula la base al momento de preguntar (`reporte_asistencia`,

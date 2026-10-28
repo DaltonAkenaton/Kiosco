@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- *  RETENCION DE FOTOS  (CLAUDE.md 5.1 y 12)
+ *  RETENCION DE FOTOS  (ARQUITECTURA.md 5.1 y 12)
  * ============================================================================
  *
  *  Una foto de asistencia es un dato personal con UNA finalidad. Pasado el

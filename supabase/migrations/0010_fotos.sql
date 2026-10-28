@@ -4,7 +4,7 @@
 --
 --  ⚠ ESTA MIGRACION NO CREA NINGUN ALMACENAMIENTO DE FOTOS, Y ESO ES EL PUNTO.
 --
---  El cliente pidio que las fotografias NO salgan del kiosco (CLAUDE.md 1.1,
+--  El cliente pidio que las fotografias NO salgan del kiosco (ARQUITECTURA.md 1.1,
 --  confirmado el 21-09-2026). Viven cifradas con AES-256-GCM en el disco de la
 --  PC y solo se ven desde el modo administrador de ese mismo kiosco.
 --
@@ -41,7 +41,7 @@
 --  QUIEN MIRO QUE FOTO
 -- ============================================================================
 --
---  CLAUDE.md 12: "bitacora de quien consulta fotos (tabla accesos_foto)".
+--  ARQUITECTURA.md 12: "bitacora de quien consulta fotos (tabla accesos_foto)".
 --
 --  Es la parte del deber de seguridad que mas se olvida. Guardar bien las
 --  fotos es solo la mitad; la otra es poder responderle a un empleado que
@@ -168,7 +168,7 @@ comment on function actualizar_estado_de_foto(uuid, text) is
 --
 --  Que el valor viva en la nube y se aplique en el kiosco es lo que permite
 --  cambiar el plazo en todos los kioscos a la vez sin ir a ninguno
---  (CLAUDE.md 1.3).
+--  (ARQUITECTURA.md 1.3).
 create or replace function dias_retencion_fotos()
 returns integer
 language sql
@@ -187,7 +187,7 @@ $$;
 --  MARCAS CON FOTO POR REVISAR
 -- ============================================================================
 --
---  Alimenta el filtro "Revisar en kiosco" del panel (CLAUDE.md 10).
+--  Alimenta el filtro "Revisar en kiosco" del panel (ARQUITECTURA.md 10).
 --
 --  El problema practico que resuelve: con las fotos en el kiosco, cada
 --  revision es un viaje fisico. Si el jefe tiene que ir una vez por caso, deja

@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- *  RECIBIR REGISTROS  (CLAUDE.md 7, "push")
+ *  RECIBIR REGISTROS  (ARQUITECTURA.md 7, "push")
  * ============================================================================
  *
  *  El kiosco manda lo que tiene en su bandeja de salida, tal cual lo guardo:
@@ -13,7 +13,7 @@
  *      { aceptados: [uuid...], rechazados: [{ id, motivo }...] }
  *
  *  "Aceptado" incluye "ya lo tenia": el kiosco reintenta tras un corte y eso
- *  no debe duplicar nada (idempotencia por UUID, CLAUDE.md 7). Con esa
+ *  no debe duplicar nada (idempotencia por UUID, ARQUITECTURA.md 7). Con esa
  *  respuesta el kiosco marca cada renglon de su bandeja como enviado, o
  *  anota por que se rechazo.
  *
@@ -24,7 +24,7 @@
  *
  *  KIOSCO REVOCADO: a diferencia de las demas funciones, esta SI lo atiende.
  *  Lo que registro antes de la baja entra en cuarentena; nunca se descarta
- *  en silencio (CLAUDE.md 3.3).
+ *  en silencio (ARQUITECTURA.md 3.3).
  */
 
 import { z } from 'npm:zod@4';
@@ -43,7 +43,7 @@ const MAXIMO_POR_TIPO = 500;
 
 // Las lecturas de reloj de cada marca y evento (compartido/tipos.ts,
 // LecturasDeReloj). Se piden todas: sin ellas no se puede detectar un reloj
-// movido (CLAUDE.md 6).
+// movido (ARQUITECTURA.md 6).
 const Reloj = z.object({
   horaDispositivoMs: z.number().int().nonnegative(),
   horaEstimadaMs: z.number().int().nonnegative(),

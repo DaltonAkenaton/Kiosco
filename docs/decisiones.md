@@ -26,7 +26,7 @@ npm workspaces.
   el proyecto. npm ya viene con Node.
 
 **Por qué:** el criterio dominante del proyecto es *"debe poder mantenerse con
-documentación, sin su autor presente"* (CLAUDE.md sección 1). Cada herramienta
+documentación, sin su autor presente"* (ARQUITECTURA.md sección 1). Cada herramienta
 extra es una cosa más que quien herede esto tiene que aprender.
 
 **Reconsiderar si:** el proyecto pasa de ~6 paquetes o las compilaciones
@@ -76,7 +76,7 @@ npx ng update @angular/core @angular/cli
 ```
 
 No corre prisa: Angular 21 tiene soporte vigente. Pero conviene no dejarlo
-pasar mucho: el CLAUDE.md pide "versión estable actual".
+pasar mucho: el ARQUITECTURA.md pide "versión estable actual".
 
 **Reconsiderar:** en cuanto se actualice Node.
 
@@ -107,7 +107,7 @@ usa `baseUrl` (que quedó obsoleta), sino rutas relativas en `paths`.
 
 **Descartado:** `provideRouter` con rutas `/inicio`, `/confirmar`, `/exito`.
 
-**Por qué:** el flujo del kiosco (CLAUDE.md sección 4) es una sola pantalla que
+**Por qué:** el flujo del kiosco (ARQUITECTURA.md sección 4) es una sola pantalla que
 cambia de estado, no páginas distintas. Con rutas tendríamos direcciones
 navegables, historial y botón de "atrás" — complejidad sin beneficio, y
 superficie extra que habría que bloquear por seguridad.
@@ -164,7 +164,7 @@ como variables CSS en `styles.css`.
 
 **Descartado:**
 
-- *CSS a mano.* Más lento de iterar, y el CLAUDE.md pide ajustar tamaños y
+- *CSS a mano.* Más lento de iterar, y el ARQUITECTURA.md pide ajustar tamaños y
   contraste según cómo se vea en la pantalla real del kiosco.
 - *Angular Material.* Está pensado para aplicaciones densas de escritorio, no
   para botones gigantes de kiosco. Habría que pelearse con sus estilos.
@@ -222,7 +222,7 @@ los colores de la universidad. El color institucional se usa sólo en adornos
 **Descartado:** aplicar la paleta institucional a toda la pantalla — que es lo
 que se suele pedir cuando alguien dice "ponle los colores de la universidad".
 
-**Por qué:** el CLAUDE.md sección 4 exige *"la mayor distinción visual posible
+**Por qué:** el ARQUITECTURA.md sección 4 exige *"la mayor distinción visual posible
 entre ENTRADA y SALIDA"*. Ahí el color no es decoración, es **información**: el
 error que hay que evitar es que alguien medio dormido registre salida creyendo
 que entró, y eso le cuesta su día de trabajo. Si el color institucional
@@ -290,7 +290,7 @@ con la tolerancia que tenga en caché.
    tolerancia de 10 a 15 minutos, los reportes de enero y febrero se ajustan
    solos. Si hubiéramos guardado "retardo: sí", habría que migrar datos —
    o peor, quedaría un histórico incoherente.
-2. **Las marcas son inmutables** (CLAUDE.md sección 8). La hora es un **hecho**;
+2. **Las marcas son inmutables** (ARQUITECTURA.md sección 8). La hora es un **hecho**;
    "llegó tarde" es una **interpretación**. Los hechos se guardan, las
    interpretaciones se calculan.
 3. **El kiosco se simplifica.** Menos reglas de negocio en la PC pública es
@@ -348,7 +348,7 @@ cambian.
 **Decidido:** usar `node:sqlite`, el SQLite que viene incluido dentro de Node
 (y por lo tanto dentro de Electron).
 
-**Descartado:** `better-sqlite3`, que es lo que pedía el CLAUDE.md sección 2.
+**Descartado:** `better-sqlite3`, que es lo que pedía el ARQUITECTURA.md sección 2.
 
 **Por qué se cambió:** `better-sqlite3` es un módulo nativo (C++) y hay que
 compilarlo para el Node concreto que trae Electron. Para Electron 44 **no
@@ -356,7 +356,7 @@ existe binario precompilado** (404 al buscarlo), así que habría que
 compilarlo desde el código fuente, lo que exige **Visual Studio Build Tools en
 cada máquina** donde se toque el proyecto.
 
-Eso choca de frente con la restricción central del CLAUDE.md sección 1: *"el
+Eso choca de frente con la restricción central del ARQUITECTURA.md sección 1: *"el
 sistema debe poder mantenerse con documentación, sin su autor presente"*, en
 una facultad que *"no tiene departamento de TI"*.
 
@@ -417,7 +417,7 @@ funciona**, sin importar su estado.
 **Descartado:** deshabilitar el botón después de que alguien marca salida.
 
 **Por qué se descartó:** choca de frente con la regla de oro del proyecto —
-*"nunca impedir que alguien registre"* (CLAUDE.md sección 1).
+*"nunca impedir que alguien registre"* (ARQUITECTURA.md sección 1).
 
 Hay al menos cuatro situaciones reales en las que una persona marca salida y
 necesita volver a checar el mismo día:
@@ -504,7 +504,7 @@ instante**. `registrarMarca` recibe ese pase, lo canjea y lo borra.
   nombre de cualquiera saltándose el PIN. La pantalla es la parte
   no confiable del sistema; no puede ser ella quien diga a nombre de quién se
   registra una marca.
-- *Volver a leer el reloj al guardar.* Es lo más simple, y rompe el CLAUDE.md
+- *Volver a leer el reloj al guardar.* Es lo más simple, y rompe el ARQUITECTURA.md
   4.3: la hora registrada sería la de cuando el empleado terminó de leer la
   confirmación, no la de cuando llegó. Con tres segundos de cuenta regresiva
   eso es poco; con alguien que se queda dudando, no.
@@ -540,7 +540,7 @@ Audio API, con osciladores. No hay archivos de audio en el proyecto.
   que la página pueda cargarlos, hay un retraso la primera vez mientras se
   descargan y decodifican, y cambiar un sonido exige abrir un editor de audio.
 - *La campanita del sistema (`\a`, `beep`).* Suena igual para todo. El
-  requisito del CLAUDE.md 13.1 es justamente que los tres se distingan.
+  requisito del ARQUITECTURA.md 13.1 es justamente que los tres se distingan.
 - *Voz sintetizada ("entrada registrada").* Tentador, y mala idea en un
   pasillo: dice en voz alta lo que alguien acaba de hacer, y a las 6 de la
   mañana una voz es mucho más intrusiva que un pitido.
@@ -567,7 +567,7 @@ se instala dentro del perfil del usuario.
   Windows, y aquí sería un problema serio: exigiría que alguien con permisos de
   administrador esté presente en cada PC, cada vez. Incluidas las
   actualizaciones automáticas, que entonces simplemente no podrían instalarse
-  solas — y el CLAUDE.md dice que la facultad no tiene departamento de TI.
+  solas — y el ARQUITECTURA.md dice que la facultad no tiene departamento de TI.
 - *Instalador de un clic (`oneClick: true`).* Se instala solo en cuanto lo
   abres. Ahorra dos clics a costa de que quien instala no vea lo que está
   pasando. Instalar ocurre una vez por PC y lo hace una persona; ver el
@@ -575,7 +575,7 @@ se instala dentro del perfil del usuario.
 - *Dejar elegir la carpeta de instalación.* Una PC con el kiosco instalado en
   una ruta rara es una PC que nadie va a saber reparar dentro de dos años.
 
-**Por qué:** encaja con el entorno descrito en el CLAUDE.md 13, donde el
+**Por qué:** encaja con el entorno descrito en el ARQUITECTURA.md 13, donde el
 kiosco corre en una cuenta de Windows **estándar, sin privilegios**.
 
 Y va acompañado de `deleteAppDataOnUninstall: false`: desinstalar **nunca**
@@ -648,7 +648,7 @@ que no son negociables:
    entre las 10:15 y las 10:32 es un hueco inexplicable; con eso, tiene
    explicación.
 
-Sobre el código: **no es seguridad, y conviene decirlo claro.** El CLAUDE.md
+Sobre el código: **no es seguridad, y conviene decirlo claro.** El ARQUITECTURA.md
 3.2 dice que todo lo empaquetado en el `.exe` es público, así que se puede
 averiguar. Es un tope contra el uso casual, y no necesita ser más — pausar no
 da acceso a nada. Lo que sí se respeta es el mínimo privilegio: el código se
@@ -705,7 +705,7 @@ asistencia sí se sincronizan, llevando el **SHA-256** de la foto y su **estado*
 - *Fotos en Supabase Storage* (lo que estaba diseñado hasta ahora, migración
   0010 incluida). El cliente lo descartó para no entrar en políticas de
   seguridad de la información de la universidad.
-- *No guardar fotos.* Rompería el modelo antitrampa completo: el CLAUDE.md 3.4
+- *No guardar fotos.* Rompería el modelo antitrampa completo: el ARQUITECTURA.md 3.4
   dice "el PIN identifica; **la foto es la evidencia**".
 - *Subirlas sólo cuando el jefe las pida.* Suena a punto medio y es lo peor de
   los dos: la foto igual sale a la nube, pero encima el jefe depende de que el
@@ -717,7 +717,7 @@ almacenamiento fuera de México.
 
 **Lo que hay que tener presente, porque no es gratis:**
 
-1. **La PC pasa a ser un punto único de fallo.** El CLAUDE.md §1 dice "las
+1. **La PC pasa a ser un punto único de fallo.** El ARQUITECTURA.md §1 dice "las
    computadoras cambian con frecuencia; toda PC es reemplazable" — y ahora, si
    una PC muere, se va con ella toda la evidencia fotográfica que tuviera.
 2. **`safeStorage` ata la llave al perfil de Windows de esa máquina.** Si se
@@ -747,20 +747,20 @@ con una contraseña de recuperación que el administrador define al instalar.
 - *Sólo `safeStorage`,* que es lo que decía la especificación. Es más simple y
   tiene un modo de falla intolerable: DPAPI está atado al perfil de Windows de
   esa máquina, así que reinstalar Windows —o que se corrompa el perfil— vuelve
-  las fotos ilegibles para siempre. No es hipotético: el CLAUDE.md dice que las
+  las fotos ilegibles para siempre. No es hipotético: el ARQUITECTURA.md dice que las
   PCs cambian con frecuencia y que no hay departamento de TI.
 - *Guardar la llave en la nube.* Tendría sentido técnico y contradice de frente
   la decisión anterior: si la llave sale, las fotos dejan de ser "sólo locales"
   en cualquier sentido útil.
 - *Una llave fija en el código.* Eso no es cifrar, es ofuscar. Todo lo del
-  `.exe` es público (CLAUDE.md 3.2).
+  `.exe` es público (ARQUITECTURA.md 3.2).
 
 **Por qué:** porque una medida de seguridad que puede destruir los datos que
 protege está mal calibrada. El riesgo real aquí no es que alguien robe las
 fotos: es que nadie pueda abrirlas el día que hagan falta.
 
 La contraseña se entrega impresa junto con las demás credenciales
-(CLAUDE.md 1.1) y nunca vive en el repositorio ni en la nube.
+(ARQUITECTURA.md 1.1) y nunca vive en el repositorio ni en la nube.
 
 **Reconsiderar si:** aparece un gestor de secretos institucional donde
 depositarla, en cuyo caso deja de depender de una hoja de papel.
@@ -805,7 +805,7 @@ el máximo sube de 12 a ~24.
 **Descartado:**
 
 - *Caer al modo `'usuario'`* ("dgomez"), que es lo que el sistema hacía solo al
-  pasar de 12 empleados. Necesita **teclado completo**, y el CLAUDE.md 13.1 dice
+  pasar de 12 empleados. Necesita **teclado completo**, y el ARQUITECTURA.md 13.1 dice
   que la entrada preferente es un **teclado numérico** — con guantes y a las 6
   de la mañana. La regla de degradación automática estaba pensada para un
   problema de legibilidad de la lista, no para uno de hardware.
@@ -835,7 +835,7 @@ vive en una tabla local aparte, `fotos`.
 **Descartado:**
 
 - *Columnas nuevas en `marcas`* (`conservar`, `eliminada_en`…). Más cómodo de
-  consultar, y obliga a hacer `UPDATE` sobre una tabla que el CLAUDE.md 8
+  consultar, y obliga a hacer `UPDATE` sobre una tabla que el ARQUITECTURA.md 8
   declara inmutable. Al primer "sólo esta columna sí se puede cambiar", la regla
   deja de ser una regla.
 
@@ -861,7 +861,7 @@ reloj sospechoso no se borra nada.
 
 - *Usar sólo `Date.now()`.* Es lo obvio y abre una puerta concreta: adelantar el
   reloj 31 días y reiniciar la app borra la evidencia del mes. En un sistema que
-  asume que puede haber marcajes irregulares (CLAUDE.md 1), eso no es un
+  asume que puede haber marcajes irregulares (ARQUITECTURA.md 1), eso no es un
   caso raro.
 
 **Por qué:** así, adelantar el reloj ya no alcanza. Además hay que registrar una
@@ -905,7 +905,7 @@ verdad: cada fallo va a `eventos_dispositivo` como `modo_admin_intento_fallido`.
 
 Se descartó también poner "capturando información". Daría a entender que se
 tomó una foto, y eso no pasa. Fotografiar a quien falla sería usar la cámara
-para un fin distinto de la asistencia (CLAUDE.md 12), y eso tendría que
+para un fin distinto de la asistencia (ARQUITECTURA.md 12), y eso tendría que
 aprobarlo la Unidad de Transparencia.
 
 **Reconsiderar si:** los eventos muestran intentos en serie. En ese caso se puede
@@ -920,7 +920,7 @@ bajar `fallosAntesDeEsperar`.
 - El ZIP lleva **sólo las fotos con marca de agua** (`fotos/`), más
   `registros.csv` y `LEEME.txt`. Las originales, sin marca, **no** van por
   defecto (`EXPORTACION.incluirOriginales: false`).
-- Lo que se graba es lo que pide el CLAUDE.md 5.1: fecha, hora, tipo, número de
+- Lo que se graba es lo que pide el ARQUITECTURA.md 5.1: fecha, hora, tipo, número de
   empleado y kiosco. **No el nombre** (`datosGrabados.nombre: false`). Si el
   empleado no tiene número, se graba su usuario, para que la foto no quede
   anónima.
@@ -950,7 +950,7 @@ bajar `fallosAntesDeEsperar`.
   puerta al explorador de archivos. Se quedó sólo como opción secundaria.
 - *Poner el número o el nombre del empleado en el nombre de cada archivo.* Van
   grabados en la foto y en el CSV. El nombre del archivo lleva fecha, hora, tipo
-  y UUID, igual que en el kiosco (CLAUDE.md 5.1).
+  y UUID, igual que en el kiosco (ARQUITECTURA.md 5.1).
 - *Marcar la foto en la pantalla (canvas) y mandarla de vuelta.* El proceso
   principal tendría que creer lo que le devuelve la pantalla.
 - *Proteger el ZIP con contraseña.* El cifrado estándar de ZIP es débil, y el
@@ -1000,7 +1000,7 @@ no se editó (una queja formal, por ejemplo). Para esa exportación se enciende
   llevó. Además, depender de una tabla interna de Supabase Auth ata el sistema
   a un detalle que puede cambiar.
 - *La llave `anon` dentro del `.exe` para llamar a las funciones.* No agrega
-  seguridad (todo lo del `.exe` es público, CLAUDE.md 3.2). Lo que identifica al
+  seguridad (todo lo del `.exe` es público, ARQUITECTURA.md 3.2). Lo que identifica al
   kiosco es su token.
 
 **Por qué:** cada pieza queda en el lugar donde se prueba mejor y donde un
@@ -1054,7 +1054,7 @@ panel puede ofrecer "usar la misma" al ponerla, sabiendo el riesgo.
   instalado no podría darse de alta nunca.
 
 **Por qué:** la regla de oro (nunca impedir que alguien registre) y "nunca
-descartar en silencio" (CLAUDE.md 3.3) mandan sobre la comodidad.
+descartar en silencio" (ARQUITECTURA.md 3.3) mandan sobre la comodidad.
 
 **Reconsiderar si:** hay muchos rechazos. Entonces conviene una pantalla en el
 modo administrador para verlos y reenviarlos a mano.
@@ -1100,7 +1100,7 @@ modo administrador para verlos y reenviarlos a mano.
   que alguien tendría que cruzar.
 
 **Por qué:** "todas las acciones quedan en bitácora y requieren motivo"
-(CLAUDE.md 10) sólo se puede garantizar si no hay otra puerta.
+(ARQUITECTURA.md 10) sólo se puede garantizar si no hay otra puerta.
 
 **Reconsiderar si:** aparece una acción que de verdad no necesite motivo (por
 ejemplo, generar un código de alta, que ya no lo pide porque no cambia nada
@@ -1115,7 +1115,7 @@ hasta que alguien lo usa).
 - **No hay tablas de resultados.** `marcas_validas()`, `jornadas()` y
   `reporte_asistencia()` (migración 0016) calculan al momento, con la
   configuración vigente. Cambiar la tolerancia recalcula también el pasado, y
-  ninguna marca se toca (CLAUDE.md 8).
+  ninguna marca se toca (ARQUITECTURA.md 8).
 - **Una sola fuente de tolerancia:** la tolerancia y los minutos para falta del
   turno quedan **vacíos** normalmente y entonces se usa Configuración. Sólo se
   llenan si ESE turno necesita otra regla.
@@ -1155,9 +1155,9 @@ hasta que alguien lo usa).
 - *Emparejar en el kiosco.* Una persona puede entrar por un kiosco y salir por
   otro.
 - *Tomar la hora de salida "esperada" cuando no hay salida.* El sistema no
-  inventa horas (CLAUDE.md 8).
+  inventa horas (ARQUITECTURA.md 8).
 
-**Por qué:** es lo que pide el CLAUDE.md 8 al pie de la letra, y deja todo lo
+**Por qué:** es lo que pide el ARQUITECTURA.md 8 al pie de la letra, y deja todo lo
 ajustable en manos del jefe.
 
 **Reconsiderar si:** los reportes de meses completos se vuelven lentos (con 20
@@ -1217,7 +1217,7 @@ GitHub Actions. Las actualizaciones del kiosco salen de GitHub Releases
 falta otro proveedor de correo y más piezas en Supabase); instalar
 actualizaciones solas (podría caer a la hora de entrada).
 
-**Por qué:** GitHub ya es parte del sistema (CLAUDE.md 1.1), no cuesta, y cada
+**Por qué:** GitHub ya es parte del sistema (ARQUITECTURA.md 1.1), no cuesta, y cada
 tarea se puede correr a mano con un botón.
 
 **Actualización (25-09-2026):** el repositorio será **privado**. El flujo
@@ -1323,7 +1323,7 @@ desde el reporte con "Justificar".
 de lo común). Sin esto, una caída del sistema llenaba el reporte de retardos
 que nadie tuvo.
 
-**Las marcas no se tocan** (CLAUDE.md 8): la incidencia sólo cambia la
+**Las marcas no se tocan** (ARQUITECTURA.md 8): la incidencia sólo cambia la
 calificación del día.
 
 ---
@@ -1377,7 +1377,7 @@ diferencia "por si no quedó" (no debería: el kiosco confirma en pantalla).
 su hora de salida, menos lo que ya contó como reponer un retardo, y sólo si
 llega a `minutos_minimos_tiempo_extra` (30, configurable).
 
-**Descartado:** pagar o descontar (el sistema informa, CLAUDE.md 1.2);
+**Descartado:** pagar o descontar (el sistema informa, ARQUITECTURA.md 1.2);
 contar cualquier minuto (salir 3 minutos tarde llenaba el reporte de "+3 min").
 
 **Por qué:** un turno doble (14–16 h) se contaba bien como horas, pero nadie

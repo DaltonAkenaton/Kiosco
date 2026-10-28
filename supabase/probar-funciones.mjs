@@ -324,7 +324,7 @@ try {
   comprobar('un PIN en claro (no hash) se rechaza', pinEnClaro.estado === 400);
 
   // ==========================================================================
-  //  Kiosco revocado  (CLAUDE.md 3.3)
+  //  Kiosco revocado  (ARQUITECTURA.md 3.3)
   // ==========================================================================
   console.log('\n--- kiosco revocado ---');
 
@@ -364,6 +364,10 @@ try {
   console.log('\n--- administradores (panel) ---');
 
   const AUTH = 'http://127.0.0.1:54321/auth/v1';
+  // NO SON LLAVES FILTRADAS. Son las llaves de DEMOSTRACION que trae todo
+  // Supabase local (`npx supabase start`): las mismas en cualquier computadora
+  // y publicadas en la documentacion de Supabase (emisor "supabase-demo").
+  // Solo abren el Supabase local (127.0.0.1); ningun proyecto real las acepta.
   const LLAVE_ANON =
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
   const LLAVE_SERVICIO =

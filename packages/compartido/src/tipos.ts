@@ -12,7 +12,7 @@
  *  Functions. Asi los tres hablan exactamente el mismo idioma y es imposible
  *  que uno mande `tipo: "Entrada"` y el otro espere `tipo: "entrada"`.
  *
- *  Nombres de dominio en espanol (CLAUDE.md seccion 16).
+ *  Nombres de dominio en espanol (ARQUITECTURA.md seccion 14).
  */
 
 // ----------------------------------------------------------------------------
@@ -31,7 +31,7 @@ export type OrigenMarca = 'kiosco' | 'manual';
 
 /**
  * Banderas = etiquetas de "esto hay que revisarlo".
- * CLAUDE.md es muy claro: las banderas NUNCA impiden registrar. Solo dejan
+ * ARQUITECTURA.md es muy claro: las banderas NUNCA impiden registrar. Solo dejan
  * constancia para que el jefe lo revise despues en el panel.
  */
 export type BanderaMarca =
@@ -76,7 +76,7 @@ export const NOMBRES_DE_BANDERAS: Record<BanderaMarca, string> = {
 };
 
 /**
- * Las lecturas de tiempo que se guardan JUNTO a cada marca (CLAUDE.md 6).
+ * Las lecturas de tiempo que se guardan JUNTO a cada marca (ARQUITECTURA.md 6).
  * La idea de fondo: no confiamos en la hora de Windows, asi que guardamos
  * varias mediciones distintas para poder detectar despues si alguien la movio.
  */
@@ -123,7 +123,7 @@ export interface MarcaLocal {
   banderas: BanderaMarca[];
   /**
    * SHA-256 (hex) del JPEG, calculado ANTES de cifrarlo. `null` si no hubo foto.
-   * Es lo unico de la foto que viaja a la nube (CLAUDE.md 5.1).
+   * Es lo unico de la foto que viaja a la nube (ARQUITECTURA.md 5.1).
    */
   fotoHash: string | null;
 }
@@ -199,7 +199,7 @@ export type ResultadoIdentificacion =
        *      su PIN. Con el pase no: para tener uno hay que haber pasado por
        *      la verificacion de PIN, y solo sirve una vez.
        *
-       *   2. LA HORA CORRECTA. CLAUDE.md 4.3 pide que el timestamp sea el del
+       *   2. LA HORA CORRECTA. ARQUITECTURA.md 4.3 pide que el timestamp sea el del
        *      instante de la validacion, no el de cuando el empleado termino de
        *      leer la confirmacion tres segundos despues. Como la hora viaja
        *      dentro del pase (en el proceso principal), la espera de la
@@ -283,7 +283,7 @@ export type ResultadoCambioPin =
 // ----------------------------------------------------------------------------
 
 /**
- * La conexion con la nube, en una palabra (CLAUDE.md 7):
+ * La conexion con la nube, en una palabra (ARQUITECTURA.md 7):
  *
  *   apagada        SINCRONIZACION.activa = false, o no hay direccion: todo local.
  *   sin_alta       nunca se ha dado de alta: falta teclear el codigo.
@@ -305,7 +305,7 @@ export type EstadoNube =
 export interface EstadoKiosco {
   /** `true` si logro hablar con Supabase recientemente. */
   enLinea: boolean;
-  /** Cuantas marcas esperan subir. CLAUDE.md 4.1 pide mostrarlo de forma discreta. */
+  /** Cuantas marcas esperan subir. ARQUITECTURA.md 4.1 pide mostrarlo de forma discreta. */
   registrosPendientes: number;
   /** `false` si la camara esta caida: la interfaz muestra el aviso grande. */
   camaraDisponible: boolean;

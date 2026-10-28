@@ -2,7 +2,7 @@
 --  0015 · LO QUE HACE EL PANEL DEL JEFE  (bloque 8)
 -- ============================================================================
 --
---  CLAUDE.md 10: "Acciones (todas quedan en bitacora y requieren motivo)".
+--  ARQUITECTURA.md 10: "Acciones (todas quedan en bitacora y requieren motivo)".
 --
 --  Cada accion del panel es una funcion de la base que:
 --    1. comprueba el rol (admin o supervisor, segun la accion);
@@ -214,7 +214,7 @@ exception
 end;
 $$;
 
-/** Baja (o reactivacion). Baja NO borra: sus marcas se conservan (CLAUDE.md 7). */
+/** Baja (o reactivacion). Baja NO borra: sus marcas se conservan (ARQUITECTURA.md 7). */
 create or replace function cambiar_estado_empleado(p_id uuid, p_activo boolean, p_motivo text)
 returns void
 language plpgsql
@@ -235,7 +235,7 @@ end;
 $$;
 
 /**
- * PIN nuevo para quien lo olvido (CLAUDE.md 11). Se genera al azar y se
+ * PIN nuevo para quien lo olvido (ARQUITECTURA.md 11). Se genera al azar y se
  * devuelve UNA vez. Queda marcado como temporal: el jefe lo dio, no el
  * empleado lo eligio.
  */
@@ -265,7 +265,7 @@ $$;
 
 
 -- ============================================================================
---  3. REGISTRO MANUAL DE ASISTENCIA  (CLAUDE.md 11: sin luz, olvido de PIN)
+--  3. REGISTRO MANUAL DE ASISTENCIA  (ARQUITECTURA.md 11: sin luz, olvido de PIN)
 -- ============================================================================
 --  Una marca con origen 'manual', la bandera 'manual' y sin kiosco. Tambien
 --  la puede hacer un supervisor (0002: "puede registrar asistencia manual").

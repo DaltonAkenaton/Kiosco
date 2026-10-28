@@ -157,7 +157,7 @@ const api: ApiKiosco = {
   },
 
   /**
-   * Modo administrador (CLAUDE.md 5.2). Operaciones CONCRETAS, igual que
+   * Modo administrador (ARQUITECTURA.md 5.2). Operaciones CONCRETAS, igual que
    * arriba: "ver la foto de esta marca", nunca "leer este archivo".
    */
   admin: {

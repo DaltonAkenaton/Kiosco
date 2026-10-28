@@ -10,10 +10,10 @@
  *  Si no existen, no toca nada: se usa lo que ya diga el archivo.
  *
  *  Asi las credenciales viven en los secretos de GitHub y no en el repositorio
- *  (CLAUDE.md 1.1).
+ *  (ARQUITECTURA.md 1.1).
  *
  *  Y una red de seguridad: si la llave es la `service_role` (la que abre TODO,
- *  CLAUDE.md 3.2), se niega a compilar. Esa llave publicada en una pagina web
+ *  ARQUITECTURA.md 3.2), se niega a compilar. Esa llave publicada en una pagina web
  *  le daria a cualquiera la base de datos completa.
  */
 
@@ -64,7 +64,7 @@ writeFileSync(
   `/**
  * GENERADO por escribir-entorno.mjs a partir de las variables de entorno de
  * Netlify. No se edita a mano en el servidor: se cambia en Netlify.
- * Es la llave PUBLICA: por si sola no deja ver nada (RLS, CLAUDE.md 3.2).
+ * Es la llave PUBLICA: por si sola no deja ver nada (RLS, ARQUITECTURA.md 3.2).
  */
 export const ENTORNO = {
   produccion: true,

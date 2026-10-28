@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- *  VENTANA CON MOTIVO  (CLAUDE.md 10: "todas requieren motivo")
+ *  VENTANA CON MOTIVO  (ARQUITECTURA.md 10: "todas requieren motivo")
  * ============================================================================
  *
  *  La ventana que aparece antes de cualquier accion que cambia algo: dar de

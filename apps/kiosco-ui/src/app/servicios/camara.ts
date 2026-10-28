@@ -9,7 +9,7 @@
  *    2. Vigilar que siga viva, y avisar al proceso principal cuando cambia.
  *    3. Capturar la foto del momento del registro, redimensionada y medida.
  *
- *  LA REGLA QUE MANDA AQUI (CLAUDE.md seccion 5):
+ *  LA REGLA QUE MANDA AQUI (ARQUITECTURA.md seccion 5):
  *
  *      La camara NUNCA bloquea el registro.
  *
@@ -103,7 +103,7 @@ export class Camara {
 
     await this.encender();
 
-    // Vigilancia periodica (CLAUDE.md 5: "verificacion periodica del estado").
+    // Vigilancia periodica (ARQUITECTURA.md 5: "verificacion periodica del estado").
     // Cubre el caso de que alguien desconecte el cable a media manana.
     this.vigilante = setInterval(() => void this.revisar(), intervaloVigilanciaMs);
   }
@@ -316,7 +316,7 @@ export class Camara {
   }
 
   /**
-   * Mide brillo y varianza para detectar un lente tapado (CLAUDE.md 5).
+   * Mide brillo y varianza para detectar un lente tapado (ARQUITECTURA.md 5).
    *
    * BRILLO: el promedio de que tan clara es la imagen, de 0 (negro) a 255.
    *         Un lente tapado con un dedo o con cinta da un brillo muy bajo.

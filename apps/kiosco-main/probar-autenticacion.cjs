@@ -323,14 +323,14 @@ app.whenReady().then(async () => {
   comprobar('el evento lleva su tipo y su detalle', cuerpo && cuerpo.detalle.minutos === 15);
   comprobar('el evento lleva lecturas de reloj', cuerpo && typeof cuerpo.reloj.horaEstimadaMs === 'number');
 
-  // Nunca datos personales en un evento (CLAUDE.md 16).
+  // Nunca datos personales en un evento (ARQUITECTURA.md 14).
   comprobar(
     'el evento no trae nombres ni PINes',
     evento && !/dgomez|1234|Dalton/.test(evento.payload),
   );
 
   // ======================================================================
-  //  FOTOS CIFRADAS  (bloque 3.b, CLAUDE.md 5.1)
+  //  FOTOS CIFRADAS  (bloque 3.b, ARQUITECTURA.md 5.1)
   // ======================================================================
   //  La foto nunca sale del kiosco: vive cifrada y a la nube va su hash. Si
   //  algo de esto falla en silencio, el sintoma no se ve hasta el dia que el
@@ -530,7 +530,7 @@ app.whenReady().then(async () => {
   comprobar('"Treviño" genero atrevino', bd.buscarPorUsuario('atrevino') !== null);
 
   // ======================================================================
-  //  MODO ADMINISTRADOR  (CLAUDE.md 5.2)
+  //  MODO ADMINISTRADOR  (ARQUITECTURA.md 5.2)
   // ======================================================================
   console.log('\n--- modo administrador ---');
 
@@ -605,7 +605,7 @@ app.whenReady().then(async () => {
   comprobar('filtro por fecha: hoy no trae la de hace 40 dias',
     deHoy.some((m) => m.id === idMarca) && !deHoy.some((m) => m.id === vencida.id));
 
-  // Medianoche LOCAL, no UTC, y respetando el horario de verano (CLAUDE.md 6).
+  // Medianoche LOCAL, no UTC, y respetando el horario de verano (ARQUITECTURA.md 6).
   // Nuevo Laredo: UTC-5 en verano, UTC-6 en invierno.
   const z = 'America/Matamoros';
   comprobar('1-nov-2026 (aun horario de verano) empieza a las 05:00 UTC',
@@ -660,7 +660,7 @@ app.whenReady().then(async () => {
     enEspera.ok === false && /Espera \d+ segundos/.test(enEspera.mensaje), enEspera.mensaje);
 
   // ======================================================================
-  //  EXPORTACION A USB  (CLAUDE.md 5.2, cierre del 3.b)
+  //  EXPORTACION A USB  (ARQUITECTURA.md 5.2, cierre del 3.b)
   // ======================================================================
   //  La unica salida de las fotos. Lo que no puede fallar en silencio: que
   //  el ZIP abra, que cada foto quede en la bitacora, y que la marca de agua

@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- *  CONFIGURACION  (CLAUDE.md 1.3 y 10: "lo que hace moldeable el sistema")
+ *  CONFIGURACION  (ARQUITECTURA.md 1.3 y 10: "lo que hace moldeable el sistema")
  * ============================================================================
  *
  *  Las reglas que el jefe puede cambiar sin programador: tolerancia, minutos

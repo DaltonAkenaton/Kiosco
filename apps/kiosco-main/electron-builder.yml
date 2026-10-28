@@ -33,7 +33,7 @@
 ##
 ##  Paso de verdad, y en el peor momento: preparando una demostracion.
 ##
-##  Y encaja con el proyecto: el CLAUDE.md dice desde la primera linea que
+##  Y encaja con el proyecto: el ARQUITECTURA.md dice desde la primera linea que
 ##  "internet y luz fallan ocasionalmente". Si el kiosco esta pensado para
 ##  funcionar sin red, generar el kiosco tambien deberia poder.
 ##
@@ -76,7 +76,7 @@ files:
 ## No es proteccion —se puede abrir con herramientas comunes— pero si evita
 ## que alguien edite un .js suelto dentro de "Archivos de programa" y cambie
 ## el comportamiento del kiosco sin que nadie se entere. Para la seguridad de
-## verdad estan las reglas del CLAUDE.md 3.
+## verdad estan las reglas del ARQUITECTURA.md 3.
 asar: true
 
 win:
@@ -87,7 +87,7 @@ win:
 
   ## Icono: `recursos-instalador/icon.ico` (electron-builder lo toma solo de
   ## esa carpeta). Es un reloj con palomita, PROVISIONAL (29-09-2026) hasta
-  ## tener el escudo oficial de la UAT (CLAUDE.md 14). Se dibuja en
+  ## tener el escudo oficial de la UAT. Se dibuja en
   ## `recursos-instalador/icono.svg`; para regenerar el .ico:
   ## `npx electron generar-icono.cjs`.
 
@@ -109,7 +109,7 @@ nsis:
   ##  `perMachine: false` instala SOLO para el usuario actual, dentro de su
   ##  perfil, y por lo tanto NO pide contrasena de administrador.
   ##
-  ##  Eso encaja exactamente con el kiosco descrito en CLAUDE.md 13: "cuenta
+  ##  Eso encaja exactamente con el kiosco descrito en ARQUITECTURA.md 13: "cuenta
   ##  estandar sin privilegios". Con `perMachine: true`, instalar exigiria que
   ##  alguien con Administrador este presente en cada PC, cada vez — incluidas
   ##  las actualizaciones automaticas, que entonces simplemente no podrian

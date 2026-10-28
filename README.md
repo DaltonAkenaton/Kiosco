@@ -167,8 +167,8 @@ direcciones se reemplazaron por valores de ejemplo. Los nombres de empleados de
 los datos de demostración son ficticios.
 
 Los commits en coautoría con Claude reflejan desarrollo asistido por IA. La
-especificación [`CLAUDE.md`](CLAUDE.md) muestra cómo se pusieron por escrito
-los requisitos, las reglas de seguridad y las decisiones del cliente para guiar
+especificación [`ARQUITECTURA.md`](ARQUITECTURA.md) muestra cómo se pusieron por escrito
+los requisitos, las reglas de seguridad y las decisiones de diseño para guiar
 ese trabajo.
 
 **Autor:** Dalton Akenaton Gómez Arellano · [github.com/DaltonAkenaton](https://github.com/DaltonAkenaton)

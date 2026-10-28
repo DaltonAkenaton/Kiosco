@@ -129,7 +129,7 @@ export function guardarMarca(datos: DatosDeMarca): string {
       origen: 'kiosco',
       reloj: datos.reloj,
       banderas: datos.banderas,
-      // La huella, nunca la foto ni su ruta (CLAUDE.md 5.1).
+      // La huella, nunca la foto ni su ruta (ARQUITECTURA.md 5.1).
       fotoHash: datos.foto?.hash ?? null,
     });
 
@@ -219,13 +219,13 @@ export function contarMarcas(): number {
  *  Alimenta la pantalla de registros del kiosco.
  *
  *  Es la PRIMERA VERSION de la pantalla de auditoria del modo administrador
- *  (CLAUDE.md 5.2, bloque 3.b). Hoy sirve para enseñar que los datos de verdad
+ *  (ARQUITECTURA.md 5.2, bloque 3.b). Hoy sirve para enseñar que los datos de verdad
  *  se guardan; manana sera la pantalla donde el revisor compara cada registro
  *  con su foto.
  *
  *  Fijate en lo que NO devuelve: ni el hash del PIN, ni la ruta de la foto.
  *  La pantalla no necesita ninguna de las dos para pintar una tabla, asi que no
- *  las recibe (minimo privilegio, CLAUDE.md 3.1). Solo se le dice SI hay foto.
+ *  las recibe (minimo privilegio, ARQUITECTURA.md 3.1). Solo se le dice SI hay foto.
  */
 export interface MarcaEnPantalla {
   id: string;

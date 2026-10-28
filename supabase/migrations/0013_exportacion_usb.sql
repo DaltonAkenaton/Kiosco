@@ -3,7 +3,7 @@
 -- ============================================================================
 --
 --  El modo administrador del kiosco ya puede sacar registros y fotos a una
---  memoria USB (CLAUDE.md 5.2). Cada foto exportada llega a `accesos_foto`
+--  memoria USB (ARQUITECTURA.md 5.2). Cada foto exportada llega a `accesos_foto`
 --  con la accion 'exportar', que ya existia desde la 0010.
 --
 --  Lo nuevo es el evento de la exportacion ENTERA. Hace falta aparte porque
@@ -16,7 +16,7 @@
 --  carpeta personal.
 --
 --  Como en la 0011 y la 0012: una migracion aplicada no se edita
---  (CLAUDE.md 16), se reemplaza la restriccion aqui.
+--  (ARQUITECTURA.md 14), se reemplaza la restriccion aqui.
 
 alter table eventos_dispositivo drop constraint eventos_dispositivo_tipo_check;
 

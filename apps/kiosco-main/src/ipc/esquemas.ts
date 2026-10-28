@@ -3,7 +3,7 @@
  *  VALIDACION DE LO QUE LLEGA DESDE LA PANTALLA
  * ============================================================================
  *
- *  CLAUDE.md 3.1: "Todo handler ipcMain.handle valida tipos y rangos de
+ *  ARQUITECTURA.md 3.1: "Todo handler ipcMain.handle valida tipos y rangos de
  *  entrada (usar zod o validacion equivalente)."
  *
  *  ¿Por que validar si el mensaje viene de mi propia interfaz?
@@ -240,7 +240,7 @@ export const EsquemaPausa = z.strictObject({
 });
 
 // ============================================================================
-//  MODO ADMINISTRADOR  (CLAUDE.md 5.2)
+//  MODO ADMINISTRADOR  (ARQUITECTURA.md 5.2)
 // ============================================================================
 //  Aqui entra quien quiere ver fotos. Cada campo tiene techo de largo: un
 //  texto de un megabyte en el campo "usuario" no debe llegar ni a la base.

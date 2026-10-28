@@ -79,7 +79,7 @@ export function modoIdentificacionVigente(): ModoIdentificacion {
  *
  *  Bajan con la sincronizacion a `configuracion_cache` (como JSON: '4',
  *  '"America/Matamoros"'). Aqui se leen EN CADA USO, para que un cambio en el
- *  panel se note en el siguiente registro sin reiniciar nada (CLAUDE.md 1.3).
+ *  panel se note en el siguiente registro sin reiniciar nada (ARQUITECTURA.md 1.3).
  *
  *  Un valor que no llego, o que llego absurdo (texto, negativo, fuera de
  *  rango), NUNCA se obedece: se usa el respaldo de configuracion.ts. Con un
@@ -111,7 +111,7 @@ export function esPcCompartida(): boolean {
   );
 }
 
-/** Las reglas del PIN vigentes (CLAUDE.md 3.4). */
+/** Las reglas del PIN vigentes (ARQUITECTURA.md 3.4). */
 export function reglasDelPin(): { intentosMaximos: number; segundosDeBloqueo: number; minutosParaOlvidar: number } {
   return {
     intentosMaximos: numeroConfigurado('intentos_pin_maximos', CONFIG.seguridadPin.intentosFallidosMaximos, {
@@ -129,7 +129,7 @@ export function reglasDelPin(): { intentosMaximos: number; segundosDeBloqueo: nu
   };
 }
 
-/** Umbrales de la camara tapada (CLAUDE.md 5). */
+/** Umbrales de la camara tapada (ARQUITECTURA.md 5). */
 export function umbralesDeCamara(): { brilloMinimo: number; varianzaMinima: number } {
   return {
     brilloMinimo: numeroConfigurado('umbral_brillo_minimo', CONFIG.camara.umbralBrilloMinimo, { minimo: 0, maximo: 255 }),
@@ -140,7 +140,7 @@ export function umbralesDeCamara(): { brilloMinimo: number; varianzaMinima: numb
   };
 }
 
-/** Cuanto pueden separarse reloj y cronometro antes de sospechar (CLAUDE.md 6). */
+/** Cuanto pueden separarse reloj y cronometro antes de sospechar (ARQUITECTURA.md 6). */
 export function umbralDeRelojMs(): number {
   return numeroConfigurado('umbral_desfase_reloj_ms', CONFIG.reloj.umbralDesfaseSospechosoMs, {
     minimo: 5_000,
@@ -175,7 +175,7 @@ export function cambiarModoIdentificacion(modo: ModoIdentificacion): boolean {
 }
 
 /**
- * La zona horaria que manda (CLAUDE.md 6): la de la tabla `configuracion`
+ * La zona horaria que manda (ARQUITECTURA.md 6): la de la tabla `configuracion`
  * si llego y Windows/Node la conoce; si no, la de configuracion.ts.
  *
  * Se valida pidiendole a `Intl` que la use: una zona mal escrita en el panel

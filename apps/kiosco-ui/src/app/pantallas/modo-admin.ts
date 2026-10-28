@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- *  MODO ADMINISTRADOR  (CLAUDE.md 5.2)
+ *  MODO ADMINISTRADOR  (ARQUITECTURA.md 5.2)
  * ============================================================================
  *
  *  La UNICA forma de ver las fotos. Se abre con el boton del engrane de la

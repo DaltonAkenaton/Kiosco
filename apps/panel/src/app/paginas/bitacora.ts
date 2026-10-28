@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- *  BITACORA: quien cambio que, cuando y por que  (CLAUDE.md 10)
+ *  BITACORA: quien cambio que, cuando y por que  (ARQUITECTURA.md 10)
  * ============================================================================
  *
  *  La llenan los triggers de la base (0009, 0015), no el panel: por eso
@@ -308,7 +308,7 @@ export class Bitacora implements OnInit {
       q = q.or(`registro_id.eq.${persona},datos_despues->>empleado_id.eq.${persona},datos_antes->>empleado_id.eq.${persona}`);
     }
 
-    // El dia se corta a medianoche de Nuevo Laredo, no de UTC (CLAUDE.md 6).
+    // El dia se corta a medianoche de Nuevo Laredo, no de UTC (ARQUITECTURA.md 6).
     const zona = this.sesion.zona();
     if (this.desde()) q = q.gte('creado_en', new Date(inicioDelDiaLocal(this.desde(), zona)).toISOString());
     if (this.hasta()) q = q.lt('creado_en', new Date(inicioDelDiaLocal(diaSiguiente(this.hasta()), zona)).toISOString());

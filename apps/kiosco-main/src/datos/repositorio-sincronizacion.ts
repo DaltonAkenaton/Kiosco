@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- *  REPOSITORIO DE LA SINCRONIZACION  (CLAUDE.md 7)
+ *  REPOSITORIO DE LA SINCRONIZACION  (ARQUITECTURA.md 7)
  * ============================================================================
  *
  *  Las dos mitades del intercambio con la nube, del lado de la base local:
@@ -59,7 +59,7 @@ export type EstadoDeFotoParaNube =
 /**
  * Encola el cambio de estado de una foto para que la nube lo sepa.
  *
- * La nube no tiene la foto (CLAUDE.md 5.1), asi que solo se entera de que le
+ * La nube no tiene la foto (ARQUITECTURA.md 5.1), asi que solo se entera de que le
  * paso si el kiosco se lo dice. Sin esto, el panel mostraria "disponible en
  * el kiosco" una foto que se borro hace un mes.
  */
@@ -342,7 +342,7 @@ export function aplicarCatalogo(
 }
 
 /**
- * CLAUDE.md 6: "Un cambio grande de desfase marca las marcas offline de ese
+ * ARQUITECTURA.md 6: "Un cambio grande de desfase marca las marcas offline de ese
  * periodo."
  *
  * Si al volver la conexion el reloj de Windows resulta muy distinto de como

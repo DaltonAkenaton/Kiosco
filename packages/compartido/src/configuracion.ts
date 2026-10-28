@@ -24,7 +24,7 @@
  *     sincronizar, sin reinstalar nada. Aqui van cosas como "tolerancia de
  *     retardo" o "dias de retencion de fotos".
  *
- *     El CLAUDE.md (seccion 8) exige que horarios, tolerancias y turnos vivan
+ *     El ARQUITECTURA.md (seccion 8) exige que horarios, tolerancias y turnos vivan
  *     en TABLAS, nunca en codigo. Por eso esos valores NO estan aqui.
  *
  *  Los valores de abajo marcados como `PorDefecto` son el "plan B": lo que
@@ -175,7 +175,7 @@ export const IDENTIFICACION = {
 // ============================================================================
 //  2. SEGURIDAD DEL PIN  (intentos fallidos y bloqueos)
 // ============================================================================
-//  CLAUDE.md 3.4: "Bloqueo temporal por empleado tras N intentos fallidos
+//  ARQUITECTURA.md 3.4: "Bloqueo temporal por empleado tras N intentos fallidos
 //  (configurable) y retardo creciente."
 //
 //  Ojo con el equilibrio: bloquear mucho tiempo choca con la REGLA DE ORO
@@ -285,7 +285,7 @@ export const SEGURIDAD_PIN = {
 // ============================================================================
 export const INTERFAZ = {
   /**
-   * CLAUDE.md 4.4: "Si no toca nada, se confirma automaticamente."
+   * ARQUITECTURA.md 4.4: "Si no toca nada, se confirma automaticamente."
    * Segundos de la cuenta regresiva en la pantalla de confirmacion.
    *
    * Es el numero mas delicado de este archivo, porque mide DOS cosas
@@ -382,7 +382,7 @@ export const INTERFAZ = {
    * ¿Se puede ver la lista de registros guardados desde el kiosco?
    *
    * Es la PRIMERA VERSION de la pantalla de auditoria del modo administrador
-   * (CLAUDE.md 5.2, bloque 3.b). Hoy muestra la tabla; cuando exista el modo
+   * (ARQUITECTURA.md 5.2, bloque 3.b). Hoy muestra la tabla; cuando exista el modo
    * administrador quedara detras de usuario y contrasena, y cada registro
    * llevara su foto al lado.
    *
@@ -405,7 +405,7 @@ export const INTERFAZ = {
 
   /**
    * ------------------------------------------------------------------------
-   *  SONIDOS  (CLAUDE.md 13.1: "sonidos distintos para entrada, salida y error")
+   *  SONIDOS  (ARQUITECTURA.md 13.1: "sonidos distintos para entrada, salida y error")
    * ------------------------------------------------------------------------
    *
    * Los tres sonidos NO son archivos: se generan con el sintetizador que ya
@@ -464,8 +464,8 @@ export const INTERFAZ = {
 //  EL PROBLEMA QUE RESUELVE
 //  ------------------------
 //  El kiosco instalado va en pantalla completa y no se deja cerrar. Eso esta
-//  bien si la PC solo sirve para checar... pero nadie ha confirmado que sea
-//  asi (CLAUDE.md 14: pendiente). Si resulta ser una computadora que alguien
+//  bien si la PC solo sirve para checar... pero no siempre es
+//  asi. Si resulta ser una computadora que alguien
 //  mas usa —un maestro que necesita buscar algo, soporte revisando otra
 //  cosa— entonces una aplicacion que no se quita de en medio es un estorbo
 //  serio, y la primera reaccion de cualquiera seria desinstalarla.
@@ -525,7 +525,7 @@ export const PAUSA = {
    *
    * ESTO NO ES SEGURIDAD, Y CONVIENE DECIRLO CLARO.
    *
-   * El CLAUDE.md 3.2 es explicito: "todo lo empaquetado en el .exe se
+   * El ARQUITECTURA.md 3.2 es explicito: "todo lo empaquetado en el .exe se
    * considera publico". Este codigo viaja dentro del programa, asi que quien
    * quiera puede averiguarlo.
    *
@@ -552,10 +552,10 @@ export const PAUSA = {
 // ============================================================================
 //  4. CAMARA Y FOTOGRAFIA
 // ============================================================================
-//  CLAUDE.md 5: la camara NUNCA bloquea el registro.
+//  ARQUITECTURA.md 5: la camara NUNCA bloquea el registro.
 export const CAMARA = {
   /**
-   * Lado mayor de la foto guardada, en pixeles. CLAUDE.md 4: "640x480".
+   * Lado mayor de la foto guardada, en pixeles. ARQUITECTURA.md 4: "640x480".
    *
    * Estuvo en 480 por una version anterior de la especificacion. Se subio a
    * 640 el 23-09-2026, al agregar el zoom del modo administrador: con 480, al
@@ -570,7 +570,7 @@ export const CAMARA = {
   /** Calidad JPEG de 0 a 1. 0.7 da fotos de 60-80 KB a 640 px, suficientes para reconocer a alguien. */
   calidadJpeg: 0.7,
 
-  /** Cada cuanto se revisa si la camara sigue viva (CLAUDE.md 5). */
+  /** Cada cuanto se revisa si la camara sigue viva (ARQUITECTURA.md 5). */
   intervaloVerificacionMs: 5000,
 
   /**
@@ -601,12 +601,12 @@ export const CAMARA = {
 // ============================================================================
 //  5. RELOJ Y ANTI-MANIPULACION
 // ============================================================================
-//  CLAUDE.md 6. La idea: el empleado con acceso a la PC podria cambiar la hora
+//  ARQUITECTURA.md 6. La idea: el empleado con acceso a la PC podria cambiar la hora
 //  de Windows para "llegar temprano". No lo podemos impedir, pero SI lo podemos
 //  detectar y dejar constancia. Las banderas nunca bloquean el registro.
 export const RELOJ = {
   /**
-   * Zona horaria oficial del sistema (CLAUDE.md 6: confirmado America/Matamoros).
+   * Zona horaria oficial del sistema (ARQUITECTURA.md 6: confirmado America/Matamoros).
    * Este es solo el valor por defecto; el real vive en la tabla `configuracion`.
    * PROHIBIDO usar America/Mexico_City u offsets fijos como "-06:00".
    */
@@ -635,10 +635,10 @@ export const RELOJ = {
 // ============================================================================
 //  6. SINCRONIZACION CON LA NUBE
 // ============================================================================
-//  CLAUDE.md 7. La red NUNCA bloquea la interfaz: todo esto corre por detras.
+//  ARQUITECTURA.md 7. La red NUNCA bloquea la interfaz: todo esto corre por detras.
 export const SINCRONIZACION = {
   /**
-   * EL INTERRUPTOR GENERAL (CLAUDE.md 7). Con `false` el kiosco funciona 100%
+   * EL INTERRUPTOR GENERAL (ARQUITECTURA.md 7). Con `false` el kiosco funciona 100%
    * local y no intenta hablar con nadie: ni se enrola, ni sube, ni baja. Es
    * lo que permite entregar el sistema aunque el cliente decida al final que
    * no quiere nube.
@@ -647,7 +647,7 @@ export const SINCRONIZACION = {
 
   /**
    * ¿Se suben las fotos? NO: la foto nunca sale del kiosco; a la nube va solo
-   * su hash (CLAUDE.md 5.1). El interruptor existe para que, si algun dia el
+   * su hash (ARQUITECTURA.md 5.1). El interruptor existe para que, si algun dia el
    * cliente cambia de opinion, quede claro donde se decide. Hoy nada lo lee
    * para subir: encenderlo requeriria construir esa parte.
    */
@@ -656,7 +656,7 @@ export const SINCRONIZACION = {
   /**
    * Donde viven las Edge Functions. En desarrollo, el Supabase local
    * (`npx supabase start`). En el kiosco instalado, el proyecto de
-   * PRODUCCION: se llena al crear la cuenta (CLAUDE.md 13.3). Mientras este
+   * PRODUCCION: se llena al crear la cuenta (ARQUITECTURA.md 13.3). Mientras este
    * vacio, el kiosco instalado se comporta como si `activa` fuera `false`.
    *
    * AQUI VA LA "Project URL" DEL PROYECTO DE PRODUCCION, tal como se copia
@@ -790,13 +790,13 @@ export const ALMACENAMIENTO = {
 
   /**
    * El "gafete" del kiosco ante la nube: su token, cifrado con DPAPI de
-   * Windows (CLAUDE.md 3.3). Copiado a otra PC no se puede descifrar.
+   * Windows (ARQUITECTURA.md 3.3). Copiado a otra PC no se puede descifrar.
    */
   archivoCredencial: 'credencial-kiosco.json',
 } as const;
 
 // ============================================================================
-//  8.b  FOTOS: CIFRADO Y RETENCION  (CLAUDE.md 5.1)
+//  8.b  FOTOS: CIFRADO Y RETENCION  (ARQUITECTURA.md 5.1)
 // ============================================================================
 //  LA FOTO NUNCA SALE DEL KIOSCO. Vive cifrada en disco y a la nube solo va
 //  su hash. Aqui estan los valores ESTRUCTURALES (los que decide el
@@ -813,7 +813,7 @@ export const FOTOS = {
   archivoLlave: 'llave-fotos.json',
 
   /**
-   * Dias que se conserva una foto antes de borrarse (CLAUDE.md 5.1).
+   * Dias que se conserva una foto antes de borrarse (ARQUITECTURA.md 5.1).
    *
    * RESPALDO: el valor real es `dias_retencion_fotos` de la tabla
    * `configuracion`, que baja con la sincronizacion. Este solo se usa mientras
@@ -875,7 +875,7 @@ export const JORNADA = {
 } as const;
 
 // ============================================================================
-//  8.c  MODO ADMINISTRADOR EN EL KIOSCO  (CLAUDE.md 5.2)
+//  8.c  MODO ADMINISTRADOR EN EL KIOSCO  (ARQUITECTURA.md 5.2)
 // ============================================================================
 //  La unica forma de ver las fotos. Se entra con el boton del ENGRANE de la
 //  barra de abajo, y usuario y contrasena de administrador del sistema (no de
@@ -886,7 +886,7 @@ export const JORNADA = {
 //  computadora, y una combinacion de cuatro teclas se olvida. Lo que protege
 //  no es que la puerta este escondida: es la contrasena (ver D-029).
 export const MODO_ADMIN = {
-  /** Se cierra solo tras estos minutos sin actividad (CLAUDE.md 5.2: 2 minutos). */
+  /** Se cierra solo tras estos minutos sin actividad (ARQUITECTURA.md 5.2: 2 minutos). */
   minutosDeInactividad: 2,
 
   /** Cuantos registros rechazados por la oficina se listan (los mas recientes). */
@@ -955,7 +955,7 @@ export const MODO_ADMIN = {
 } as const;
 
 // ============================================================================
-//  8.d  EXPORTACION A MEMORIA USB  (CLAUDE.md 5.2)
+//  8.d  EXPORTACION A MEMORIA USB  (ARQUITECTURA.md 5.2)
 // ============================================================================
 //  Un ZIP con las fotos DESCIFRADAS y con marca de agua, mas un CSV de los
 //  registros. Es el unico camino por el que una foto sale del kiosco, y por
@@ -966,7 +966,7 @@ export const EXPORTACION = {
    * graba, y no solo se muestra encima: en la memoria los archivos viajan
    * sueltos, sin la pantalla de auditoria que diga de quien es cada uno.
    *
-   * La lista es la del CLAUDE.md 5.1: fecha, hora, numero de empleado, tipo y
+   * La lista es la del ARQUITECTURA.md 5.1: fecha, hora, numero de empleado, tipo y
    * nombre del kiosco. El nombre del empleado NO va por defecto (minimizacion
    * de datos): el numero basta para cruzar con el CSV. Si el empleado no
    * tiene numero, se graba su usuario ("dgomez") para que la foto no quede
@@ -1052,7 +1052,7 @@ export const EXPORTACION = {
 //  LAS VERSIONES VIVEN EN REPOSITORIOS PUBLICOS APARTE, solo con instaladores
 //  (sin codigo). Publicos porque el kiosco no puede llevar una contrasena
 //  para bajar de uno privado: todo lo que va dentro del .exe es publico
-//  (CLAUDE.md 3.2). El instalador no tiene nada secreto.
+//  (ARQUITECTURA.md 3.2). El instalador no tiene nada secreto.
 //
 //  Uno por ambiente (ver AMBIENTE arriba), para que un kiosco de pruebas
 //  jamas baje una version de produccion ni al reves.
@@ -1060,7 +1060,7 @@ export const ACTUALIZACIONES = {
   /** Apagarlas del todo (por ejemplo, si algo sale mal con una version). */
   activas: true,
 
-  /** La cuenta de GitHub del sistema (CLAUDE.md 1.1), duena de los repositorios. */
+  /** La cuenta de GitHub del sistema (ARQUITECTURA.md 1.1), duena de los repositorios. */
   propietario: 'cuenta-del-sistema',
 
   /** Donde publica cada ambiente. Los crea el responsable: ver manual tecnico. */
@@ -1107,7 +1107,7 @@ export const ACTUALIZACIONES = {
 //  Para leerlo a distancia: en el modo administrador, "Guardar diagnostico"
 //  lo copia a una memoria USB y se manda por correo o WhatsApp.
 //
-//  NUNCA lleva PINes, tokens ni fotos (CLAUDE.md 16): el codigo no los manda
+//  NUNCA lleva PINes, tokens ni fotos (ARQUITECTURA.md 14): el codigo no los manda
 //  a la consola, y por si acaso cada renglon se limpia antes de escribirse.
 export const DIAGNOSTICO = {
   /** Encenderlo o apagarlo. Apagado, todo sigue igual que antes (solo consola). */

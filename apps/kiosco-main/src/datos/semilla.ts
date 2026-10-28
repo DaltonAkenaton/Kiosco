@@ -33,7 +33,7 @@ import { leerCredencial } from '../servicios/credencial-kiosco';
  * Personal de prueba.
  *
  * Son veinte, como los ~20 empleados reales que confirmo el cliente
- * (CLAUDE.md 1.1). Con menos, la pantalla de la lista no se parece a la de
+ * (ARQUITECTURA.md 1.1). Con menos, la pantalla de la lista no se parece a la de
  * verdad: con 5 cabe todo con un digito; con 20 hacen falta dos (D-026).
  *
  * Los nombres traen acentos y apellidos compuestos a proposito: asi se
@@ -132,7 +132,7 @@ export function sembrarEmpleadosDePrueba(): void {
 
   /**
    * EXCEPCION CONSCIENTE a la regla "nunca registrar PINs en logs"
-   * (CLAUDE.md seccion 16).
+   * (ARQUITECTURA.md seccion 14).
    *
    * Esa regla existe para proteger el PIN de PERSONAS REALES. Estos
    * empleados son inventados, viven solo en tu maquina de desarrollo, y sus
@@ -156,7 +156,7 @@ export function sembrarEmpleadosDePrueba(): void {
  * ============================================================================
  *
  *  En el kiosco real, las credenciales de administrador bajan de la nube con
- *  la sincronizacion (CLAUDE.md 5.2), igual que los PINes. Mientras no exista
+ *  la sincronizacion (ARQUITECTURA.md 5.2), igual que los PINes. Mientras no exista
  *  la sincronizacion (bloques 5 y 6), esta es la unica forma de entrar al modo
  *  administrador para probarlo.
  *

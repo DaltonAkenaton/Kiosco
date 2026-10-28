@@ -2,7 +2,7 @@
 --  0012 · MODO ADMINISTRADOR DEL KIOSCO  (bloque 3.b)
 -- ============================================================================
 --
---  El kiosco ya tiene modo administrador (CLAUDE.md 5.2), y deja rastro de dos
+--  El kiosco ya tiene modo administrador (ARQUITECTURA.md 5.2), y deja rastro de dos
 --  cosas que la nube todavia no sabia recibir:
 --
 --  1. "Conservar" una foto (y quitarselo). Es una decision sobre la evidencia
@@ -15,7 +15,7 @@
 --     por muchos fallos seguidos. Van a `eventos_dispositivo`: describen la
 --     maquina, no a un empleado. Nunca el usuario tecleado ni la contrasena.
 --
---  Como en la 0011: una migracion aplicada no se edita (CLAUDE.md 16), se
+--  Como en la 0011: una migracion aplicada no se edita (ARQUITECTURA.md 14), se
 --  reemplazan las restricciones aqui.
 
 alter table accesos_foto drop constraint accesos_foto_accion_check;

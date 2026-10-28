@@ -4,7 +4,7 @@
  * ============================================================================
  *
  *  Este archivo implementa, una por una, las reglas OBLIGATORIAS de la
- *  seccion 3.1 del CLAUDE.md. Cada bloque dice que ataque evita.
+ *  seccion 3.1 del ARQUITECTURA.md. Cada bloque dice que ataque evita.
  *
  *  El modelo mental correcto para un kiosco:
  *  "Doy por hecho que alguien va a tener el teclado, el mouse y todo el tiempo
@@ -98,7 +98,7 @@ export function aplicarPoliticasDeSesion(sesion: Session = session.defaultSessio
   });
 
   // --- 2. Permisos del navegador ------------------------------------------
-  // CLAUDE.md 3.1: "permitir solo `media` (camara) y denegar todo lo demas".
+  // ARQUITECTURA.md 3.1: "permitir solo `media` (camara) y denegar todo lo demas".
   // Sin esto, la pagina podria pedir ubicacion, notificaciones, portapapeles,
   // reproduccion automatica... y Electron se los concederia sin preguntar.
   const PERMISOS_AUTORIZADOS = new Set(['media']);
@@ -158,7 +158,7 @@ export function blindarVentana(ventana: BrowserWindow): void {
   });
 
   // --- 7. DevTools solo en desarrollo -------------------------------------
-  // CLAUDE.md 3.1: "Menu y DevTools deshabilitados en produccion".
+  // ARQUITECTURA.md 3.1: "Menu y DevTools deshabilitados en produccion".
   // Con DevTools abiertas cualquiera puede leer el hash del PIN de un
   // empleado o falsificar mensajes IPC desde la consola.
   if (!ES_DESARROLLO) {
@@ -177,7 +177,7 @@ export function blindarVentana(ventana: BrowserWindow): void {
   //
   // Va sin filtro solo en desarrollo. En produccion nos quedamos con los
   // avisos y errores, nunca con mensajes informativos, porque estos podrian
-  // contener datos de empleados (CLAUDE.md 16: nunca registrar PINs ni fotos).
+  // contener datos de empleados (ARQUITECTURA.md 14: nunca registrar PINs ni fotos).
   contenido.on('console-message', (detalles) => {
     const esImportante = detalles.level === 'warning' || detalles.level === 'error';
     if (!ES_DESARROLLO && !esImportante) return;

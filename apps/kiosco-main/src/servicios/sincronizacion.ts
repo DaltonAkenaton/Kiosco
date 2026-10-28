@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- *  SINCRONIZACION CON LA NUBE  (CLAUDE.md 7, bloque 6)
+ *  SINCRONIZACION CON LA NUBE  (ARQUITECTURA.md 7, bloque 6)
  * ============================================================================
  *
  *  El kiosco trabaja SIEMPRE contra su base local: registrar nunca espera a
@@ -22,7 +22,7 @@
  *    hasta 5 min): no se machaca a un servidor caido.
  *  - Nada se borra de la bandeja. Lo enviado se marca como enviado; lo que la
  *    nube rechaza para siempre se marca como rechazado, con su motivo.
- *  - Todo se puede apagar con SINCRONIZACION.activa (CLAUDE.md 7).
+ *  - Todo se puede apagar con SINCRONIZACION.activa (ARQUITECTURA.md 7).
  *
  *  ---------------------------------------------------------------------------
  *  El reloj
@@ -30,7 +30,7 @@
  *  Cada respuesta trae `servidorAhoraMs`. Comparandolo con el momento en que
  *  salio y llego la peticion, se sabe cuanto se aparta el reloj de Windows
  *  del del servidor. Ese desfase corrige la hora de las marcas siguientes
- *  (CLAUDE.md 6) y se recuerda entre arranques.
+ *  (ARQUITECTURA.md 6) y se recuerda entre arranques.
  */
 
 import { app } from 'electron';
@@ -110,7 +110,7 @@ let ultimaMedicionMs = 0;
 function registrarDesfase(desfase: number): void {
   // ¿Se movio el reloj desde la ultima vez que se hablo con la nube? Si el
   // salto es grande, lo registrado sin internet en ese rato tiene una hora
-  // en la que no se puede confiar (CLAUDE.md 6).
+  // en la que no se puede confiar (ARQUITECTURA.md 6).
   if (desfaseConocidoMs !== null && Math.abs(desfase - desfaseConocidoMs) > CONFIG.reloj.cambioDesfaseSignificativoMs) {
     const marcadas = marcarPendientesConRelojSospechoso();
     console.warn(
@@ -386,7 +386,7 @@ let ultimaBajadaOkMs = 0;
  *     OTRO kiosco hace un minuto, y hay que sugerir bien ENTRADA o SALIDA;
  *   - con un PIN incorrecto: el jefe pudo cambiarlo hace un minuto. Sin
  *     esto, quien recibe su PIN temporal falla, reintenta y queda bloqueado
- *     (CLAUDE.md 1: la regla de oro).
+ *     (ARQUITECTURA.md 1: la regla de oro).
  *
  * Devuelve `true` si lo que hay en el kiosco esta al dia (recien bajado, o
  * bajado hace menos de `segundosEntreConsultasRapidas`). Nunca lanza, y sin

@@ -198,7 +198,7 @@ export function guardarEmpleado(empleado: EmpleadoEnCache): void {
  *
  * Con esto el kiosco SUGIERE la accion: si la ultima fue entrada, lo
  * siguiente probablemente es salida. Es solo una sugerencia — el empleado
- * siempre puede cambiarla con un boton (CLAUDE.md 4.4).
+ * siempre puede cambiarla con un boton (ARQUITECTURA.md 4.4).
  */
 export function ultimaMarcaDe(
   empleadoId: string,

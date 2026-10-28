@@ -26,7 +26,7 @@ create table administradores (
   nombre      text not null,
 
   /*
-    ROLES.  CLAUDE.md 14 los marca como [PENDIENTE] con el cliente, asi que se
+    ROLES.  Se
     asume lo minimo que hace falta para empezar y queda facil de ampliar:
 
       'admin'       puede todo: cambiar configuracion, dar de alta empleados,
@@ -200,7 +200,7 @@ create policy configuracion_leer on configuracion
   using (es_administrador());
 
 -- Cambiarla, solo el rol admin. Es la pantalla que altera como se comporta
--- todo el sistema (CLAUDE.md 10).
+-- todo el sistema (ARQUITECTURA.md 10).
 create policy configuracion_actualizar on configuracion
   for update to authenticated
   using (puede_administrar())

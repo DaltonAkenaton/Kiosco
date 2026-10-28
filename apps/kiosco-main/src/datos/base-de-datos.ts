@@ -8,7 +8,7 @@
  *  ---------------------------------------------------------------------------
  *  ¿Por que `node:sqlite` y no `better-sqlite3`?
  *  ---------------------------------------------------------------------------
- *  El CLAUDE.md pedia `better-sqlite3`. Se intento y NO se pudo, por una razon
+ *  El ARQUITECTURA.md pedia `better-sqlite3`. Se intento y NO se pudo, por una razon
  *  concreta que vale la pena conocer:
  *
  *  `better-sqlite3` es un modulo NATIVO: parte de su codigo esta escrito en
@@ -25,7 +25,7 @@
  *  fuente en C++... lo que exige instalar Visual Studio Build Tools en cada
  *  maquina donde se toque el proyecto.
  *
- *  Y ahi choca con la restriccion central del CLAUDE.md seccion 1:
+ *  Y ahi choca con la restriccion central del ARQUITECTURA.md seccion 1:
  *  "el sistema debe poder mantenerse con documentacion, sin su autor
  *  presente", en una facultad que "no tiene departamento de TI".
  *
@@ -121,7 +121,7 @@ function configurarPragmas(conexion: DatabaseSync): void {
    *
    * Para nosotros importa por algo muy concreto: si se va la luz a media
    * escritura, WAL recupera la base al siguiente arranque en vez de dejarla
-   * corrupta. Y en esta facultad la luz se va (CLAUDE.md 11).
+   * corrupta. Y en esta facultad la luz se va (ARQUITECTURA.md 11).
    */
   conexion.exec('PRAGMA journal_mode = WAL');
 

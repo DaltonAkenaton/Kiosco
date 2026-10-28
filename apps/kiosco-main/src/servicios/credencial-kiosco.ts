@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- *  LA CREDENCIAL DEL KIOSCO  (CLAUDE.md 3.3)
+ *  LA CREDENCIAL DEL KIOSCO  (ARQUITECTURA.md 3.3)
  * ============================================================================
  *
  *  Cuando el kiosco se da de alta, la nube le entrega un token: 64 caracteres
@@ -20,7 +20,7 @@
  *  Si alguien copia el archivo a otra PC, Windows alla no lo puede descifrar.
  *  Eso es INTENCIONAL: un kiosco clonado no puede hacerse pasar por el
  *  original. La PC nueva se da de alta con su propio codigo, y la vieja se
- *  revoca en el panel (CLAUDE.md 11, "Cambio de PC").
+ *  revoca en el panel (ARQUITECTURA.md 11, "Cambio de PC").
  *
  *  El token NUNCA se escribe en claro, ni en disco ni en el log.
  */

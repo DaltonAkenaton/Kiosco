@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- *  INCIDENCIAS Y DIAS FESTIVOS  (CLAUDE.md 8 y 10, migracion 0020)
+ *  INCIDENCIAS Y DIAS FESTIVOS  (ARQUITECTURA.md 8 y 10, migracion 0020)
  * ============================================================================
  *
  *  Lo que evita que un dia "raro" cuente como falta o retardo:

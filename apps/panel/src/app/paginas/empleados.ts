@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- *  EMPLEADOS  (CLAUDE.md 10, 13.3)
+ *  EMPLEADOS  (ARQUITECTURA.md 10, 13.3)
  * ============================================================================
  *
  *  Alta, correccion de datos, PIN nuevo, baja y reactivacion; e importacion
@@ -10,7 +10,7 @@
  *  admin y un motivo, y queda en la bitacora. Un supervisor ve la lista pero
  *  no los botones.
  *
- *  DERECHOS ARCO (CLAUDE.md 12, migracion 0017): "Sus datos" descarga todo
+ *  DERECHOS ARCO (ARQUITECTURA.md 12, migracion 0017): "Sus datos" descarga todo
  *  lo que el sistema guarda de la persona, y "Suprimir sus datos" la vuelve
  *  anonima sin borrar sus marcas (son registro laboral e inmutables).
  *

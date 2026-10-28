@@ -110,7 +110,7 @@ function estaAceptado(colorA, colorB) {
 }
 
 // El aviso que mas importa: ENTRADA y SALIDA tienen que ser inconfundibles.
-// El CLAUDE.md seccion 4 pide "la mayor distincion visual posible".
+// El ARQUITECTURA.md seccion 4 pide "la mayor distincion visual posible".
 if (distancia(colores.entrada, colores.salida) < DISTANCIA_MINIMA_SEGURA * 2) {
   avisos.push(
     `ENTRADA (${colores.entrada}) y SALIDA (${colores.salida}) se parecen demasiado. ` +

@@ -3,11 +3,11 @@
  *  ACTUALIZACIONES AUTOMATICAS
  * ============================================================================
  *
- *  CLAUDE.md 13: "Actualizaciones automaticas con electron-updater."
+ *  ARQUITECTURA.md 13: "Actualizaciones automaticas con electron-updater."
  *
  *  ¿POR QUE ESTO IMPORTA TANTO EN ESTE PROYECTO?
  *  --------------------------------------------
- *  Por la frase de la seccion 1 del CLAUDE.md: "la facultad no tiene
+ *  Por la frase de la seccion 1 del ARQUITECTURA.md: "la facultad no tiene
  *  departamento de TI". Si actualizar el kiosco exigiera que alguien vaya con
  *  una memoria USB a cada PC, en la practica NUNCA se va a actualizar. Y hay
  *  varios kioscos.

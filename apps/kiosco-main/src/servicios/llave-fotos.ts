@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- *  LA LLAVE DE LAS FOTOS  (CLAUDE.md 5.1, "Llave de cifrado y recuperacion")
+ *  LA LLAVE DE LAS FOTOS  (ARQUITECTURA.md 5.1, "Llave de cifrado y recuperacion")
  * ============================================================================
  *
  *  Todas las fotos del kiosco se cifran con UNA llave: 32 bytes al azar que
@@ -28,7 +28,7 @@
  *
  *    - Solo DPAPI: si se reinstala Windows o se recrea el perfil, las fotos
  *      quedan ilegibles PARA SIEMPRE. Y en esta facultad "las computadoras
- *      cambian con frecuencia" (CLAUDE.md 1).
+ *      cambian con frecuencia" (ARQUITECTURA.md 1).
  *    - Solo contrasena: la app tendria que pedirla en cada arranque, y un
  *      kiosco que se queda esperando una contrasena a las 6 AM es un kiosco
  *      donde nadie checa.
@@ -239,7 +239,7 @@ async function derivarLlave(
  *
  * La contrasena NO se guarda en ningun lado: solo la llave cifrada con ella.
  * Si se olvida y Windows ya no abre la llave, las fotos se pierden. Por eso
- * se entrega impresa con las demas credenciales (CLAUDE.md 1.1).
+ * se entrega impresa con las demas credenciales (ARQUITECTURA.md 1.1).
  */
 export async function definirContrasenaDeRecuperacion(
   contrasena: string,

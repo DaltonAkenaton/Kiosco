@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- *  EXPORTACION A MEMORIA USB  (CLAUDE.md 5.2, cierre del bloque 3.b)
+ *  EXPORTACION A MEMORIA USB  (ARQUITECTURA.md 5.2, cierre del bloque 3.b)
  * ============================================================================
  *
  *  El UNICO camino por el que una foto sale del kiosco. Arma un ZIP con:
@@ -17,7 +17,7 @@
  *    1. Se anota en la bitacora `accesos_foto` cada foto que va a salir.
  *    2. DESPUES se escriben.
  *  Si anotar falla, no sale nada. Una foto que sale sin rastro es justo lo
- *  que la bitacora existe para impedir (CLAUDE.md 12). Si la escritura falla
+ *  que la bitacora existe para impedir (ARQUITECTURA.md 12). Si la escritura falla
  *  a la mitad, la bitacora dira que se exporto algo que no llego a la
  *  memoria: sobra una anotacion, pero nunca falta una.
  *
@@ -26,7 +26,7 @@
  *  ---------------------------------------------------------------------------
  *  Fecha, hora, tipo y el UUID de la marca: se ordenan solos por fecha y el
  *  UUID los liga al CSV. El numero y el nombre del empleado NO van en el
- *  nombre del archivo (mismo criterio que en el kiosco, CLAUDE.md 5.1): van
+ *  nombre del archivo (mismo criterio que en el kiosco, ARQUITECTURA.md 5.1): van
  *  grabados en la foto y en el CSV.
  *
  *  ---------------------------------------------------------------------------
@@ -78,7 +78,7 @@ type EstadoEnCsv =
   | 'no se pudo marcar';
 
 // ----------------------------------------------------------------------------
-//  Fechas en la zona configurada (nunca la de Windows, CLAUDE.md 6)
+//  Fechas en la zona configurada (nunca la de Windows, ARQUITECTURA.md 6)
 // ----------------------------------------------------------------------------
 
 interface PartesDeFecha {

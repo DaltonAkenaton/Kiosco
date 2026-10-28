@@ -86,7 +86,7 @@ export const RUTA_INTERFAZ_COMPILADA = path.join(__dirname, 'interfaz', 'index.h
  * Aqui van la base de datos SQLite y las fotos pendientes de subir.
  *
  * ¿Por que ahi y no junto al .exe? Porque en el kiosco la app corre con una
- * cuenta de Windows SIN privilegios (CLAUDE.md 13), y esa cuenta no puede
+ * cuenta de Windows SIN privilegios (ARQUITECTURA.md 13), y esa cuenta no puede
  * escribir dentro de "Archivos de programa". AppData siempre es escribible.
  *
  * Es una funcion y no una constante porque `app.getPath` solo se puede

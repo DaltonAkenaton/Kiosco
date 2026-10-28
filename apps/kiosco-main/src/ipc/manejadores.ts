@@ -192,7 +192,7 @@ function configuracionParaInterfaz(): ConfiguracionParaInterfaz {
  * Convierte una hora en milisegundos al texto "06:02" en la zona configurada.
  *
  * Se usa SOLO para mostrar. Lo que se guarda siempre son los milisegundos en
- * UTC (CLAUDE.md 6: "todo se guarda en UTC; conversion a hora local solo al
+ * UTC (ARQUITECTURA.md 6: "todo se guarda en UTC; conversion a hora local solo al
  * mostrar"). Guardar texto ya formateado seria un error: al cambiar de zona
  * horaria, el historico quedaria mintiendo.
  */
@@ -224,7 +224,7 @@ function fechaYHoraLocalDe(milisegundos: number): string {
  */
 /**
  * "Dalton G.": lo unico que se muestra en la pantalla del kiosco, en la
- * lista y tambien al confirmar (CLAUDE.md 3.4: nombre e inicial, nunca el
+ * lista y tambien al confirmar (ARQUITECTURA.md 3.4: nombre e inicial, nunca el
  * nombre completo). Antes la confirmacion decia "Hola, Dalton Akenaton Gomez
  * Arellano": a la vista de la fila entera, y partido en dos renglones.
  */
@@ -295,7 +295,7 @@ export function registrarManejadoresIpc(): void {
 
       if (!validacion.success) {
         // OJO: no metemos `datosCrudos` en el log. Ahi va el PIN.
-        // CLAUDE.md 16: "Nunca registrar PINs, tokens ni fotos en logs".
+        // ARQUITECTURA.md 14: "Nunca registrar PINs, tokens ni fotos en logs".
         console.warn('[ipc] identificar: datos invalidos');
         return {
           ok: false,
@@ -364,7 +364,7 @@ export function registrarManejadoresIpc(): void {
 
         // --- 3. LEER EL RELOJ AHORA ---------------------------------------
         //
-        // CLAUDE.md 4.3: "Al validar, EN ESE INSTANTE: se captura timestamp,
+        // ARQUITECTURA.md 4.3: "Al validar, EN ESE INSTANTE: se captura timestamp,
         // lecturas de reloj y foto."
         //
         // Esta linea es el "instante" del que habla esa regla. A partir de
@@ -624,7 +624,7 @@ export function registrarManejadoresIpc(): void {
   //  "Numero o PIN incorrecto" (sin decir cual, para no delatar que numeros
   //  existen). En la practica, quien teclea mal su numero cree que su PIN
   //  esta mal y lo intenta una y otra vez, con fila detras: el cuello de
-  //  botella que el sistema no debe crear (CLAUDE.md 1). Con ~20 personas
+  //  botella que el sistema no debe crear (ARQUITECTURA.md 1). Con ~20 personas
   //  que se conocen, los numeros no son secreto; lo que protege es el PIN,
   //  con su bloqueo y su retardo, y eso no cambia. Por eso aqui no se
   //  simula la espera: se responde al momento.
@@ -767,14 +767,14 @@ export function registrarManejadoresIpc(): void {
   //  obtenerRegistros: la pantalla de consulta
   // ---------------------------------------------------------------------
   //  Primera version de la pantalla de auditoria del modo administrador
-  //  (CLAUDE.md 5.2). Hoy sirve para ver que los datos se guardan de verdad.
+  //  (ARQUITECTURA.md 5.2). Hoy sirve para ver que los datos se guardan de verdad.
   //
   //  El limite NO lo manda la pantalla: sale de la configuracion. Si lo
   //  eligiera quien llama, un `obtenerRegistros(1000000)` traeria la base
   //  entera a memoria. La pantalla pide "los registros"; cuantos, lo decide
   //  este lado.
   // ---------------------------------------------------------------------
-  //  enrolarKiosco: el codigo de 8 caracteres del panel (CLAUDE.md 3.3)
+  //  enrolarKiosco: el codigo de 8 caracteres del panel (ARQUITECTURA.md 3.3)
   // ---------------------------------------------------------------------
   //  Sin sesion de administrador, a proposito: un kiosco recien instalado
   //  todavia no tiene administradores (bajan del catalogo, DESPUES de darlo
@@ -840,7 +840,7 @@ export function registrarManejadoresIpc(): void {
       );
 
       // Queda constancia para el panel, que asi puede alertar de una camara
-      // caida (CLAUDE.md 5) y, sobre todo, explicar por que las marcas de esa
+      // caida (ARQUITECTURA.md 5) y, sobre todo, explicar por que las marcas de esa
       // manana salieron sin foto.
       //
       // `detalle` es el mensaje del navegador ("permiso denegado", "en uso por

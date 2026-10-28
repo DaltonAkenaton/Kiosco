@@ -3,7 +3,7 @@
  *  SERVICIO DE SONIDOS
  * ============================================================================
  *
- *  CLAUDE.md 13.1: "Retroalimentacion con sonidos distintos para entrada,
+ *  ARQUITECTURA.md 13.1: "Retroalimentacion con sonidos distintos para entrada,
  *  salida y error."
  *
  *  ¿POR QUE UN KIOSCO NECESITA SONIDO?

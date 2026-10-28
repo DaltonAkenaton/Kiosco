@@ -46,7 +46,7 @@ create table eventos_dispositivo (
     y una migracion cada vez que aparezca un tipo de evento nuevo.
 
     ⚠ LO PROHIBIDO AQUI: nombres, PINes, rutas de fotos. Un evento describe la
-    MAQUINA, no a las personas (CLAUDE.md 16). La prueba automatizada del
+    MAQUINA, no a las personas (ARQUITECTURA.md 14). La prueba automatizada del
     kiosco lo verifica.
   */
   detalle jsonb not null default '{}'::jsonb,

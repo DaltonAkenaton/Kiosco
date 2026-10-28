@@ -1,11 +1,11 @@
 -- ============================================================================
---  0016 · JORNADAS, RETARDOS, FALTAS Y REPORTES  (bloque 9, CLAUDE.md 8)
+--  0016 · JORNADAS, RETARDOS, FALTAS Y REPORTES  (bloque 9, ARQUITECTURA.md 8)
 -- ============================================================================
 --
 --  "El kiosco no sabe que es un retardo ni le hace falta. Solo registra
 --  marcas. Retardos, faltas y horas se calculan en el servidor con la
 --  configuracion vigente, asi que cambiar la tolerancia recalcula tambien el
---  historico sin tocar ni una marca." (CLAUDE.md 8)
+--  historico sin tocar ni una marca." (ARQUITECTURA.md 8)
 --
 --  Por eso aqui NO hay tablas de resultados: todo son FUNCIONES que calculan
 --  al momento de preguntar.
@@ -49,7 +49,7 @@ alter table turnos
 update turnos set tolerancia_minutos = null, minutos_para_falta = null;
 
 /*
-  HORARIO POR PERSONA Y POR DIA (confirmado por el cliente, CLAUDE.md 8).
+  HORARIO POR PERSONA Y POR DIA (confirmado por el cliente, ARQUITECTURA.md 8).
 
   Cada dia de una asignacion puede tener su propia hora de entrada y salida
   ("los sabados entra a las 7"). Vacio = la del turno.
@@ -91,7 +91,7 @@ $$;
 --  - una marca ANULADA no cuenta (pero sigue en la tabla: es inmutable);
 --  - una con CAMBIO DE TIPO cuenta con el tipo corregido;
 --  - una correccion "agregar" cuenta como una marca mas.
---  La marca original nunca se toca (CLAUDE.md 8).
+--  La marca original nunca se toca (ARQUITECTURA.md 8).
 
 create or replace function marcas_validas(p_desde timestamptz, p_hasta timestamptz)
 returns table (
@@ -128,7 +128,7 @@ $$;
 --  3. JORNADAS: emparejar entradas con salidas
 -- ============================================================================
 --  En el servidor y no en el kiosco, porque alguien puede entrar por un
---  kiosco y salir por otro (CLAUDE.md 8).
+--  kiosco y salir por otro (ARQUITECTURA.md 8).
 --
 --  Reglas, en orden:
 --    1. TOQUES REPETIDOS: de varias entradas seguidas cuenta la primera (la

@@ -29,7 +29,7 @@
  *    1. NUNCA rompe el kiosco. Si el disco esta lleno o la carpeta no se
  *       puede crear, se deja de anotar en silencio y ya. Por eso todo va en
  *       try/catch: un diario que tumba el barco es peor que no tener diario.
- *    2. NUNCA lleva PINes, tokens ni fotos (CLAUDE.md 16). El codigo ya no
+ *    2. NUNCA lleva PINes, tokens ni fotos (ARQUITECTURA.md 14). El codigo ya no
  *       los manda a la consola, pero por si algun dia alguien se equivoca,
  *       cada renglon pasa por `limpiar()` antes de escribirse.
  *    3. NO CRECE SIN LIMITE. Un archivo por dia, con tope de tamaño, y los de
@@ -76,7 +76,7 @@ export function limpiar(texto: string): string {
   return limpio.length > D.maxCaracteresPorRenglon ? `${limpio.slice(0, D.maxCaracteresPorRenglon)}… [cortado]` : limpio;
 }
 
-/** "2026-10-06" y "10:20:31", en la hora de Nuevo Laredo (CLAUDE.md 6), no la de Windows. */
+/** "2026-10-06" y "10:20:31", en la hora de Nuevo Laredo (ARQUITECTURA.md 6), no la de Windows. */
 function fechaYHora(ahora: Date): { dia: string; hora: string } {
   if (Date.now() - zonaLeidaEnMs > MS_ENTRE_LECTURAS_DE_ZONA) {
     zonaLeidaEnMs = Date.now();

@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
   <!--
     Icono del kiosco (29-09-2026): un reloj con una palomita de "registrado".
-    Provisional hasta tener el escudo oficial de la UAT (CLAUDE.md 14).
+    Provisional hasta tener el escudo oficial de la UAT.
     Colores de tema.json: azul institucional, naranja institucional, verde
     de ENTRADA. Para regenerar el .ico: node generar-icono.cjs (con electron).
   -->

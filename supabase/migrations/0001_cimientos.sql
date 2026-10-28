@@ -13,7 +13,7 @@
 --     guarda siempre en UTC. La conversion a hora local ocurre SOLO al mostrar
 --     o al calcular a que dia pertenece algo. Guardar hora local seria un error
 --     que no se nota hasta el cambio de horario de verano, y entonces ya hay
---     meses de datos mal guardados (CLAUDE.md 6).
+--     meses de datos mal guardados (ARQUITECTURA.md 6).
 --
 --  2. LA ZONA NUNCA SE ESCRIBE A MANO.  Vive en la tabla `configuracion`. Esta
 --     PROHIBIDO escribir 'America/Mexico_City' o un desfase fijo como '-06:00'
@@ -30,7 +30,7 @@
 --  ---------------------------------------------------------------------------
 --
 --      KIOSCO      nunca, directamente. Solo llama Edge Functions, que usan
---                  `service_role` (CLAUDE.md 3.2). La llave `service_role`
+--                  `service_role` (ARQUITECTURA.md 3.2). La llave `service_role`
 --                  JAMAS viaja dentro del .exe.
 --
 --      PANEL       con Supabase Auth, como rol `authenticated`. Lo que puede
@@ -44,7 +44,7 @@
 -- `pgcrypto` da `crypt()` y `gen_salt()`, que generan hashes bcrypt
 -- compatibles con los que hace `bcryptjs` en el kiosco. Esa compatibilidad es
 -- lo que permite que un PIN creado desde el panel se pueda verificar sin
--- internet en el kiosco (CLAUDE.md 3.4).
+-- internet en el kiosco (ARQUITECTURA.md 3.4).
 create extension if not exists pgcrypto with schema extensions;
 
 -- ----------------------------------------------------------------------------
@@ -69,7 +69,7 @@ alter default privileges in schema public revoke all on sequences from anon;
 --
 --  La tabla que hace que el sistema se adapte sin reinstalar nada.
 --
---  CLAUDE.md 1.3: "Cualquier regla de negocio que el cliente pueda querer
+--  ARQUITECTURA.md 1.3: "Cualquier regla de negocio que el cliente pueda querer
 --  cambiar se ajusta desde el panel administrativo, sin recompilar ni
 --  reinstalar nada."
 --
@@ -104,7 +104,7 @@ alter table configuracion enable row level security;
 -- ----------------------------------------------------------------------------
 --  Valores iniciales
 -- ----------------------------------------------------------------------------
---  Son los supuestos de CLAUDE.md 1.2.
+--  Son los supuestos de ARQUITECTURA.md 1.2.
 --  NO son invenciones: son decisiones tomadas por el equipo, escritas donde el
 --  cliente pueda cambiarlas al ver el sistema funcionando.
 insert into configuracion (clave, valor, descripcion, grupo) values
@@ -252,7 +252,7 @@ comment on function fecha_laboral(timestamptz) is
 --  Trigger que mantiene al dia la columna `actualizado_en`.
 --
 --  ¿Por que no dejarlo a la aplicacion? Porque `actualizado_en` es la columna
---  de la que depende la sincronizacion incremental del kiosco (CLAUDE.md 7:
+--  de la que depende la sincronizacion incremental del kiosco (ARQUITECTURA.md 7:
 --  "sincronizacion incremental por actualizado_en"). Si una sola consulta se
 --  olvidara de actualizarla, ese registro dejaria de bajar a los kioscos y
 --  nadie lo notaria: el empleado con el PIN nuevo simplemente no podria entrar,

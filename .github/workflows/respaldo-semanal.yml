@@ -1,5 +1,5 @@
 # ============================================================================
-#  RESPALDO DE LA BASE DE DATOS (CLAUDE.md 13.3)  +  SUPABASE DESPIERTO (13)
+#  RESPALDO DE LA BASE DE DATOS (ARQUITECTURA.md 13.3)  +  SUPABASE DESPIERTO (13)
 # ============================================================================
 #
 #  Dos veces por semana, GitHub se conecta a la base del AMBIENTE (produccion,
@@ -10,7 +10,7 @@
 #
 #  Queda como "artifact" de esta corrida durante 90 dias: Actions -> la corrida
 #  -> "Artifacts" -> respaldo-N. Se descarga como ZIP. Para guardarlo "fuera
-#  de Supabase" como pide el CLAUDE.md, descarga el del lunes y subelo al
+#  de Supabase" como pide el ARQUITECTURA.md, descarga el del lunes y subelo al
 #  Drive de la facultad (manual tecnico, "Respaldos").
 #
 #  De paso, conectarse a la base cuenta como actividad: Supabase no pausa el
@@ -122,7 +122,7 @@ jobs:
           sql/     Para RESTAURAR la base completa en un proyecto de Supabase nuevo.
                    Paso a paso: manual tecnico, seccion 7.
 
-          Las FOTOS no estan aqui: nunca salen del kiosco (CLAUDE.md 5.1).
+          Las FOTOS no estan aqui: nunca salen del kiosco (ARQUITECTURA.md 5.1).
           Contiene datos personales: guardalo en un lugar con acceso restringido.
           FIN
           date -u +"Generado: %Y-%m-%d %H:%M UTC" >> respaldo/LEEME.txt

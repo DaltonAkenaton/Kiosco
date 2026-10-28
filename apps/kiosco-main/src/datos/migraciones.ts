@@ -33,7 +33,7 @@
  *  2. EL ORDEN NUNCA CAMBIA Y LOS NUMEROS NO SE REUTILIZAN.
  *     El numero es la identidad de la migracion.
  *
- *  Estas mismas reglas aplican a las migraciones de Supabase (CLAUDE.md 16).
+ *  Estas mismas reglas aplican a las migraciones de Supabase (ARQUITECTURA.md 14).
  */
 
 export interface Migracion {
@@ -84,7 +84,7 @@ export const MIGRACIONES: Migracion[] = [
       -- ====================================================================
       --  marcas
       -- ====================================================================
-      --  Los registros de entrada y salida. INMUTABLES (CLAUDE.md 8):
+      --  Los registros de entrada y salida. INMUTABLES (ARQUITECTURA.md 8):
       --  una vez escrita, una marca no se modifica ni se borra jamas.
       --  Las correcciones se guardan aparte, sin tocar el original.
       CREATE TABLE marcas (
@@ -96,7 +96,7 @@ export const MIGRACIONES: Migracion[] = [
         tipo                  TEXT NOT NULL CHECK (tipo IN ('entrada', 'salida')),
         origen                TEXT NOT NULL DEFAULT 'kiosco',
 
-        -- --- Lecturas de reloj (CLAUDE.md 6) ---
+        -- --- Lecturas de reloj (ARQUITECTURA.md 6) ---
         -- Se guardan varias mediciones distintas para poder detectar despues
         -- si alguien movio la hora de Windows.
         hora_dispositivo_ms   INTEGER NOT NULL,  -- Date.now() del momento
@@ -188,7 +188,7 @@ export const MIGRACIONES: Migracion[] = [
       -- ====================================================================
       --  El SHA-256 del JPEG. Es EVIDENCIA, igual que la hora: se escribe al
       --  crear la marca y no cambia nunca. Es lo unico de la foto que viaja a
-      --  la nube (CLAUDE.md 5.1).
+      --  la nube (ARQUITECTURA.md 5.1).
       --
       --  La vieja columna foto_ruta_local queda, pero ya no se escribe: la
       --  usan solo las marcas anteriores a esta version, hasta que
@@ -230,7 +230,7 @@ export const MIGRACIONES: Migracion[] = [
       --  administradores_cache
       -- ====================================================================
       --  Igual que los PINes: los hashes bajan en la sincronizacion para
-      --  poder validar SIN INTERNET (CLAUDE.md 5.2). Nunca la contrasena.
+      --  poder validar SIN INTERNET (ARQUITECTURA.md 5.2). Nunca la contrasena.
       CREATE TABLE administradores_cache (
         id               TEXT PRIMARY KEY,     -- el user_id de la nube
         usuario          TEXT NOT NULL UNIQUE,
@@ -246,7 +246,7 @@ export const MIGRACIONES: Migracion[] = [
       -- ====================================================================
       --  Espejo de la tabla de la nube (0010). Cada fila entra tambien a la
       --  bandeja de salida: el rastro no debe vivir solo en la maquina que
-      --  lo produce (CLAUDE.md 12). Nunca se borra ni se edita.
+      --  lo produce (ARQUITECTURA.md 12). Nunca se borra ni se edita.
       CREATE TABLE accesos_foto (
         id             TEXT PRIMARY KEY,
         marca_id       TEXT NOT NULL,
@@ -273,7 +273,7 @@ export const MIGRACIONES: Migracion[] = [
       --  Esos renglones salen de la cola (ya no cuentan como "por enviar")
       --  pero NO se borran: quedan con la fecha y el motivo en ultimo_error,
       --  para que alguien los revise. Borrarlos seria perder asistencia en
-      --  silencio (CLAUDE.md 3.3).
+      --  silencio (ARQUITECTURA.md 3.3).
       ALTER TABLE outbox ADD COLUMN rechazado_en TEXT;
     `,
   },
@@ -289,7 +289,7 @@ export const MIGRACIONES: Migracion[] = [
       --  renglon se queda, con fecha y motivo, y deja de mostrarse y de
       --  poder reenviarse. Ademas se avisa a la oficina (evento
       --  'registros_descartados'), para que el jefe sepa quien, cuando,
-      --  cuantos y por que. Nada se descarta en silencio (CLAUDE.md 3.3).
+      --  cuantos y por que. Nada se descarta en silencio (ARQUITECTURA.md 3.3).
       ALTER TABLE outbox ADD COLUMN descartado_en TEXT;
       ALTER TABLE outbox ADD COLUMN descartado_motivo TEXT;
     `,

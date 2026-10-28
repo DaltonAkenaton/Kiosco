@@ -12,7 +12,7 @@
  *      catalogo           empleados, admins, configuracion  ->  al kiosco
  *      latido             "sigo vivo": version, camara, pendientes
  *
- *  El kiosco NO usa Supabase Auth ni habla con las tablas (CLAUDE.md 3.2).
+ *  El kiosco NO usa Supabase Auth ni habla con las tablas (ARQUITECTURA.md 3.2).
  *  Presenta su token en el encabezado `x-kiosco-token`; aqui se saca su
  *  SHA-256 y se busca en `dispositivos`. Si cuadra, la funcion trabaja con
  *  service_role, la llave maestra que NUNCA sale del servidor.
@@ -50,7 +50,7 @@ export function tokenNuevo(): string {
 
 /**
  * Una respuesta JSON. Todas llevan `servidorAhoraMs`: con eso el kiosco
- * calcula cuanto se aparta su reloj del del servidor (CLAUDE.md 6), sin
+ * calcula cuanto se aparta su reloj del del servidor (ARQUITECTURA.md 6), sin
  * pedirlo aparte.
  */
 export function responder(estado: number, cuerpo: Record<string, unknown>): Response {

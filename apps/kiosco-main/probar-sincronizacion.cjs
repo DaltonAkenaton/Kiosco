@@ -218,7 +218,7 @@ app.whenReady().then(async () => {
       descarte && descarte.detalle.cantidad === 3 && descarte.detalle.motivo === 'prueba de punta a punta');
 
     // ======================================================================
-    console.log('\n--- el reloj se movio sin internet (CLAUDE.md 6) ---');
+    console.log('\n--- el reloj se movio sin internet (ARQUITECTURA.md 6) ---');
     // Se simula: la ultima vez que hablo con la nube, Windows iba 10 minutos
     // adelantado. Ahora va bien. Lo registrado mientras tanto es dudoso.
     bd.reiniciarSincronizacionParaPrueba();

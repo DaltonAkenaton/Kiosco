@@ -253,7 +253,7 @@ comprobar('dos turnos consecutivos (sin encimarse) SI se permiten', true);
 // ============================================================================
 //  4. LA COLUMNA GENERADA DEL TURNO NOCTURNO
 // ============================================================================
-//  El turno que cruza medianoche es obligatorio desde la v1 (CLAUDE.md 1.1).
+//  El turno que cruza medianoche es obligatorio desde la v1 (ARQUITECTURA.md 1.1).
 console.log('\n--- turno que cruza medianoche ---');
 
 const { rows: turnos } = await bd.query(

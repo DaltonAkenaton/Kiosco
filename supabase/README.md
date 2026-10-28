@@ -20,7 +20,7 @@ producción sean idénticas. Sin migraciones, "funciona en mi máquina" se
 convierte en "y en el servidor quién sabe", y averiguar la diferencia entre dos
 bases de datos a mano es un trabajo horrible.
 
-**Nunca se hacen cambios a mano en producción** (CLAUDE.md 16). Ni uno. El día
+**Nunca se hacen cambios a mano en producción** (ARQUITECTURA.md 14). Ni uno. El día
 que alguien agregue una columna desde el panel de Supabase, la siguiente
 migración fallará y nadie sabrá por qué.
 
@@ -65,7 +65,7 @@ La **`service_role` se salta todas las reglas de seguridad** y sólo puede vivir
 dentro de una Edge Function.
 
 Nunca en el `.exe` del kiosco. Nunca en el panel. Nunca en el repositorio
-(CLAUDE.md 3.2).
+(ARQUITECTURA.md 3.2).
 
 ### 2. RLS en todas las tablas, negando por defecto
 
@@ -80,7 +80,7 @@ como políticas.
 
 ### 3. Aquí no hay ni una sola fotografía
 
-El cliente pidió que las fotos se queden en el kiosco (CLAUDE.md 1.1). A la
+El cliente pidió que las fotos se queden en el kiosco (ARQUITECTURA.md 1.1). A la
 nube llega sólo el **hash SHA-256** y el **estado** de cada foto, que es lo que
 permite al panel decir "esta marca tiene foto, ve al kiosco de la entrada" o
 "esta foto debería estar y no está".
@@ -142,7 +142,7 @@ Supabase local queda en <http://localhost:54323>.
 
 ## Los dos proyectos: pruebas y producción
 
-CLAUDE.md 13.3 pide **dos proyectos de Supabase separados**, con variables de
+ARQUITECTURA.md 13.3 pide **dos proyectos de Supabase separados**, con variables de
 entorno distintas. Nunca se prueba contra producción.
 
 No es exageración: una prueba de sincronización manda marcas inventadas, y una
@@ -187,7 +187,7 @@ de la base (`generar_codigo_enrolamiento`, `revocar_dispositivo`) que el panel
 llama con su sesión. Ver D-031.
 
 *(No hay función de fotos: **las fotos nunca salen del kiosco**. A la nube
-sólo llega su hash. Ver CLAUDE.md 5.1.)*
+sólo llega su hash. Ver ARQUITECTURA.md 5.1.)*
 
 ## Datos de prueba (`seed.sql`)
 
@@ -207,4 +207,4 @@ registros, calculados desde hoy). Nunca llegan a la nube real.
 
 ## Qué falta
 
-- Turnos rotativos complejos, si el cliente los define (CLAUDE.md 14).
+- Turnos rotativos complejos, si llegan a hacer falta.

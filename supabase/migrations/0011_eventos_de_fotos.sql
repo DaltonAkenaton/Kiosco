@@ -3,13 +3,13 @@
 -- ============================================================================
 --
 --  El kiosco ahora cifra sus fotos, las borra a los 30 dias y maneja una llave
---  con contrasena de recuperacion (CLAUDE.md 5.1). Todo eso deja constancia en
+--  con contrasena de recuperacion (ARQUITECTURA.md 5.1). Todo eso deja constancia en
 --  `eventos_dispositivo`, y la lista de tipos es CERRADA (0006): un tipo que
 --  la nube no conoce seria rechazado al sincronizar, y el kiosco lo
 --  reintentaria para siempre.
 --
 --  Por que no se edita la 0006: una migracion aplicada no se toca nunca
---  (CLAUDE.md 16). Se reemplaza la restriccion aqui.
+--  (ARQUITECTURA.md 14). Se reemplaza la restriccion aqui.
 --
 --  Lo que dicen los tipos nuevos, para quien lea el panel:
 --

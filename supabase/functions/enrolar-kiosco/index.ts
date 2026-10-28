@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- *  ENROLAR KIOSCO  (CLAUDE.md 3.3)
+ *  ENROLAR KIOSCO  (ARQUITECTURA.md 3.3)
  * ============================================================================
  *
  *  Un kiosco recien instalado presenta el codigo de 8 caracteres que el jefe
@@ -81,7 +81,7 @@ Deno.serve(
       });
     }
 
-    // Ni el token ni el codigo van al log (CLAUDE.md 16).
+    // Ni el token ni el codigo van al log (ARQUITECTURA.md 14).
     console.info(`[enrolar] kiosco dado de alta: ${dispositivo.dispositivo_id}`);
     return responder(200, {
       dispositivoId: dispositivo.dispositivo_id,

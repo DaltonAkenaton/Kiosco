@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- *  MANEJADORES DEL MODO ADMINISTRADOR  (CLAUDE.md 5.2)
+ *  MANEJADORES DEL MODO ADMINISTRADOR  (ARQUITECTURA.md 5.2)
  * ============================================================================
  *
  *  Mismo patron que manejadores.ts —validar, hacer, responder—, con un paso
@@ -190,7 +190,7 @@ export function registrarManejadoresAdmin(): void {
   // ---------------------------------------------------------------------
   //  El orden importa: primero se anota en la bitacora, DESPUES se entrega.
   //  Si anotar falla, la foto no sale. Una foto vista sin rastro es justo lo
-  //  que la bitacora existe para impedir (CLAUDE.md 12).
+  //  que la bitacora existe para impedir (ARQUITECTURA.md 12).
   ipcMain.handle(
     CANALES.adminVerFoto,
     conSesion(EsquemaVerFoto, (datos, sesion): FotoParaAuditoria => {
@@ -203,7 +203,7 @@ export function registrarManejadoresAdmin(): void {
         // faltante / alterada / llave_no_disponible: se informa sin mostrar nada.
         console.warn(`[admin] foto en estado ${lectura.estado}`);
         // Faltante y alterada son evidencia de que algo paso: la nube tiene
-        // que saberlo para que el panel lo muestre (CLAUDE.md 5.1). "Llave no
+        // que saberlo para que el panel lo muestre (ARQUITECTURA.md 5.1). "Llave no
         // disponible" no: la foto esta bien, solo falta con que abrirla.
         if (lectura.estado === 'faltante' || lectura.estado === 'alterada') {
           registrarEstadoDeFoto(foto.marcaId, lectura.estado);
@@ -216,7 +216,7 @@ export function registrarManejadoresAdmin(): void {
       return {
         estado: 'con_foto',
         // Descifrada solo en memoria: viaja a la pantalla y ahi se queda
-        // mientras este abierta. Nunca se escribe en disco (CLAUDE.md 5.2).
+        // mientras este abierta. Nunca se escribe en disco (ARQUITECTURA.md 5.2).
         jpegDataUrl: `data:image/jpeg;base64,${lectura.jpeg.toString('base64')}`,
         hashCorto: (foto.hash ?? '').slice(0, 12),
       };
@@ -374,7 +374,7 @@ export function registrarManejadoresAdmin(): void {
   );
 
   // ---------------------------------------------------------------------
-  //  Exportacion a USB: la unica salida de las fotos (CLAUDE.md 5.2)
+  //  Exportacion a USB: la unica salida de las fotos (ARQUITECTURA.md 5.2)
   // ---------------------------------------------------------------------
   ipcMain.handle(
     CANALES.adminBuscarMemoriasUsb,
@@ -400,7 +400,7 @@ export function registrarManejadoresAdmin(): void {
       if (!CONFIG.exportacion.permitirElegirCarpeta) throw new ErrorParaMostrar('Esta opción está apagada.');
 
       // La ventana de Windows la abre el proceso principal, y la ruta elegida
-      // nunca pasa por la pantalla (CLAUDE.md 3.1).
+      // nunca pasa por la pantalla (ARQUITECTURA.md 3.1).
       const ventana = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
       const opciones: Electron.OpenDialogOptions = {
         title: 'Elige la memoria o el disco USB donde guardar',

@@ -7,7 +7,7 @@
  *  se lleva la cuenta de que le ha pasado a cada una: donde quedo, si un
  *  administrador pidio conservarla, y cuando se borro por antiguedad.
  *
- *  La marca NO se toca desde aqui. Es inmutable (CLAUDE.md 8); la foto no.
+ *  La marca NO se toca desde aqui. Es inmutable (ARQUITECTURA.md 8); la foto no.
  *  La unica excepcion es `registrarFotoHeredada`, explicada ahi mismo.
  */
 
@@ -87,7 +87,7 @@ export function marcarComoEliminada(marcaId: string): void {
 }
 
 /**
- * Pone o quita la marca "Conservar" (CLAUDE.md 5.1: casos en disputa).
+ * Pone o quita la marca "Conservar" (ARQUITECTURA.md 5.1: casos en disputa).
  *
  * Devuelve `false` si no hay foto viva que conservar: una foto ya borrada no
  * se puede "conservar" de vuelta.

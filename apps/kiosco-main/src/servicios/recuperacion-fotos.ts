@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- *  RECUPERAR FOTOS DE UNA LLAVE ANTERIOR  (CLAUDE.md 5.1)
+ *  RECUPERAR FOTOS DE UNA LLAVE ANTERIOR  (ARQUITECTURA.md 5.1)
  * ============================================================================
  *
  *  Cuando Windows ya no puede abrir la llave de las fotos (se reinstalo

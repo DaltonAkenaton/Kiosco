@@ -4,7 +4,7 @@
 --
 --  Quien cambio que, cuando, y como estaba antes.
 --
---  CLAUDE.md 8: "bitacora_auditoria: llenada por TRIGGERS."
+--  ARQUITECTURA.md 8: "bitacora_auditoria: llenada por TRIGGERS."
 --
 --  Esa palabra —triggers— es toda la decision. Podria llenarla la aplicacion,
 --  y seria mas facil de leer. Pero entonces la bitacora registraria solo lo que
@@ -123,7 +123,7 @@ begin
     auditar: se puede ver QUE se cambio el PIN y CUANDO, sin guardar nada
     reversible. Lo mismo con el token de un dispositivo.
 
-    (CLAUDE.md 16: "Nunca registrar PINes, tokens ni fotos en logs." Una
+    (ARQUITECTURA.md 14: "Nunca registrar PINes, tokens ni fotos en logs." Una
     bitacora es un log, aunque viva en una tabla.)
   */
   if fila_antes ? 'pin_hash' then

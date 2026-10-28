@@ -3,7 +3,7 @@
  *  RELOJ Y DETECCION DE MANIPULACION
  * ============================================================================
  *
- *  CLAUDE.md seccion 6, y una de las partes mas interesantes del sistema.
+ *  ARQUITECTURA.md seccion 6, y una de las partes mas interesantes del sistema.
  *
  *  EL PROBLEMA
  *  -----------
@@ -38,7 +38,7 @@
  *  LO QUE NUNCA HACE
  *  -----------------
  *  Bloquear el registro. Las banderas son para que el jefe revise, no para
- *  impedir que alguien cheque (CLAUDE.md 6: "las banderas nunca bloquean").
+ *  impedir que alguien cheque (ARQUITECTURA.md 6: "las banderas nunca bloquean").
  */
 
 import { randomUUID } from 'node:crypto';
@@ -140,7 +140,7 @@ export function detectarAnomaliasDeReloj(
     console.warn('[reloj] la marca es anterior a la ultima registrada');
   }
 
-  // --- 3. ¿La fecha es absurda? (CLAUDE.md 13.2) --------------------------
+  // --- 3. ¿La fecha es absurda? (ARQUITECTURA.md 13.2) --------------------------
   //
   // El caso tipico NO es alguien haciendo trampa: es la pila del BIOS
   // agotada. Cuando muere, la PC arranca creyendo que es el ano 2009 o 1980.

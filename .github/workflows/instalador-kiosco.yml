@@ -15,7 +15,7 @@
 #
 #  ¿POR QUE OTRO REPOSITORIO Y PUBLICO? Este (el del codigo) es privado, y un
 #  kiosco no puede descargar de uno privado sin una contraseña dentro del .exe,
-#  que dejaria de ser secreta (CLAUDE.md 3.2). El de versiones solo tiene
+#  que dejaria de ser secreta (ARQUITECTURA.md 3.2). El de versiones solo tiene
 #  instaladores, que no llevan nada secreto.
 #
 #  Necesita UN secreto: TOKEN_VERSIONES, un token de GitHub con permiso de

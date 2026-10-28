@@ -25,7 +25,7 @@
  *  que comprobar que ACABE DE IDENTIFICARSE.
  *
  *  AGUJERO 2 (la hora).
- *  CLAUDE.md 4.3 pide que el timestamp sea el del instante de la validacion.
+ *  ARQUITECTURA.md 4.3 pide que el timestamp sea el del instante de la validacion.
  *  Con la pantalla de confirmacion del bloque 3, entre validar y guardar
  *  pasan hasta 3 segundos (mas si el empleado se queda pensando). Si el
  *  reloj se leyera al guardar, la hora registrada seria la de cuando la

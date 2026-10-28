@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- *  SESION DEL MODO ADMINISTRADOR  (CLAUDE.md 5.2)
+ *  SESION DEL MODO ADMINISTRADOR  (ARQUITECTURA.md 5.2)
  * ============================================================================
  *
  *  Quien entra, cuanto dura, y cuando se cierra sola.

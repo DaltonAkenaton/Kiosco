@@ -4,8 +4,8 @@
 --
 --  El corazon del sistema. Cada entrada y cada salida.
 --
---  CLAUDE.md 8: "marcas (INMUTABLE)".
---  CLAUDE.md 3.2: "No existen permisos de UPDATE ni DELETE sobre marcas para
+--  ARQUITECTURA.md 8: "marcas (INMUTABLE)".
+--  ARQUITECTURA.md 3.2: "No existen permisos de UPDATE ni DELETE sobre marcas para
 --                  ningun rol."
 --
 --  ---------------------------------------------------------------------------
@@ -34,7 +34,7 @@ create table marcas (
     Es lo que hace idempotente la sincronizacion: el kiosco puede reintentar la
     subida mil veces —y lo va a hacer, porque el internet de la facultad se cae—
     y el servidor inserta con `ON CONFLICT DO NOTHING` sobre esta llave.
-    Repetir el envio no duplica nada (CLAUDE.md 7).
+    Repetir el envio no duplica nada (ARQUITECTURA.md 7).
 
     Si el id lo pusiera el servidor, cada reintento crearia una marca nueva y
     un empleado apareceria con quince entradas a las 06:02.
@@ -48,7 +48,7 @@ create table marcas (
   origen text not null default 'kiosco' check (origen in ('kiosco', 'manual')),
 
   -- ========================================================================
-  --  LAS CUATRO LECTURAS DE RELOJ  (CLAUDE.md 6)
+  --  LAS CUATRO LECTURAS DE RELOJ  (ARQUITECTURA.md 6)
   -- ========================================================================
   --  El empleado tiene acceso fisico a la PC y puede cambiar la hora de
   --  Windows. No lo podemos impedir; si lo podemos detectar. Por eso no se
@@ -91,7 +91,7 @@ create table marcas (
   /*
     ⚠ AQUI NO HAY NINGUNA FOTO, Y ES LA DECISION MAS IMPORTANTE DEL PROYECTO.
 
-    El cliente pidio que las fotografias NO salgan del kiosco (CLAUDE.md 1.1,
+    El cliente pidio que las fotografias NO salgan del kiosco (ARQUITECTURA.md 1.1,
     confirmado el 21-09-2026). Viven cifradas en el disco de esa PC y solo se
     ven desde el modo administrador de ese mismo kiosco.
 
@@ -130,14 +130,14 @@ create table marcas (
   /*
     BANDERAS: "esto hay que revisarlo".
 
-    NUNCA impiden registrar (CLAUDE.md 5 y 6). Son etiquetas para que el jefe
+    NUNCA impiden registrar (ARQUITECTURA.md 5 y 6). Son etiquetas para que el jefe
     lo mire despues. El kiosco registra siempre; esta columna es como avisa de
     que algo no cuadraba.
   */
   banderas text[] not null default '{}',
 
   -- Marca de un dispositivo revocado, aceptada para no perder asistencia real
-  -- pero apartada para revision (CLAUDE.md 3.3).
+  -- pero apartada para revision (ARQUITECTURA.md 3.3).
   en_cuarentena boolean not null default false,
 
   constraint marcas_banderas_conocidas check (
@@ -197,7 +197,7 @@ create index marcas_para_revisar_idx on marcas (hora_estimada desc)
   where en_cuarentena or array_length(banderas, 1) > 0;
 
 -- Las marcas cuya foto hay que ir a revisar AL KIOSCO. Es lo que alimenta el
--- filtro "Revisar en kiosco" del panel (CLAUDE.md 10): va por dispositivo para
+-- filtro "Revisar en kiosco" del panel (ARQUITECTURA.md 10): va por dispositivo para
 -- que el jefe haga un solo viaje en vez de uno por caso.
 create index marcas_foto_problema_idx on marcas (dispositivo_id, hora_estimada desc)
   where foto_estado in ('faltante', 'alterada');
@@ -229,7 +229,7 @@ as $$
 begin
   if tg_op = 'DELETE' then
     raise exception
-      'Las marcas no se borran. Para anular una, agrega una correccion (CLAUDE.md 8).'
+      'Las marcas no se borran. Para anular una, agrega una correccion (ARQUITECTURA.md 8).'
       using errcode = 'restrict_violation';
   end if;
 
@@ -263,7 +263,7 @@ begin
     if to_jsonb(new) - 'foto_estado' is distinct from to_jsonb(old) - 'foto_estado' then
       raise exception
         'Las marcas no se editan. Solo puede cambiar foto_estado. '
-        'Para corregir una marca, agrega una correccion (CLAUDE.md 8).'
+        'Para corregir una marca, agrega una correccion (ARQUITECTURA.md 8).'
         using errcode = 'restrict_violation';
     end if;
 

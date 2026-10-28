@@ -1,5 +1,5 @@
 -- ============================================================================
---  RESUMEN DIARIO PARA EL JEFE  (CLAUDE.md 13.4)
+--  RESUMEN DIARIO PARA EL JEFE  (ARQUITECTURA.md 13.4)
 -- ============================================================================
 --
 --  Lo usa .github/workflows/resumen-diario.yml: cada manana corre esto contra

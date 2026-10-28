@@ -12,7 +12,7 @@
        font-bold     -> negritas
        rounded-xl    -> esquinas redondeadas
 
-   ¿Por que Tailwind aqui? Porque el CLAUDE.md pide "botones y textos grandes,
+   ¿Por que Tailwind aqui? Porque el ARQUITECTURA.md pide "botones y textos grandes,
    alto contraste, pensados para uso rapido a las 6 AM", y con Tailwind ajustas
    un tamano cambiando una clase, sin pelearte con hojas de estilo aparte.
    ========================================================================== */

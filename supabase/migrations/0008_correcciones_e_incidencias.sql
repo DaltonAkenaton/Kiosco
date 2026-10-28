@@ -8,7 +8,7 @@
 --  CORRECCIONES
 -- ============================================================================
 --
---  CLAUDE.md 8: "Las correcciones nunca modifican la marca original."
+--  ARQUITECTURA.md 8: "Las correcciones nunca modifican la marca original."
 --
 --  Esta tabla es la contraparte necesaria de la inmutabilidad de `marcas`. Sin
 --  ella, "no se puede editar" seria simplemente "no se puede arreglar", y el

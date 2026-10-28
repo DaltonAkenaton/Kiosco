@@ -3,7 +3,7 @@
  *  COMPONENTE: RELOJ
  * ============================================================================
  *
- *  El reloj grande de la pantalla principal (CLAUDE.md 4.1).
+ *  El reloj grande de la pantalla principal (ARQUITECTURA.md 4.1).
  *
  *  Es un componente aparte —y no unas lineas dentro de la pantalla— por dos
  *  razones:

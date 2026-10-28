@@ -3,7 +3,7 @@
 -- ============================================================================
 --
 --  El personal de limpieza. Es la tabla que el kiosco baja en cada
---  sincronizacion para poder validar PINes sin internet (CLAUDE.md 7).
+--  sincronizacion para poder validar PINes sin internet (ARQUITECTURA.md 7).
 
 create table empleados (
   id  uuid primary key default gen_random_uuid(),
@@ -17,7 +17,7 @@ create table empleados (
 
     ¿Por que no el numero de empleado? Porque en la practica nadie se lo sabe,
     y pedirselo a las 6 de la manana garantiza que no pueda checar
-    (CLAUDE.md 3.4). El numero se conserva abajo, pero como referencia
+    (ARQUITECTURA.md 3.4). El numero se conserva abajo, pero como referencia
     administrativa.
   */
   usuario  text not null unique
@@ -37,7 +37,7 @@ create table empleados (
     El formato es el de `crypt(pin, gen_salt('bf'))` de pgcrypto, que es el
     mismo que produce `bcryptjs` en el kiosco. Esa compatibilidad es lo que
     permite que un PIN puesto desde el panel se verifique sin internet en el
-    kiosco (CLAUDE.md 3.4).
+    kiosco (ARQUITECTURA.md 3.4).
 
     El CHECK exige que empiece con `$2`, la firma de bcrypt. Es una red contra
     el peor error posible de todos: que alguien guarde aqui el PIN tal cual.
@@ -52,7 +52,7 @@ create table empleados (
 
   /*
     Dar de baja NO borra. El empleado se desactiva, y en la siguiente
-    sincronizacion los kioscos lo desactivan tambien (CLAUDE.md 7).
+    sincronizacion los kioscos lo desactivan tambien (ARQUITECTURA.md 7).
 
     Borrarlo dejaria sus marcas apuntando a nadie, y esas marcas son el
     registro de asistencia de los meses que si trabajo.
@@ -60,7 +60,7 @@ create table empleados (
   activo  boolean not null default true,
 
   /*
-    FASE 2 (CLAUDE.md 13.3): foto de referencia para que quien revise pueda
+    FASE 2 (ARQUITECTURA.md 13.3): foto de referencia para que quien revise pueda
     comparar contra la foto del checado.
 
     La columna existe DESDE AHORA aunque la funcion no. Es a proposito: agregar
@@ -76,7 +76,7 @@ create table empleados (
     DE ESTA COLUMNA DEPENDE LA SINCRONIZACION.
 
     El kiosco baja solo lo que cambio desde su ultima consulta
-    (CLAUDE.md 7: "sincronizacion incremental por actualizado_en"). La mantiene
+    (ARQUITECTURA.md 7: "sincronizacion incremental por actualizado_en"). La mantiene
     un trigger, no la aplicacion: ver `tocar_actualizado_en()` en 0001.
   */
   actualizado_en timestamptz not null default now()
@@ -121,7 +121,7 @@ create policy empleados_actualizar on empleados
   `activo = false`.
 
   El unico caso en que un empleado debe desaparecer de verdad es un derecho de
-  supresion de datos personales (CLAUDE.md 12), y eso NO es un DELETE: es una
+  supresion de datos personales (ARQUITECTURA.md 12), y eso NO es un DELETE: es una
   anonimizacion registrada en bitacora, que conserva las marcas —porque la
   asistencia es un registro laboral— y borra lo que identifica a la persona.
   Se construye en la fase 4, como una funcion dedicada.
@@ -194,7 +194,7 @@ comment on function establecer_pin(uuid, text, boolean) is
 --
 --  OJO: el camino normal NO pasa por aqui. Lo normal es que el kiosco valide
 --  el PIN contra su copia local, sin red, que es lo que hace que el sistema
---  funcione sin internet (CLAUDE.md 7). Esta funcion es el respaldo.
+--  funcione sin internet (ARQUITECTURA.md 7). Esta funcion es el respaldo.
 create or replace function verificar_pin(p_usuario text, p_pin text)
 returns uuid
 language sql

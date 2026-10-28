@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- *  CATALOGO  (CLAUDE.md 7, "pull")
+ *  CATALOGO  (ARQUITECTURA.md 7, "pull")
  * ============================================================================
  *
  *  Lo que el kiosco necesita para trabajar SIN internet:

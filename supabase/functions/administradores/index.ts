@@ -5,7 +5,7 @@
  *
  *  Dar acceso al panel a alguien nuevo exige crear su cuenta en Supabase
  *  Auth, y eso solo se puede con la llave service_role. Esa llave NUNCA va en
- *  el panel (CLAUDE.md 3.2), asi que el panel le pide el favor a esta funcion.
+ *  el panel (ARQUITECTURA.md 3.2), asi que el panel le pide el favor a esta funcion.
  *
  *      panel:  { accion: "crear", correo, nombre, rol, motivo }
  *      aqui:   ¿quien llama es administrador activo?  ->  crea la cuenta con
@@ -153,7 +153,7 @@ Deno.serve(async (peticion) => {
     const actualizado = await bd.auth.admin.updateUserById(d.userId, { password: contrasena });
     if (actualizado.error) throw actualizado.error;
 
-    // La contrasena nunca va al log (CLAUDE.md 16).
+    // La contrasena nunca va al log (ARQUITECTURA.md 14).
     console.info(`[administradores] contrasena restablecida para ${d.userId}`);
     return responder(200, { contrasenaTemporal: contrasena });
   } catch (fallo) {

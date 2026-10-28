@@ -6,7 +6,7 @@
 --  la oficina no acepto (por ejemplo, pruebas hechas con el kiosco dado de
 --  baja). En el kiosco no se borran: dejan de mostrarse y de reenviarse.
 --
---  Para que eso no sea "desaparecer asistencia en silencio" (CLAUDE.md 3.3),
+--  Para que eso no sea "desaparecer asistencia en silencio" (ARQUITECTURA.md 3.3),
 --  el kiosco manda este evento con quien lo hizo (adminId), cuantos fueron y
 --  el motivo que escribio. El panel lo muestra en la pagina Kioscos, en "Lo
 --  que se hizo en los kioscos".
