@@ -12,8 +12,8 @@ un panel web donde su jefe revisa la asistencia.
 
 ## El problema
 
-- Alrededor de 20 empleados en tres turnos, incluido un **turno nocturno que
-  cruza la medianoche**, en una ciudad fronteriza con **horario de verano**.
+- Personal en tres turnos, incluido un **turno nocturno que cruza la
+  medianoche**, en una ciudad fronteriza con **horario de verano**.
 - El internet y la luz fallan de vez en cuando. **Nunca se le puede impedir a
   nadie registrar su asistencia**: la red jamás debe bloquear la pantalla.
 - El diseño debe prevenir marcajes irregulares e inconsistencias de horario
@@ -75,8 +75,8 @@ Las 50 decisiones están documentadas, con su porqué, en
 1. **Primero sin conexión, con bandeja de salida idempotente.** Cada registro
    recibe un UUID en el kiosco y el servidor inserta con
    `ON CONFLICT DO NOTHING`, así que los reintentos (con espera creciente)
-   nunca duplican una marca. Se puede desconectar la PC en cualquier momento
-   sin perder datos.
+   nunca duplican una marca. Se puede quitar el internet en cualquier momento:
+   lo registrado espera en la PC y se envía al volver la conexión.
 2. **Las fotos se quedan en el kiosco; a la nube sólo va su hash.** Cada JPEG
    se resume con SHA-256 *antes* de cifrarlo con AES-256-GCM. El panel puede
    señalar una foto como *faltante* o *alterada* sin tenerla nunca. Los
